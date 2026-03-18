@@ -69,43 +69,55 @@ const subscriptionSlice = createSlice({
       state.subscriptionError = null;
     },
   },
- extraReducers: (builder) => {
-  builder
-    .addCase(fetchSubscriptionPlans.pending, (state) => {
-      state.plansStatus = "loading";
-      state.activePlanStatus = "loading"; // ← keep activePlan loading in sync
-    })
-    .addCase(fetchSubscriptionPlans.fulfilled, (state, action) => {
-      state.plansStatus = "succeeded";
-      state.activePlanStatus = "succeeded"; // ← sync
-      state.plans = action.payload?.plans || [];
-      state.activePlan = action.payload?.currentPlanKey || "FREE"; // ← populate activePlan
-      state.isActivePlan = action.payload?.currentPlanKey !== "FREE"; // ← populate isActivePlan
-      state.plansError = null;
-      state.activePlanError = null;
-    })
-    .addCase(fetchSubscriptionPlans.rejected, (state, action) => {
-      state.plansStatus = "failed";
-      state.activePlanStatus = "failed"; // ← sync
-      state.plansError = action.payload || "Failed to fetch subscription plans";
-      state.activePlanError = action.payload || "Failed to fetch subscription plans";
-    })
+  extraReducers: (builder) => {
+    builder
+      // Fetch Subscription Plans
+      .addCase(fetchSubscriptionPlans.pending, (state) => {
+        state.plansStatus = "loading";
+      })
+      .addCase(fetchSubscriptionPlans.fulfilled, (state, action) => {
+        state.plansStatus = "succeeded";
+        state.plans = action.payload;
+        state.plansError = null;
+      })
+      .addCase(fetchSubscriptionPlans.rejected, (state, action) => {
+        state.plansStatus = "failed";
+        state.plansError =
+          action.payload || "Failed to fetch subscription plans";
+      })
 
-    // createSubscription cases stay the same
-    .addCase(createSubscription.pending, (state) => {
-      state.subscriptionStatus = "loading";
-      state.subscriptionError = null;
-    })
-    .addCase(createSubscription.fulfilled, (state) => {
-      state.subscriptionStatus = "succeeded";
-      state.subscriptionError = null;
-      state.selectedPlan = null;
-    })
-    .addCase(createSubscription.rejected, (state, action) => {
-      state.subscriptionStatus = "failed";
-      state.subscriptionError = action.payload || "Failed to create subscription";
-    });
-},
+
+      // Create Subscription (NEW)
+      .addCase(createSubscription.pending, (state) => {
+        state.subscriptionStatus = "loading";
+        state.subscriptionError = null;
+      })
+      .addCase(createSubscription.fulfilled, (state, action) => {
+        state.subscriptionStatus = "succeeded";
+        state.subscriptionError = null;
+        // Optionally clear selected plan after successful subscription
+        state.selectedPlan = null;
+      })
+      .addCase(createSubscription.rejected, (state, action) => {
+        state.subscriptionStatus = "failed";
+        state.subscriptionError =
+          action.payload || "Failed to create subscription";
+      });
+
+    // Activate Billing
+    // .addCase(activateBilling.pending, (state) => {
+    //   state.activePlanStatus = 'loading';
+    // })
+    // .addCase(activateBilling.fulfilled, (state, action) => {
+    //   state.activePlanStatus = 'succeeded';
+    //   state.activePlan = action.payload;
+    //   state.activePlanError = null;
+    // })
+    // .addCase(activateBilling.rejected, (state, action) => {
+    //   state.activePlanStatus = 'failed';
+    //   state.activePlanError = action.payload || 'Failed to activate billing';
+    // })
+  },
 });
 
 // Export actions

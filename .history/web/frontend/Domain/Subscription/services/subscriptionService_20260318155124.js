@@ -17,7 +17,33 @@ export const subscriptionService = {
         throw error;
       }
     },
-   
+  
+    /**
+     * Verify current active plan
+     * @returns {Promise<Object>} Active plan information
+     */
+    
+  
+    /**
+     * Activate billing with a charge ID
+     * @param {string} chargeId - Shopify charge ID
+     * @returns {Promise<Object>} Activated plan information
+     */
+    
+    async activateBilling(chargeId) {
+      try {
+        const response = await fetch(`/api/subscription/activate/billing?charge_id=${encodeURIComponent(chargeId)}`);
+  
+        if (!response.ok) {
+          throw new Error(`Failed to activate billing: ${response.statusText}`);
+        }
+  
+        return await response.json();
+      } catch (error) {
+        console.error('Error activating billing:', error);
+        throw error;
+      }
+    },
   
     /**
      * Create a new subscription

@@ -31,7 +31,7 @@ export const usePlanStatus = () => {
   const dispatch = useDispatch();
   // Verify current plan
   const verifyPlan = useCallback(() => {
-    dispatch(fetchSubscriptionPlans());
+    dispatch(verifyActivePlan());
   }, [dispatch]);
 
   useEffect(() => {

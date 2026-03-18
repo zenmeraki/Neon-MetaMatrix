@@ -27,10 +27,9 @@ export const useActivePlan = () => {
   const chargeId = urlParams.get("charge_id");
 
   // Verify current plan
- const verifyPlan = useCallback(() => {
+  const verifyPlan = useCallback(() => {
     dispatch(fetchSubscriptionPlans());
   }, [dispatch]);
-
 
  
 

@@ -193,6 +193,7 @@ export const createSubscriptionController = async (req, res) => {
         $price: Decimal!
       ) {
         appSubscriptionCreate(
+                test:true
           name: $name
           returnUrl: $returnUrl
           trialDays: $trialDays

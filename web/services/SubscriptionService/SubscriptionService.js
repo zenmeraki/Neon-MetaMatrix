@@ -86,7 +86,6 @@ export class SubscriptionService {
     ) {
       appSubscriptionCreate(
         name: $name
-        test:true
         returnUrl: $returnUrl
         trialDays: $trialDays
         lineItems: [{

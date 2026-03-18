@@ -17,7 +17,46 @@ export const subscriptionService = {
         throw error;
       }
     },
-   
+  
+    /**
+     * Verify current active plan
+     * @returns {Promise<Object>} Active plan information
+     */
+    async verifyPlan() {
+      try {
+        const response = await fetch('/api/subscription/verify-plan');
+  
+        if (!response.ok) {
+          throw new Error(`Failed to verify plan: ${response.statusText}`);
+        }
+  
+        return await response.json();
+      } catch (error) {
+        console.error('Error verifying plan:', error);
+        throw error;
+      }
+    },
+  
+    /**
+     * Activate billing with a charge ID
+     * @param {string} chargeId - Shopify charge ID
+     * @returns {Promise<Object>} Activated plan information
+     */
+    
+    async activateBilling(chargeId) {
+      try {
+        const response = await fetch(`/api/subscription/activate/billing?charge_id=${encodeURIComponent(chargeId)}`);
+  
+        if (!response.ok) {
+          throw new Error(`Failed to activate billing: ${response.statusText}`);
+        }
+  
+        return await response.json();
+      } catch (error) {
+        console.error('Error activating billing:', error);
+        throw error;
+      }
+    },
   
     /**
      * Create a new subscription

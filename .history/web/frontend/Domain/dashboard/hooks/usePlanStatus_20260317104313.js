@@ -7,7 +7,7 @@ import {
   selectActivePlan,
   selectActivePlanError,
   selectActivePlanStatus,
-  fetchSubscriptionPlans,
+  verifyActivePlan,
 } from "../../../store/slices/subscriptionSlice";
 
 /**
@@ -31,7 +31,7 @@ export const usePlanStatus = () => {
   const dispatch = useDispatch();
   // Verify current plan
   const verifyPlan = useCallback(() => {
-    dispatch(fetchSubscriptionPlans());
+    dispatch(verifyActivePlan());
   }, [dispatch]);
 
   useEffect(() => {
