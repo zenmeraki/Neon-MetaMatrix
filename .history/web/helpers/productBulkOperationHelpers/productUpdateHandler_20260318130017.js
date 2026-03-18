@@ -899,12 +899,10 @@ function handleOptionValueField({
   });
 }
 
-
 export function getProductImage(product) {
- if (!product.featuredImageId && !product.featuredMedia?.preview?.image?.url) {
-  return "";
-}
-
+  if (product.featuredImageId) {
+    return null;
+  }
 
   if (product.featuredMedia?.preview?.image?.url) {
     return product.featuredMedia.preview.image.url;

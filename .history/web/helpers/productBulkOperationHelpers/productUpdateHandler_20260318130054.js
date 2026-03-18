@@ -899,7 +899,6 @@ function handleOptionValueField({
   });
 }
 
-
 export function getProductImage(product) {
  if (!product.featuredImageId && !product.featuredMedia?.preview?.image?.url) {
   return "";

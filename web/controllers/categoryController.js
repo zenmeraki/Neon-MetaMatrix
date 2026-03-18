@@ -12,6 +12,7 @@ export const getAllCategories = async (req, res) => {
         ? req.query.search.trim()
         : null;
 
+        
     const keyCache = `${session.shop}:categories:${
       isNameOnly ? "fullname" : "title"
     } ${search || "all"}`;

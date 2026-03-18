@@ -51,10 +51,13 @@ async function processBulkEdit(job) {
       batchId,
     } = await service._preparingBulkOperation({ historyId });
 
+    
     const result = await service._bulkOperationHelper({
       formattedProducts,
       field: history.rules?.[0]?.field || "",
     });
+
+    console.log("📦 bulkOperation result:", result);
 
     if (!result?.bulkOperation?.id) {
       console.error("❌ Missing bulkOperationId in Shopify response", {
@@ -87,7 +90,7 @@ async function processBulkEdit(job) {
     // );
     //
     // Prisma: batch is a JSON field, so we must merge into existing batch
-    const existingBatch = (history.batch ?? {}) 
+    const existingBatch = (history.batch ?? {})
     const updatedBatch = {
       ...existingBatch,
       lastProductId,

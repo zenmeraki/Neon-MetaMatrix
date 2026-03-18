@@ -279,7 +279,7 @@ async _preparingBulkOperation({ historyId }) {
  const include =
   OPTION_NAME_FIELDS.has(rule.field) ||
   FIELD_CONFIGS?.[rule.field]?.isVariantLevel ||
-  VARIANT_LEVEL_FIELDS.has(rule.field)   
+  VARIANT_LEVEL_FIELDS.has(rule.field)          
     ? { variants: true }
     : undefined;
 

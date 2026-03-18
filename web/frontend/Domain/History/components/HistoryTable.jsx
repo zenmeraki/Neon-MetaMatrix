@@ -170,7 +170,7 @@ const HistoryTable = memo(
           // Update local state to show undo is processing
           setLocalHistories((prev) =>
             prev.map((h) =>
-              h.id === undoHistoryItemid
+              h.id === undoHistoryItem.id
                 ? {
                     ...h,
                     undo: {
@@ -264,68 +264,66 @@ const HistoryTable = memo(
       );
     }
 
-    const rows = localHistories.map((item) => {
-      const { _id, title, shop } = item;
-      const user = shop?.split(".")[0];
-      const isUndoable = canUndo(item);
-      const displayStatus = getDisplayStatus(item);
-      const isProcessing =
-        displayStatus === "processing" || displayStatus === "undo_processing";
+  const rows = localHistories.map((item) => {
+  const { id, title, shop } = item;
+  const user = shop?.split(".")[0];
+  const isUndoable = canUndo(item);
+  const displayStatus = getDisplayStatus(item);
+  const isProcessing =
+    displayStatus === "processing" || displayStatus === "undo_processing";
 
-      return [
-        // Title
-        <Box
-          key={`title-${_id}`}
-          width={COLUMN_WIDTHS.title}
-          maxWidth={COLUMN_WIDTHS.title}
-          textAlign="start"
+  return [
+    <Box
+      key={`title-${id}`}
+      width={COLUMN_WIDTHS.title}
+      maxWidth={COLUMN_WIDTHS.title}
+      textAlign="start"
+    >
+      <Text variant="bodyMd" fontWeight="medium" truncate>
+        {title}
+      </Text>
+    </Box>,
+
+    renderStatusBadge(item),
+
+    <Box key={`count-${id}`} minWidth="120px" textAlign="start">
+      <Text>{formatProcessedCount(item)}</Text>
+    </Box>,
+
+    <Box key={`user-${id}`} minWidth="120px" textAlign="start">
+      <Text>{user || "-"}</Text>
+    </Box>,
+
+    <Box key={`time-${id}`} minWidth="180px" textAlign="start">
+      {formatEditTime(item)}
+    </Box>,
+
+    <InlineStack key={`actions-${id}`} align="start" gap="200">
+      <ButtonGroup variant="segmented">
+        <Button
+          size="slim"
+          icon={<Eye size={14} />}
+          onClick={() => {
+            if (!id) return;
+            navigate(`/editDetails/${id}`);
+          }}
         >
-          <Text variant="bodyMd" fontWeight="medium" truncate>
-            {title}
-          </Text>
-        </Box>,
+          {t("view") || "View"}
+        </Button>
 
-        // Status
-        renderStatusBadge(item),
-
-        // Processed Count
-        <Box key={`count-${_id}`} minWidth="120px" textAlign="start">
-          <Text>{formatProcessedCount(item)}</Text>
-        </Box>,
-
-        // User
-        <Box key={`user-${_id}`} minWidth="120px" textAlign="start">
-          <Text>{user || "-"}</Text>
-        </Box>,
-
-        // Edit Time
-        <Box key={`time-${_id}`} minWidth="180px" textAlign="start">
-          {formatEditTime(item)}
-        </Box>,
-
-        // Actions
-        <InlineStack key={`actions-${_id}`} align="start" gap="200">
-          <ButtonGroup variant="segmented">
-            <Button
-              size="slim"
-              icon={<Eye size={14} />}
-              onClick={() => navigate(`/editDetails/${_id}`)}
-            >
-              {t("view") || "View"}
-            </Button>
-            <Button
-              size="slim"
-              icon={<RotateCw size={14} />}
-              onClick={() => isUndoable && handleUndo(item)}
-              disabled={!isUndoable || isProcessing}
-              tone={isUndoable ? "critical" : undefined}
-            >
-              {t("undoEdit") || "Undo"}
-            </Button>
-          </ButtonGroup>
-        </InlineStack>,
-      ];
-    });
+        <Button
+          size="slim"
+          icon={<RotateCw size={14} />}
+          onClick={() => isUndoable && handleUndo(item)}
+          disabled={!isUndoable || isProcessing}
+          tone={isUndoable ? "critical" : undefined}
+        >
+          {t("undoEdit") || "Undo"}
+        </Button>
+      </ButtonGroup>
+    </InlineStack>,
+  ];
+});
 
     return (
       <BlockStack gap="400">

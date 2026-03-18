@@ -2,7 +2,7 @@
 
 client_id = "20f31d269398d5f23df95d0450e772e9"
 name = "test-app"
-application_url = "https://directions-name-language-bbs.trycloudflare.com"
+application_url = "https://prepare-eden-internationally-fit.trycloudflare.com"
 embedded = true
 handle = "test-app-11537"
 
@@ -36,9 +36,9 @@ use_legacy_install_flow = false
 
 [auth]
 redirect_urls = [
-  "https://directions-name-language-bbs.trycloudflare.com/auth/callback",
-  "https://directions-name-language-bbs.trycloudflare.com/auth/shopify/callback",
-  "https://directions-name-language-bbs.trycloudflare.com/api/auth/callback"
+  "https://prepare-eden-internationally-fit.trycloudflare.com/auth/callback",
+  "https://prepare-eden-internationally-fit.trycloudflare.com/auth/shopify/callback",
+  "https://prepare-eden-internationally-fit.trycloudflare.com/api/auth/callback"
 ]
 
 [app_proxy]
