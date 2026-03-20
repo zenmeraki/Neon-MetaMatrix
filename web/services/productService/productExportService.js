@@ -195,21 +195,21 @@ export class ProductExportService {
   }
 
   async getExportHistoryDetails(id) {
-    // ✅ CONVERTED TO PRISMA
-    const history = await prisma.exportHistory.findUnique({
-      where: { id },
-      select: {
-        filename: true,
-        status: true,
-        type: true,
-        exportTime: true,
-        totalItems: true,
-        exportedData: true,
-      },
-    });
-
-    if (!history) throw new Error("export history not found");
-
-    return history;
+  if (!id || id === "undefined" || id === "null") {
+    throw new Error("Invalid export history ID");
   }
+
+  const history = await prisma.exportJob.findFirst({
+    where: {
+      id,
+      shop: this.session.shop,
+    },
+  });
+
+  if (!history) {
+    throw new Error("export history not found");
+  }
+
+  return history;
+}
 }

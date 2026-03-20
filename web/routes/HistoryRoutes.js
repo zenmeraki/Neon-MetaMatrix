@@ -6,17 +6,22 @@ import {
   getHistoryChanges,
   getHistoryDetails,
 } from "../controllers/historyController.js";
+
 import rateLimit from "express-rate-limit";
+
 import { validateQuery } from "../middleware/validateQuery.js";
+
 import editHistoryQuerySchema from "../validations/editHistoryQuerySchema.js";
-import { getAllExportHistories } from "../controllers/historyController.js";
+
+import { getAllExportHistories,getExportHistoryDetails } from "../controllers/historyController.js";
+
 import { validateSession } from "../middleware/validateSession.js";
+
 import {
   getAllImportHistories,
   getImportHistoryDetails,
-  getRecurringEditById,
-  getRecurringEdits,
 } from "../controllers/historyController.js";
+
 const router = express.Router();
 const historyRateLimiter = rateLimit({
   windowMs: +process.env.HISTORY_RATE_LIMIT_WINDOW_MS || 60_000,
@@ -55,6 +60,14 @@ router.get(
   // restrictSubscribeUserWork,
   getHistoryChanges
 );
+
+router.get(
+  "/get-export-details/:id",
+  getExportHistoryDetails
+);
+
+
+
 // GET all import histories
 router.get(
   "/get-shop-importhistory",
