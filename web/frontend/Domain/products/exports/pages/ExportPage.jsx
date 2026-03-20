@@ -81,9 +81,9 @@ export default function CsvExportPage() {
           message:
             "Export started successfully. You’ll receive the CSV once ready.",
         });
-        navigate("/history", { state: { openExport: true } });
+        navigate("/exportDetails/" + data.exportJobId);
       }
-    } catch {
+    } catch (err) {
       setBanner({
         tone: "critical",
         message: "Something went wrong while starting export.",
@@ -98,7 +98,7 @@ export default function CsvExportPage() {
       title="Export products to CSV"
       subtitle="Download product and variant data for reporting or bulk editing"
       primaryAction={{
-        content: loading ? "Exporting..." : "Download CSV",
+        content: loading ? "Exporting..." : "Generate CSV",
         onAction: handleExport,
         disabled:
           loading ||

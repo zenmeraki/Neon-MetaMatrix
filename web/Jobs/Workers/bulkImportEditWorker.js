@@ -1,11 +1,8 @@
-// web/Jobs/Workers/bulkImportEditWorker.js
 import { Worker } from "bullmq";
-import axios from "axios";
 import fs from "fs";
-import path from "path";
-import os from "os";
 import csv from "csv-parser";
 
+import { PrismaClient } from "../../generated/prisma/index.js";
 import { connection } from "../../Config/redis.js";
 import logger from "../../utils/loggerUtils.js";
 import {
@@ -16,78 +13,100 @@ import {
 import { clearKeyCaches } from "../../utils/cacheUtils.js";
 import ProductBulkService from "../../services/productService/productBulkEditService.js";
 
-// 🔹 Prisma
-import { prisma } from "../../config/database.js";
-
+const prisma = new PrismaClient();
 
 const QUEUE_NAME = process.env.IMPORT_EDIT_QUEUE || "importEdit";
-
-/* =========================
-   UTILS
-========================= */
-
-const downloadFile = async (url) => {
-  const filePath = path.join(os.tmpdir(), `${Date.now()}.csv`);
-  const writer = fs.createWriteStream(filePath);
-
-  const response = await axios.get(url, { responseType: "stream" });
-  response.data.pipe(writer);
-
-  return new Promise((resolve, reject) => {
-    writer.on("finish", () => resolve(filePath));
-    writer.on("error", reject);
-  });
-};
 
 const normalizeBoolean = (v) => v === true || v === "TRUE" || v === "true";
 
 const normalizeNumber = (v) =>
-  v !== undefined && v !== "" ? Number(v) : undefined;
+  v !== undefined && v !== null && v !== "" ? Number(v) : undefined;
 
-/* =========================
-   WORKER
-========================= */
+function extractProductOptions(existingProduct) {
+  const options = [];
+
+  if (existingProduct.option1Name) {
+    options.push({
+      id: "option1",
+      name: existingProduct.option1Name,
+      values: [],
+    });
+  }
+
+  if (existingProduct.option2Name) {
+    options.push({
+      id: "option2",
+      name: existingProduct.option2Name,
+      values: [],
+    });
+  }
+
+  if (existingProduct.option3Name) {
+    options.push({
+      id: "option3",
+      name: existingProduct.option3Name,
+      values: [],
+    });
+  }
+
+  return options;
+}
+
+function mapExistingVariantsForDiff(existingVariants) {
+  return (existingVariants || []).map((variant) => ({
+    id: variant.id,
+    title: variant.title,
+    sku: variant.sku,
+    barcode: variant.barcode,
+    price: variant.price,
+    compareAtPrice: variant.compareAtPrice,
+    inventoryQuantity: variant.inventoryQuantity,
+    inventoryPolicy: variant.inventoryPolicy,
+    taxable: variant.taxable,
+    taxCode: variant.taxCode,
+    cost: variant.cost,
+    countryOfOrigin: variant.countryOfOrigin,
+    hsTariffCode: variant.hsTariffCode,
+    weight: variant.weight,
+    weightUnit: variant.weightUnit,
+    option1: variant.option1Value,
+    option2: variant.option2Value,
+    option3: variant.option3Value,
+    tracked: variant.tracked,
+    physicalProduct: variant.physicalProduct,
+    profitMargin: variant.profitMargin,
+  }));
+}
 
 const bulkImportEditWorker = new Worker(
   QUEUE_NAME,
   async (job) => {
-    const { historyId, fileUrl, columnMappings, session } = job.data;
+    const { historyId, filePath, columnMappings, session } = job.data;
+    const localFile = filePath;
 
-    logger.info("🔵 Job received", { jobId: job.id, historyId });
+    let historyDoc = null;
 
     try {
-      logger.info("🟡 Fetching history record...");
-      const history = await prisma.editHistory.findUnique({
+      historyDoc = await prisma.editHistory.findUnique({
         where: { id: historyId },
       });
 
-      if (!history) {
-        throw new Error("History record not found");
+      if (!historyDoc) {
+        throw new Error("History document not found");
       }
 
-      // 🔄 set status = processing
       await prisma.editHistory.update({
         where: { id: historyId },
-        data: { status: "processing" },
+        data: {
+          status: "processing",
+        },
       });
-      logger.info("🟢 History status updated to processing");
 
-      await clearKeyCaches(`${history.shop}:fetchHistories`);
-      logger.info("🧹 Cache cleared");
-
-      logger.info("⬇️ Downloading CSV file...", { fileUrl });
-      const localFile = await downloadFile(fileUrl);
-      logger.info("✅ File downloaded", { localFile });
+      await clearKeyCaches(`${historyDoc.shop}:fetchHistories`);
 
       const productMap = new Map();
       let totalRows = 0;
       const formattedProducts = [];
-
-      /* =========================
-         CSV PARSE
-      ========================= */
-
-      logger.info("📄 Starting CSV parsing...");
 
       await new Promise((resolve, reject) => {
         fs.createReadStream(localFile)
@@ -95,31 +114,27 @@ const bulkImportEditWorker = new Worker(
           .on("data", (row) => {
             totalRows++;
 
-            logger.debug("Row parsed", { rowNumber: totalRows });
-
             const mapped = {};
-            for (const [csvCol, field] of Object.entries(columnMappings)) {
+            for (const [csvCol, field] of Object.entries(columnMappings || {})) {
               if (field && row[csvCol] !== undefined) {
                 mapped[field] = row[csvCol];
               }
             }
 
             if (!mapped.id) {
-              logger.warn("⚠️ Skipping row - no product id", { row });
+              logger.warn("Skipping row - no product id", { row });
               return;
             }
 
             const productId = mapped.id;
 
             if (!productMap.has(productId)) {
-              logger.debug("➕ Creating new product entry", { productId });
-
               productMap.set(productId, {
                 productSet: {
                   id: productId,
                   ...(mapped.title && { title: mapped.title }),
                   ...(mapped.vendor && { vendor: mapped.vendor }),
-                  ...(mapped.status && { status: mapped.status }),
+                  ...(mapped.status && { status: mapped.status.toUpperCase() }),
                   ...(mapped.description && {
                     descriptionHtml: mapped.description,
                   }),
@@ -128,27 +143,33 @@ const bulkImportEditWorker = new Worker(
                   }),
                   ...(mapped.handle && { handle: mapped.handle }),
                   ...(mapped.tags && { tags: mapped.tags }),
+                  ...((mapped.metaTitle || mapped.metaDescription) && {
+                    seo: {
+                      ...(mapped.metaTitle && { title: mapped.metaTitle }),
+                      ...(mapped.metaDescription && {
+                        description: mapped.metaDescription,
+                      }),
+                    },
+                  }),
                   options: [],
                   variants: [],
                 },
               });
 
-              const p = productMap.get(productId).productSet;
+              const productRef = productMap.get(productId).productSet;
 
-              if (mapped.option1Name)
-                p.options.push({ name: mapped.option1Name });
-              if (mapped.option2Name)
-                p.options.push({ name: mapped.option2Name });
-              if (mapped.option3Name)
-                p.options.push({ name: mapped.option3Name });
+              if (mapped.option1Name) {
+                productRef.options.push({ name: mapped.option1Name });
+              }
+              if (mapped.option2Name) {
+                productRef.options.push({ name: mapped.option2Name });
+              }
+              if (mapped.option3Name) {
+                productRef.options.push({ name: mapped.option3Name });
+              }
             }
 
             if (mapped.variant_id) {
-              logger.debug("➕ Adding variant", {
-                productId,
-                variantId: mapped.variant_id,
-              });
-
               productMap.get(productId).productSet.variants.push({
                 id: mapped.variant_id,
                 ...(mapped.price && { price: normalizeNumber(mapped.price) }),
@@ -166,33 +187,20 @@ const bulkImportEditWorker = new Worker(
               });
             }
           })
-          .on("end", () => {
-            logger.info("✅ CSV parsing completed", {
-              totalRows,
-              totalProducts: productMap.size,
-            });
-            resolve();
-          })
+          .on("end", resolve)
           .on("error", (err) => {
-            logger.error("❌ CSV parsing error", { error: err.message });
+            logger.error("CSV parsing error", { error: err.message });
             reject(err);
           });
       });
 
-      /* =========================
-         CHANGE RECORD CREATION
-      ========================== */
-
-      logger.info("🔍 Starting change detection...");
-
       for (const { productSet } of productMap.values()) {
-        logger.debug("Checking product", { productId: productSet.id });
-
-        // Mongo: Products.findOne({ shop: history.shop, id: productSet.id }).lean()
-        const existingProduct = await prisma.product.findFirst({
+        const existingProduct = await prisma.product.findUnique({
           where: {
-            shop: history.shop,
-            id: productSet.id,
+            shop_id: {
+              shop: historyDoc.shop,
+              id: productSet.id,
+            },
           },
           include: {
             variants: true,
@@ -200,18 +208,33 @@ const bulkImportEditWorker = new Worker(
         });
 
         if (!existingProduct) {
-          logger.warn("⚠️ Product not found in DB", {
+          logger.warn("Product not found in DB", {
             productId: productSet.id,
+            shop: historyDoc.shop,
           });
           continue;
         }
 
+        const existingProductForDiff = {
+          ...existingProduct,
+          descriptionHtml: existingProduct.description,
+          productType: existingProduct.productType,
+          tags: existingProduct.tags,
+          seo: {
+            title: existingProduct.seoTitle,
+            description: existingProduct.seoDescription,
+          },
+          options: extractProductOptions(existingProduct),
+          variants: mapExistingVariantsForDiff(existingProduct.variants),
+        };
+
         const productFieldChanges = diffProductFields(
-          existingProduct,
+          existingProductForDiff,
           productSet,
         );
+
         const variantFieldChanges = diffVariants(
-          existingProduct.variants,
+          existingProductForDiff.variants,
           productSet.variants,
         );
 
@@ -222,29 +245,23 @@ const bulkImportEditWorker = new Worker(
           continue;
         }
 
-        logger.info("✏️ Changes detected", {
-          productId: productSet.id,
-          productChanges: productFieldChanges.length,
-          variantChanges: variantFieldChanges.length,
-        });
-
         const mutationPayload = buildProductSetMutation({
           productSet,
-          existingProduct,
+          existingProduct: existingProductForDiff,
         });
 
         formattedProducts.push(JSON.stringify(mutationPayload));
 
-        // Mongo: ChangeRecord.create({...})
         await prisma.changeRecord.create({
           data: {
+            options: extractProductOptions(existingProduct),
             editHistoryId: historyId,
             productId: productSet.id,
-            shop: history.shop,
+            shop: historyDoc.shop,
             title: existingProduct.title,
-            image: existingProduct.featuredImageUrl ?? null,
+            image: existingProduct.featuredImageUrl,
             scope: "mixed",
-            batchId: job.id.toString(),
+            batchId: String(job.id),
             productFieldChanges,
             variantFieldChanges,
             status: "pending",
@@ -252,24 +269,12 @@ const bulkImportEditWorker = new Worker(
         });
       }
 
-      logger.info("📦 Total mutation payloads prepared", {
-        count: formattedProducts.length,
-      });
-
-      /* =========================
-         SHOPIFY BULK OPERATION
-      ========================== */
-
       const service = new ProductBulkService(session);
-
-      logger.info("🚀 Sending bulk operation to Shopify...");
 
       const result = await service._bulkOperationHelper({
         formattedProducts: formattedProducts.join("\n"),
         field: "mixed",
       });
-
-      logger.debug("Shopify response", { result });
 
       if (!result?.bulkOperation?.id) {
         throw new Error("Missing bulkOperationId in Shopify response");
@@ -283,67 +288,65 @@ const bulkImportEditWorker = new Worker(
           totalItems: formattedProducts.length,
         },
       });
-      logger.info("✅ History updated with bulk operation ID");
 
-      await clearKeyCaches(`${history.shop}:fetchHistories`);
-      logger.info("🧹 Cache cleared again");
+      await prisma.spreadsheetFile.updateMany({
+        where: {
+          editHistoryId: historyId,
+        },
+        data: {
+          totalRows,
+        },
+      });
 
-      fs.unlinkSync(localFile);
-      logger.info("🗑️ Temporary file deleted");
+      await clearKeyCaches(`${historyDoc.shop}:fetchHistories`);
+
+      if (localFile && fs.existsSync(localFile)) {
+        fs.unlinkSync(localFile);
+      }
     } catch (error) {
-      logger.error("🔥 Worker failed", {
+      logger.error("Worker failed", {
         jobId: job.id,
         error: error.message,
         stack: error.stack,
       });
 
-      try {
-        const history = await prisma.editHistory.findUnique({
+      if (filePath && fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+
+      const existingHistory = await prisma.editHistory.findUnique({
+        where: { id: historyId },
+        select: { id: true, shop: true },
+      });
+
+      if (existingHistory) {
+        await prisma.editHistory.update({
           where: { id: historyId },
-          select: {
-            shop: true,
-            error: true,
+          data: {
+            status: "failed",
+            error: {
+              message: error.message,
+              stack: error.stack,
+              failedAt: new Date().toISOString(),
+            },
           },
         });
 
-        if (history) {
-          const existingErrors = Array.isArray(history.error)
-            ? history.error
-            : [];
-
-          await prisma.editHistory.update({
-            where: { id: historyId },
-            data: {
-              status: "failed",
-              error: [...existingErrors, { message: error.message }],
-            },
-          });
-
-          await clearKeyCaches(`${history.shop}:fetchHistories`);
-        }
-      } catch (innerErr) {
-        logger.error("🔥 Failed to update history after worker error", {
-          jobId: job.id,
-          error: innerErr.message,
-        });
+        await clearKeyCaches(`${existingHistory.shop}:fetchHistories`);
       }
     }
   },
   { connection, concurrency: 1 },
 );
 
-/* =========================
-   LOGS
-========================= */
-
 if (process.env.NODE_ENV !== "production") {
   bulkImportEditWorker
-    .on("active", (job) => logger.info("🚀 Import started", { jobId: job.id }))
+    .on("active", (job) => logger.info("Import started", { jobId: job.id }))
     .on("completed", (job) =>
-      logger.info("✅ Import completed", { jobId: job.id }),
+      logger.info("Import completed", { jobId: job.id }),
     )
     .on("failed", (job, err) =>
-      logger.error("❌ Import failed", {
+      logger.error("Import failed", {
         jobId: job?.id,
         error: err.message,
       }),

@@ -108,15 +108,14 @@ model Variant {
 }
 
 model SpreadsheetFile {
-  id             String        @id @default(cuid())
+  id             String   @id @default(cuid())
   shop           String?
   editHistoryId  String?
   fileUrl        String?
   columnMappings Json?
   totalRows      Int?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  editHistories  EditHistory[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   @@index([shop])
 }
@@ -214,38 +213,36 @@ model SyncHistory {
 }
 
 model EditHistory {
-  id                String           @id @default(cuid())
+  id                String         @id @default(cuid())
   shop              String
   bulkOperationId   String?
   title             Json?
-  queryFilter       String           @default("")
+  queryFilter       String         @default("")
   editedType        String?
   rules             Json?
   affectedFields    Json?
   locationId        String?
-  status            String           @default("pending")
+  status            String         @default("pending")
   scheduledAt       DateTime?
   scheduledUndoAt   DateTime?
-  processedCount    Int              @default(0)
-  totalItems        Int              @default(0)
-  totalRows         Int              @default(0)
-  durationMs        Int              @default(0)
-  editTime          DateTime         @default(now())
+  processedCount    Int            @default(0)
+  totalItems        Int            @default(0)
+  totalRows         Int            @default(0)
+  durationMs        Int            @default(0)
+  editTime          DateTime       @default(now())
   startedAt         DateTime
   completedAt       DateTime?
   undo              Json?
   batch             Json?
-  type              String?          @default("Manual edit")
+  type              String?        @default("Manual edit")
   processingBatchId String?
   scheduledTask     String?
-  importFileId      String?
   user              String?
-  isFavourite       Boolean          @default(false)
+  isFavourite       Boolean        @default(false)
   error             Json?
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
   changeRecords     ChangeRecord[]
-  importFile        SpreadsheetFile? @relation(fields: [importFileId], references: [id])
 
   @@index([shop, status, type, updatedAt], map: "shop_status_type_recent")
   @@index([shop])

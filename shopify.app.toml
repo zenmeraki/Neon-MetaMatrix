@@ -1,8 +1,9 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "20f31d269398d5f23df95d0450e772e9"
+web_directories = [ "web", "web/frontend" ]
 name = "test-app"
-application_url = "https://celebration-payments-usual-employ.trycloudflare.com"
+application_url = "https://sharing-indicators-budgets-edition.trycloudflare.com"
 embedded = true
 handle = "test-app-11537"
 
@@ -11,10 +12,6 @@ automatically_update_urls_on_dev = true
 
 [webhooks]
 api_version = "2025-04"
-
-  [[webhooks.subscriptions]]
-  topics = [ "bulk_operations/finish", "products/create" ]
-  uri = "https://a50e-2409-4073-307-d512-1554-bf40-8d5f-a82.ngrok-free.app/api/webhooks"
 
   [[webhooks.subscriptions]]
   uri = "https://contributing-cole-senate-dried.trycloudflare.com/gdpr/customer_data_erasure"
@@ -28,6 +25,10 @@ api_version = "2025-04"
   uri = "https://contributing-cole-senate-dried.trycloudflare.com/gdpr/shop_data_erasure"
   compliance_topics = [ "shop/redact" ]
 
+  [[webhooks.subscriptions]]
+  topics = [ "products/create", "bulk_operations/finish" ]
+  uri = "https://a50e-2409-4073-307-d512-1554-bf40-8d5f-a82.ngrok-free.app/api/webhooks"
+
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
 scopes = "read_inventory,read_locations,read_products,write_products"
@@ -36,9 +37,9 @@ use_legacy_install_flow = false
 
 [auth]
 redirect_urls = [
-  "https://celebration-payments-usual-employ.trycloudflare.com/auth/callback",
-  "https://celebration-payments-usual-employ.trycloudflare.com/auth/shopify/callback",
-  "https://celebration-payments-usual-employ.trycloudflare.com/api/auth/callback"
+  "https://sharing-indicators-budgets-edition.trycloudflare.com/auth/callback",
+  "https://sharing-indicators-budgets-edition.trycloudflare.com/auth/shopify/callback",
+  "https://sharing-indicators-budgets-edition.trycloudflare.com/api/auth/callback"
 ]
 
 [app_proxy]

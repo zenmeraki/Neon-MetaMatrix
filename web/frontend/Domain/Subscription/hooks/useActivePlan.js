@@ -25,6 +25,8 @@ export const useActivePlan = () => {
   // Check for charge_id in URL
   const urlParams = new URLSearchParams(window.location.search);
   const chargeId = urlParams.get("charge_id");
+  const shopParam = urlParams.get("shop");
+
 
   // Verify current plan
  const verifyPlan = useCallback(() => {

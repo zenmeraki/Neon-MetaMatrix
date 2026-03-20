@@ -45,26 +45,5 @@ export const subscriptionService = {
         throw error;
       }
     },
-  
-    /**
-     * Cancel current subscription
-     * @returns {Promise<Object>} Cancellation result
-     */
-    // async cancelSubscription() {
-    //   try {
-    //     const response = await fetch('/api/subscriptions/cancel', {
-    //       method: 'POST',
-    //     });
-  
-    //     if (!response.ok) {
-    //       throw new Error(`Failed to cancel subscription: ${response.statusText}`);
-    //     }
-  
-    //     return await response.json();
-    //   } catch (error) {
-    //     console.error('Error cancelling subscription:', error);
-    //     throw error;
-    //   }
-    // }
   };
   

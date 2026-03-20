@@ -27,6 +27,7 @@ import { logApiError } from "../utils/errorLogUtils.js";
 import { uploadCsvToCloudinary } from "../utils/uploadCsvToCloudinary.js";
 
 import { prisma } from "../config/database.js";
+import { addbulkImportEditJob } from "../Jobs/Queues/bulkImportEditJob.js";
 
 
 const productService = new Services();
@@ -629,32 +630,21 @@ export const importCsvController = async (req, res) => {
     if (!columnMappings) {
       return res.status(400).json({ message: "columnMappings missing" });
     }
-    const parsedMappings = JSON.parse(columnMappings);
 
-    // 2️⃣ Upload to Cloudinary
-    const fileUrl = await uploadCsvToCloudinary(req.file.path, "124673");
+    const parsedMappings =
+      typeof columnMappings === "string"
+        ? JSON.parse(columnMappings)
+        : columnMappings;
 
-    // 1️⃣ Create DB record
-    const importDoc = await prisma.spreadsheetFile.create({
-      data: {
-        shop,
-        columnMappings: parsedMappings,
-        fileUrl,
-        totalRows: null,
-      },
-    });
+    const localFilePath = req.file.path;
 
-    const multiTitle = createMultiLanguageForFileEdit(
-      req.file.originalname,
-    );
-
+    // 1. Create edit history first
     const newHistory = await prisma.editHistory.create({
       data: {
         shop,
-        title: multiTitle,
+        title: createMultiLanguageForFileEdit(req.file.originalname),
         editedType: "mixed",
         startedAt: new Date(),
-        importFileId: importDoc.id,
         batch: {
           lastProductId: null,
           hasMore: false,
@@ -663,25 +653,34 @@ export const importCsvController = async (req, res) => {
       },
     });
 
+    // 2. Create spreadsheet file and link via editHistoryId
+    const importDoc = await prisma.spreadsheetFile.create({
+      data: {
+        shop,
+        editHistoryId: newHistory.id,
+        columnMappings: parsedMappings,
+        fileUrl: localFilePath,
+      },
+    });
+
     await clearKeyCaches(`${shop}:fetchHistories`);
 
-    // 3️⃣ Queue job
+    // 3. Queue job
     await addbulkImportEditJob({
       historyId: newHistory.id,
-      fileUrl,
+      filePath: localFilePath,
       columnMappings: parsedMappings,
       session,
     });
 
-    fs.unlinkSync(req.file.path);
-
-    res.json({
+    return res.json({
       success: true,
       importId: newHistory.id,
+      spreadsheetFileId: importDoc.id,
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: err.message });
+    return res.status(500).json({ message: err.message });
   }
 };
 
