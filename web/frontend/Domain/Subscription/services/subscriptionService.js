@@ -24,26 +24,17 @@ export const subscriptionService = {
      * @param {Object} plan - Plan to subscribe to
      * @returns {Promise<Object>} Subscription result with confirmation URL
      */
-    async createSubscription(plan) {
-      try {
-        
-        const response = await fetch('/api/subscription/create-subscription', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(plan),
-        });
-  
-        if (!response.ok) {
-          throw new Error(`Failed to create subscription: ${response.statusText}`);
-        }
-  
-        return await response.json();
-      } catch (error) {
-        console.error('Error creating subscription:', error);
-        throw error;
-      }
-    },
+     async createSubscription(plan, fetchFn = fetch) {
+    // ✅ Only send what the backend needs
+    const response = await fetchFn('/api/subscription/create-subscription', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        planKey: plan.key,  // ✅ send planKey, not whole plan object
+      }),
+    });
+    if (!response.ok) throw new Error(`Failed to create subscription: ${response.statusText}`);
+    return await response.json();
+  },
   };
   

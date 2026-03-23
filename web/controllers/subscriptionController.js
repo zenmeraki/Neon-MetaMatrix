@@ -218,15 +218,17 @@ export const createSubscriptionController = async (req, res) => {
         }
       }
     `;
-
+const returnUrlToUse = `https://${session.shop}/admin/apps/${process.env.SHOPIFY_API_KEY}/pricing`;
+console.log("[BILLING] returnUrl:", returnUrlToUse);
+console.log("[BILLING] session.shop:", session.shop);
+console.log("[BILLING] SHOPIFY_API_KEY:", process.env.SHOPIFY_API_KEY);
     const result = await client.query({
       data: {
         query: mutation,
         variables: {
           name: plan.name,
-          returnUrl:
-            returnUrl ||
-            `https://${session.shop}/admin/apps/${process.env.SHOPIFY_API_KEY}`,
+          returnUrl: returnUrlToUse,
+          // returnUrl: returnUrl || `${process.env.SHOPIFY_APP_URL}/api/subscription/callback?shop=${session.shop}`,
           trialDays: plan.trialDays,
           price: plan.price.toString(),
         },
@@ -234,7 +236,6 @@ export const createSubscriptionController = async (req, res) => {
     });
 
     const data = result.body.data.appSubscriptionCreate;
-
     if (data.userErrors && data.userErrors.length > 0) {
       console.error("[CREATE_SUBSCRIPTION] Errors:", data.userErrors);
       return res.status(400).json({
@@ -246,7 +247,10 @@ export const createSubscriptionController = async (req, res) => {
     // 👇 ONLY store pending subscription info, don't touch active subscription
     const existingSub = await prisma.subscription.findFirst({
       where: { shop: session.shop },
+      orderBy: { createdAt: "desc" },
+
     });
+
 
     if (existingSub) {
       await prisma.subscription.update({

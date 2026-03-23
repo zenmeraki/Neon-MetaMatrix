@@ -49,8 +49,9 @@ export const useSubscription = () => {
 
     try {
       // Dispatch the async thunk which will handle loading states
-      const result = await dispatch(createSubscription(selectedPlan));
-
+ const result = await dispatch(
+        createSubscription({ plan: selectedPlan, fetchFn }) // ✅ pass fetchFn
+      );
       if (createSubscription.fulfilled.match(result)) {
         setShowConfirmModal(false);
         const { confirmationUrl, name } = result.payload;

@@ -288,41 +288,7 @@ APP_SUBSCRIPTIONS_UPDATE: {
             "🎉 Pending subscription approved! Upgrading/downgrading plan.",
           );
 
-          // Cancel old ACTIVE subscription if exists
-          if (existing.subscriptionId && existing.status === "ACTIVE") {
-            console.log(
-              `🔄 Cancelling old subscription: ${existing.subscriptionId}`,
-            );
-
-            try {
-              const session = await getSessionForShop(shop); // you already have this TODO in your code
-              const client = new shopify.api.clients.Graphql({ session });
-
-              const cancelMutation = `
-                mutation CancelSubscription($id: ID!) {
-                  appSubscriptionCancel(id: $id) {
-                    userErrors { message }
-                  }
-                }
-              `;
-
-              await client.query({
-                data: {
-                  query: cancelMutation,
-                  variables: { id: existing.subscriptionId },
-                },
-              });
-
-              console.log("✅ Old subscription cancelled");
-            } catch (cancelError) {
-              console.error(
-                "⚠️ Error cancelling old subscription:",
-                cancelError,
-              );
-              // Continue anyway
-            }
-          }
-
+         
           // Activate the new subscription; clear pending fields
           await prisma.subscription.updateMany({
             where: { shop },
@@ -339,6 +305,7 @@ APP_SUBSCRIPTIONS_UPDATE: {
             },
           });
 
+          
           console.log(`✅ [BILLING] ${shop} upgraded to ${sub.name}`);
         } else {
           // 1B. Regular ACTIVE subscription (not linked to pending)
