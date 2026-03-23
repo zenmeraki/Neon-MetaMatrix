@@ -83,8 +83,8 @@ function mergeProductForBulkMirror(existing, incoming) {
     tags: Array.isArray(incoming.tags)
       ? incoming.tags
       : Array.isArray(existing?.tags)
-      ? existing.tags
-      : [],
+        ? existing.tags
+        : [],
     templateSuffix: preferIncomingOrExisting(
       incoming.templateSuffix,
       existing?.templateSuffix ?? null,
@@ -376,7 +376,7 @@ export async function handleProductEditOperation(bulkOperationId) {
 
     if (bulkOperation?.url) {
       const records = await fetchBulkOperationData(bulkOperation.url, history.shop);
-      processedCount = Number(bulkOperation.rootObjectCount || 0);
+      processedCount = Number(bulkOperation.objectCount || bulkOperation.rootObjectCount || 0);
 
       if (records.length > 0) {
         await prisma.$transaction(
@@ -604,6 +604,13 @@ export async function fetchBulkOperationData(url, shop) {
         const product = parsed?.data?.productSet?.product;
 
         if (!product?.id) {
+          const productSet = parsed?.data?.productSet;
+          const userErrors = productSet?.userErrors;
+          if (userErrors?.length) {
+            console.error(`❌ Shopify userErrors on line ${i + 1}:`, JSON.stringify(userErrors));
+          } else {
+            console.error(`❌ Null product on line ${i + 1}, raw:`, lines[i]);
+          }
           skipped += 1;
           continue;
         }

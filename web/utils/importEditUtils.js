@@ -171,7 +171,6 @@ export const buildProductSetMutation = ({ productSet, existingProduct }) => {
     productSet: {
       id: productSet.id,
 
-      // 🔹 product-level fields
       ...(productSet.title && { title: productSet.title }),
       ...(productSet.vendor && { vendor: productSet.vendor }),
       ...(productSet.status && { status: productSet.status }),
@@ -182,27 +181,30 @@ export const buildProductSetMutation = ({ productSet, existingProduct }) => {
       ...(productSet.handle && { handle: productSet.handle }),
       ...(productSet.tags && { tags: productSet.tags }),
 
-      // 🔹 OPTIONS (Shopify format)
       productOptions: existingProduct.options?.map((op) => ({
         name: op.name,
-        values: op.values?.map((val) => ({
-          name: val,
-        })),
+        values: op.values?.map((val) => ({ name: val })),
       })),
 
-      // 🔹 VARIANTS (Shopify format)
       variants: productSet.variants.map((variant) => {
         const dbVariant = existingProduct.variants.find(
           (v) => v.id === variant.id,
         );
 
+        const optionValues = existingProduct.options
+          ?.map((op, i) => {
+            const val = dbVariant?.[`option${i + 1}`];
+            if (!val) return null;
+            return { optionName: op.name, name: val };
+          })
+          .filter(Boolean);
+
         return {
           id: variant.id,
 
-          optionValues: dbVariant?.selectedOptions?.map((op) => ({
-            optionName: op.name,
-            name: op.value,
-          })),
+          // ✅ Always include optionValues when options exist — Shopify requires
+          // this to be non-null on every variant when productOptions is present
+          ...(optionValues?.length && { optionValues }),
 
           ...(variant.price !== undefined && {
             price: Number(variant.price).toFixed(2),

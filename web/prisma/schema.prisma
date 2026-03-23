@@ -239,6 +239,7 @@ model EditHistory {
   scheduledTask     String?
   user              String?
   isFavourite       Boolean        @default(false)
+  isSpreadsheetEdit Boolean        @default(false)
   error             Json?
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
@@ -246,6 +247,7 @@ model EditHistory {
 
   @@index([shop, status, type, updatedAt], map: "shop_status_type_recent")
   @@index([shop])
+  @@index([isSpreadsheetEdit]) 
 }
 
 model Collection {

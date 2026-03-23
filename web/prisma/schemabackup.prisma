@@ -1,7 +1,6 @@
 generator client {
   provider = "prisma-client-js"
-    output   = "../generated/prisma"
-
+  output   = "../generated/prisma"
 }
 
 datasource db {
@@ -32,14 +31,11 @@ model Product {
   featuredImageAltText String?
   optionsJson          Json?
   collectionsJson      Json?
-
-   option1Name          String?
+  option1Name          String?
   option2Name          String?
   option3Name          String?
   variantCount         Int?      @default(0)
   visibleOnlineStore   Boolean?
-  visiblePos           Boolean?
-
   variants             Variant[]
 
   @@id([shop, id])
@@ -58,7 +54,6 @@ model Product {
   @@index([shop, option3Name])
   @@index([shop, variantCount])
   @@index([shop, visibleOnlineStore])
-  @@index([shop, visiblePos])
 }
 
 model Variant {
@@ -68,34 +63,25 @@ model Variant {
   title               String?
   sku                 String?
   barcode             String?
-
   price               Float?
   compareAtPrice      Float?
-  cost                Float?
-
   inventoryQuantity   Int?
   inventoryPolicy     String?
-
   taxable             Boolean?
   taxCode             String?
-
-  weight              Float?
-  weightUnit          String?
-
-  countryOfOrigin     String?
-  hsTariffCode        String?
-
   position            Int?
   selectedOptionsJson Json?
-
-   option1Value        String?
+  cost                Float?
+  countryOfOrigin     String?
+  hsTariffCode        String?
+  weight              Float?
+  weightUnit          String?
+  option1Value        String?
   option2Value        String?
   option3Value        String?
-  tracked             Boolean?
   physicalProduct     Boolean?
   profitMargin        Float?
-  inventoryLocations  Json?
-
+  tracked             Boolean?
   product             Product  @relation(fields: [shop, productId], references: [shop, id])
 
   @@id([shop, id])
@@ -103,7 +89,7 @@ model Variant {
   @@index([shop, price])
   @@index([shop, productId])
   @@index([shop, barcode])
-   @@index([shop, title])
+  @@index([shop, title])
   @@index([shop, compareAtPrice])
   @@index([shop, cost])
   @@index([shop, inventoryQuantity])
@@ -122,15 +108,14 @@ model Variant {
 }
 
 model SpreadsheetFile {
-  id             String        @id @default(cuid())
+  id             String   @id @default(cuid())
   shop           String?
   editHistoryId  String?
   fileUrl        String?
   columnMappings Json?
   totalRows      Int?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  editHistories  EditHistory[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   @@index([shop])
 }
@@ -228,41 +213,41 @@ model SyncHistory {
 }
 
 model EditHistory {
-  id                String           @id @default(cuid())
+  id                String         @id @default(cuid())
   shop              String
   bulkOperationId   String?
   title             Json?
-  queryFilter       String           @default("")
+  queryFilter       String         @default("")
   editedType        String?
   rules             Json?
   affectedFields    Json?
   locationId        String?
-  status            String           @default("pending")
+  status            String         @default("pending")
   scheduledAt       DateTime?
   scheduledUndoAt   DateTime?
-  processedCount    Int              @default(0)
-  totalItems        Int              @default(0)
-  totalRows         Int              @default(0)
-  durationMs        Int              @default(0)
-  editTime          DateTime         @default(now())
+  processedCount    Int            @default(0)
+  totalItems        Int            @default(0)
+  totalRows         Int            @default(0)
+  durationMs        Int            @default(0)
+  editTime          DateTime       @default(now())
   startedAt         DateTime
   completedAt       DateTime?
   undo              Json?
   batch             Json?
-  type              String?          @default("Manual edit")
+  type              String?        @default("Manual edit")
   processingBatchId String?
   scheduledTask     String?
-  importFileId      String?
   user              String?
-  isFavourite       Boolean          @default(false)
+  isFavourite       Boolean        @default(false)
+  isSpreadsheetEdit Boolean        @default(false)
   error             Json?
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
   changeRecords     ChangeRecord[]
-  importFile        SpreadsheetFile? @relation(fields: [importFileId], references: [id])
 
   @@index([shop, status, type, updatedAt], map: "shop_status_type_recent")
   @@index([shop])
+  @@index([isSpreadsheetEdit]) 
 }
 
 model Collection {
@@ -421,26 +406,26 @@ model ErrorLog {
   @@index([source])
   @@index([createdAt])
 }
+
 model ShopifySession {
-  id               String  @id
-  shop             String
-  state            String
+  id               String  @id @db.VarChar(255)
+  shop             String  @db.VarChar(255)
+  state            String  @db.VarChar(255)
   isOnline         Boolean
-  scope            String?
+  scope            String? @db.VarChar(1024)
   expires          Int?
-  onlineAccessInfo String?
-  accessToken      String?
+  onlineAccessInfo String? @db.VarChar(255)
+  accessToken      String? @db.VarChar(255)
 
   @@map("shopify_sessions")
-  @@index([shop])
-  @@index([isOnline])
 }
 
 model ShopifySessionMigration {
-  migrationName String @id @map("migration_name")
+  migrationName String @id @map("migration_name") @db.VarChar(255)
 
   @@map("shopify_sessions_migrations")
 }
+
 enum SubscriptionStatus {
   FREE
   PENDING

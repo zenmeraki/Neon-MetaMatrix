@@ -22,36 +22,43 @@ const normalizeBoolean = (v) => v === true || v === "TRUE" || v === "true";
 const normalizeNumber = (v) =>
   v !== undefined && v !== null && v !== "" ? Number(v) : undefined;
 
+
+// ✅ FIX: derive real option values from existing variants
+// Mongo stored options with values on the product document.
+// Prisma stores options as flat columns (option1Name/2/3) and values on variants.
+// We reconstruct the same shape diffProductFields / buildProductSetMutation expects.
 function extractProductOptions(existingProduct) {
   const options = [];
 
-  if (existingProduct.option1Name) {
-    options.push({
-      id: "option1",
-      name: existingProduct.option1Name,
-      values: [],
-    });
-  }
+  const nameCols = ["option1Name", "option2Name", "option3Name"];
+  const valueCols = ["option1Value", "option2Value", "option3Value"];
 
-  if (existingProduct.option2Name) {
-    options.push({
-      id: "option2",
-      name: existingProduct.option2Name,
-      values: [],
-    });
-  }
+  for (let i = 0; i < 3; i++) {
+    const name = existingProduct[nameCols[i]];
+    if (!name) continue;
 
-  if (existingProduct.option3Name) {
+    const valueKey = valueCols[i];
+    const uniqueValues = [
+      ...new Set(
+        (existingProduct.variants || [])
+          .map((v) => v[valueKey])
+          .filter(Boolean)
+      ),
+    ];
+
     options.push({
-      id: "option3",
-      name: existingProduct.option3Name,
-      values: [],
+      id: `option${i + 1}`,
+      name,
+      values: uniqueValues,   // ✅ real values — Mongo had these, Prisma was sending []
     });
   }
 
   return options;
 }
 
+
+// Maps Prisma variant rows to the same shape the Mongo variants had
+// so diffVariants / buildProductSetMutation work identically
 function mapExistingVariantsForDiff(existingVariants) {
   return (existingVariants || []).map((variant) => ({
     id: variant.id,
@@ -69,6 +76,7 @@ function mapExistingVariantsForDiff(existingVariants) {
     hsTariffCode: variant.hsTariffCode,
     weight: variant.weight,
     weightUnit: variant.weightUnit,
+    // ✅ Prisma stores option1Value/2/3, Mongo had option1/2/3 — map to what diffVariants expects
     option1: variant.option1Value,
     option2: variant.option2Value,
     option3: variant.option3Value,
@@ -78,16 +86,15 @@ function mapExistingVariantsForDiff(existingVariants) {
   }));
 }
 
+
 const bulkImportEditWorker = new Worker(
   QUEUE_NAME,
   async (job) => {
     const { historyId, filePath, columnMappings, session } = job.data;
     const localFile = filePath;
 
-    let historyDoc = null;
-
     try {
-      historyDoc = await prisma.editHistory.findUnique({
+      const historyDoc = await prisma.editHistory.findUnique({
         where: { id: historyId },
       });
 
@@ -97,9 +104,7 @@ const bulkImportEditWorker = new Worker(
 
       await prisma.editHistory.update({
         where: { id: historyId },
-        data: {
-          status: "processing",
-        },
+        data: { status: "processing" },
       });
 
       await clearKeyCaches(`${historyDoc.shop}:fetchHistories`);
@@ -122,7 +127,7 @@ const bulkImportEditWorker = new Worker(
             }
 
             if (!mapped.id) {
-              logger.warn("Skipping row - no product id", { row });
+              logger.warn("⚠️ Skipping row - no product id", { row });
               return;
             }
 
@@ -142,7 +147,18 @@ const bulkImportEditWorker = new Worker(
                     productType: mapped.productType,
                   }),
                   ...(mapped.handle && { handle: mapped.handle }),
-                  ...(mapped.tags && { tags: mapped.tags }),
+
+                  // ✅ FIX: tags in CSV is a comma-separated string e.g. "cotton,summer"
+                  // Prisma DB stores String[] and diffProductFields compares arrays.
+                  // Without this split, diff always fires even when nothing changed,
+                  // and Shopify receives a string instead of an array → wrong update.
+                  ...(mapped.tags && {
+                    tags: mapped.tags
+                      .split(",")
+                      .map((t) => t.trim())
+                      .filter(Boolean),
+                  }),
+
                   ...((mapped.metaTitle || mapped.metaDescription) && {
                     seo: {
                       ...(mapped.metaTitle && { title: mapped.metaTitle }),
@@ -156,17 +172,11 @@ const bulkImportEditWorker = new Worker(
                 },
               });
 
-              const productRef = productMap.get(productId).productSet;
+              const p = productMap.get(productId).productSet;
 
-              if (mapped.option1Name) {
-                productRef.options.push({ name: mapped.option1Name });
-              }
-              if (mapped.option2Name) {
-                productRef.options.push({ name: mapped.option2Name });
-              }
-              if (mapped.option3Name) {
-                productRef.options.push({ name: mapped.option3Name });
-              }
+              if (mapped.option1Name) p.options.push({ name: mapped.option1Name });
+              if (mapped.option2Name) p.options.push({ name: mapped.option2Name });
+              if (mapped.option3Name) p.options.push({ name: mapped.option3Name });
             }
 
             if (mapped.variant_id) {
@@ -189,7 +199,7 @@ const bulkImportEditWorker = new Worker(
           })
           .on("end", resolve)
           .on("error", (err) => {
-            logger.error("CSV parsing error", { error: err.message });
+            logger.error("❌ CSV parsing error", { error: err.message });
             reject(err);
           });
       });
@@ -202,29 +212,27 @@ const bulkImportEditWorker = new Worker(
               id: productSet.id,
             },
           },
-          include: {
-            variants: true,
-          },
+          include: { variants: true },
         });
 
         if (!existingProduct) {
-          logger.warn("Product not found in DB", {
+          logger.warn("⚠️ Product not found in DB", {
             productId: productSet.id,
             shop: historyDoc.shop,
           });
           continue;
         }
 
+        // ✅ Remap Prisma product to the same shape Mongo documents had
+        // so diffProductFields / buildProductSetMutation work without changes
         const existingProductForDiff = {
           ...existingProduct,
           descriptionHtml: existingProduct.description,
-          productType: existingProduct.productType,
-          tags: existingProduct.tags,
           seo: {
             title: existingProduct.seoTitle,
             description: existingProduct.seoDescription,
           },
-          options: extractProductOptions(existingProduct),
+          options: extractProductOptions(existingProduct),   // ✅ now has real values
           variants: mapExistingVariantsForDiff(existingProduct.variants),
         };
 
@@ -239,9 +247,7 @@ const bulkImportEditWorker = new Worker(
         );
 
         if (!productFieldChanges.length && !variantFieldChanges.length) {
-          logger.debug("No changes detected", {
-            productId: productSet.id,
-          });
+          logger.debug("No changes detected", { productId: productSet.id });
           continue;
         }
 
@@ -254,12 +260,16 @@ const bulkImportEditWorker = new Worker(
 
         await prisma.changeRecord.create({
           data: {
-            options: extractProductOptions(existingProduct),
+            options: existingProductForDiff.options.map((op) => ({
+              id: op.id,
+              name: op.name,
+              values: op.values,                // ✅ real values, same as Mongo
+            })),
             editHistoryId: historyId,
             productId: productSet.id,
             shop: historyDoc.shop,
             title: existingProduct.title,
-            image: existingProduct.featuredImageUrl,
+            image: existingProduct.featuredImageUrl,  // Prisma flat column equivalent of Mongo featuredMedia.preview.image.url
             scope: "mixed",
             batchId: String(job.id),
             productFieldChanges,
@@ -270,6 +280,7 @@ const bulkImportEditWorker = new Worker(
       }
 
       const service = new ProductBulkService(session);
+      console.log(formattedProducts, "formattedProducts");
 
       const result = await service._bulkOperationHelper({
         formattedProducts: formattedProducts.join("\n"),
@@ -286,16 +297,13 @@ const bulkImportEditWorker = new Worker(
           totalRows,
           bulkOperationId: result.bulkOperation.id,
           totalItems: formattedProducts.length,
+          processingBatchId: String(job.id),  
         },
       });
 
       await prisma.spreadsheetFile.updateMany({
-        where: {
-          editHistoryId: historyId,
-        },
-        data: {
-          totalRows,
-        },
+        where: { editHistoryId: historyId },
+        data: { totalRows },
       });
 
       await clearKeyCaches(`${historyDoc.shop}:fetchHistories`);
@@ -304,7 +312,7 @@ const bulkImportEditWorker = new Worker(
         fs.unlinkSync(localFile);
       }
     } catch (error) {
-      logger.error("Worker failed", {
+      logger.error("🔥 Worker failed", {
         jobId: job.id,
         error: error.message,
         stack: error.stack,
@@ -341,12 +349,12 @@ const bulkImportEditWorker = new Worker(
 
 if (process.env.NODE_ENV !== "production") {
   bulkImportEditWorker
-    .on("active", (job) => logger.info("Import started", { jobId: job.id }))
+    .on("active", (job) => logger.info("🚀 Import started", { jobId: job.id }))
     .on("completed", (job) =>
-      logger.info("Import completed", { jobId: job.id }),
+      logger.info("✅ Import completed", { jobId: job.id }),
     )
     .on("failed", (job, err) =>
-      logger.error("Import failed", {
+      logger.error("❌ Import failed", {
         jobId: job?.id,
         error: err.message,
       }),

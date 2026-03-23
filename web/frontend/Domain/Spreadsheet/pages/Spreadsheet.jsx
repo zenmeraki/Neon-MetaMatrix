@@ -15,6 +15,7 @@ import CsvUploader from "../components/CsvUploader";
 import CsvPreviewTable from "../components/CsvPreviewTable";
 import ConfirmImportModal from "../components/ConfirmImportModal";
 import { parseCSV } from "../utils/csvParser";
+import { useNavigate } from "react-router-dom";
 
 export default function Spreadsheet() {
     const [file, setFile] = useState(null);
@@ -23,7 +24,7 @@ export default function Spreadsheet() {
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [status, setStatus] = useState(null);
     const [uploading, setUploading] = useState(false);
-
+    const navigate = useNavigate();
     const handleDrop = (_, acceptedFiles) => {
         const selectedFile = acceptedFiles[0];
         if (!selectedFile) return;
@@ -70,7 +71,8 @@ export default function Spreadsheet() {
             setFile(null);
             setParsedData([]);
             setColumnMappings({});
-
+            console.log(result)
+            navigate("/editDetails/" + result.importId);
             return true;
         } catch (err) {
             setStatus({
