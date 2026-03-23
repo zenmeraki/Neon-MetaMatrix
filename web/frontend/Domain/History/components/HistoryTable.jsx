@@ -130,18 +130,19 @@ const HistoryTable = memo(
      * Determines if undo action is allowed for the item
      */
     const canUndo = (item) => {
-      const { status, undo } = item;
+  const { status, undo } = item;
 
-      // Undo is allowed only if:
-      // 1. Edit is completed
-      // 2. Undo is allowed in the item
-      // 3. Undo is not already processing or completed
-      return (
-        status === "completed" &&
-        undo?.allowed === true &&
-        (!undo?.status || undo.status === "idle" || undo.status === "failed")
-      );
-    };
+  // If undo object is missing entirely, default allowed to true
+  // (matches Mongo schema behaviour where allowed defaults to true)
+  const isAllowed = undo == null ? true : undo.allowed === true;
+  const undoStatus = undo?.status ?? "idle";
+
+  return (
+    status === "completed" &&
+    isAllowed &&
+    (undoStatus === "idle" || undoStatus === "failed")
+  );
+};
 
     const handleUndo = (history) => {
       setUndoHistoryItem(history);

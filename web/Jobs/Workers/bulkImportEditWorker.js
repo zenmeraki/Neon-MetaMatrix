@@ -80,6 +80,9 @@ function mapExistingVariantsForDiff(existingVariants) {
     option1: variant.option1Value,
     option2: variant.option2Value,
     option3: variant.option3Value,
+     selectedOptions: Array.isArray(variant.selectedOptionsJson)  // ✅ ADD THIS
+      ? variant.selectedOptionsJson
+      : [],
     tracked: variant.tracked,
     physicalProduct: variant.physicalProduct,
     profitMargin: variant.profitMargin,

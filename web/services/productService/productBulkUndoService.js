@@ -82,11 +82,15 @@ class UndoEditService {
     let count = 0;
     let mode = PRODUCT_SET_MODE.PRODUCT_ONLY;
 
-    if (OPTION_NAME_FIELDS.has(field)) {
-      mode = PRODUCT_SET_MODE.BOTH;
-    } else if (FIELD_CONFIGS[field]?.isVariantLevel) {
-      mode = PRODUCT_SET_MODE.VARIANT_ONLY;
-    }
+    if (!field || field === "mixed") {
+  mode = PRODUCT_SET_MODE.BOTH;        // ✅ includes both product + variants in response
+} else if (OPTION_NAME_FIELDS.has(field)) {
+  mode = PRODUCT_SET_MODE.BOTH;
+} else if (FIELD_CONFIGS[field]?.isVariantLevel) {
+  mode = PRODUCT_SET_MODE.VARIANT_ONLY;
+} else {
+  mode = PRODUCT_SET_MODE.PRODUCT_ONLY;
+}
 
     for (const product of products) {
       const payload = {
@@ -119,10 +123,24 @@ class UndoEditService {
         payload.variants = product.variantFieldChanges?.map((variant) => {
           const variantPayload = {
             id: variant.variantId,
-            optionValues: variant.selectedOptions?.map((op) => ({
-              optionName: op.name,
-              name: op.value,
-            })),
+            optionValues: (() => {
+  // selectedOptions stored directly (regular bulk edits)
+  if (variant.selectedOptions?.length) {
+    return variant.selectedOptions.map((op) => ({
+      optionName: op.name,
+      name: op.value,
+    }));
+  }
+  // Fallback for CSV imports — reconstruct from product.options + variant index
+  const opts = product.options || [];
+  return opts
+    .map((op, i) => {
+      const val = variant[`option${i + 1}Value`] ?? variant[`option${i + 1}`];
+      if (!val) return null;
+      return { optionName: op.name, name: val };
+    })
+    .filter(Boolean);
+})(),
           };
           
           const changePayload =
@@ -221,6 +239,7 @@ class UndoEditService {
     const value = revertValue ?? oldValue;
 
     const fieldMap = {
+      description: { descriptionHtml: value },
       "Meta Title": {
         seo: {
           title: value,

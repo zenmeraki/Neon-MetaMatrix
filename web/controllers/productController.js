@@ -643,7 +643,9 @@ export const importCsvController = async (req, res) => {
         title: createMultiLanguageForFileEdit(req.file.originalname),
         editedType: "mixed",
         startedAt: new Date(),
-        isSpreadsheetEdit: true,    // ✅ ADDED — was missing in Prisma version
+        isSpreadsheetEdit: true,  
+        undo: { allowed: true },
+        rules: [{ field: "mixed" }],
         batch: {
           lastProductId: null,
           hasMore: false,
