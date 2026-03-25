@@ -93,12 +93,22 @@ class UndoEditService {
 }
 
     for (const product of products) {
+      const productFieldChanges = Array.isArray(product?.productFieldChanges)
+        ? product.productFieldChanges
+        : [];
+      const variantFieldChanges = Array.isArray(product?.variantFieldChanges)
+        ? product.variantFieldChanges
+        : [];
+      const productOptions = Array.isArray(product?.options)
+        ? product.options
+        : [];
+
       const payload = {
         id: product.productId,
       };
 
-      if (product.productFieldChanges.length > 0) {
-        product.productFieldChanges.forEach((fld) => {
+      if (productFieldChanges.length > 0) {
+        productFieldChanges.forEach((fld) => {
           if (
             !["option1Name", "option2Name", "option3Name"].includes(fld.field)
           ) {
@@ -114,25 +124,25 @@ class UndoEditService {
         });
       }
 
-      if (product.variantFieldChanges.length > 0) {
-        payload.productOptions = product.options.map((op) => ({
+      if (variantFieldChanges.length > 0) {
+        payload.productOptions = productOptions.map((op) => ({
           name: op.name,
           values: op.values?.map((val) => ({ name: val })),
         }));
         
-        payload.variants = product.variantFieldChanges?.map((variant) => {
+        payload.variants = variantFieldChanges.map((variant) => {
           const variantPayload = {
             id: variant.variantId,
             optionValues: (() => {
   // selectedOptions stored directly (regular bulk edits)
-  if (variant.selectedOptions?.length) {
+  if (Array.isArray(variant.selectedOptions) && variant.selectedOptions.length) {
     return variant.selectedOptions.map((op) => ({
       optionName: op.name,
       name: op.value,
     }));
   }
   // Fallback for CSV imports — reconstruct from product.options + variant index
-  const opts = product.options || [];
+  const opts = productOptions;
   return opts
     .map((op, i) => {
       const val = variant[`option${i + 1}Value`] ?? variant[`option${i + 1}`];

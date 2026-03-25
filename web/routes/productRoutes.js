@@ -2,25 +2,29 @@
 import express from "express";
 import {
   createProductExport,
-  getProductsWithQuery,
-} from "../controllers/productController.js";
+} from "../controllers/productExportController.js";
 import {
   handleDownloadExportProductsData,
   handleExportProductsData,
-  importCsvController
-} from "../controllers/productController.js";
+} from "../controllers/productExportController.js";
 import {
   clearProductTypes,
-  getProductTypes,
-} from "../controllers/productController.js";
+} from "../controllers/productSyncController.js";
 import {
-  checkEditStatus,
   handleBulkEditProduct,
   trackEditPreview,
   undoEdit,
-} from "../controllers/productController.js";
+} from "../controllers/productBulkEditController.js";
 
-import { csvBulkProductsEdit } from "../controllers/productController.js";
+import {
+  checkEditStatus,
+  getProductTypes,
+  getProductsWithQuery,
+} from "../controllers/productQueryController.js";
+import {
+  csvBulkProductsEdit,
+  importCsvController,
+} from "../controllers/productImportController.js";
 
 import { subscriptionMiddleware, requirePaidPlanMiddleware } from "../middleware/subscriptionMiddleware.js";
 import productQuerySchema from "../validations/productQuerySchema.js";
@@ -38,7 +42,7 @@ import { validateBody, validateQuery } from "../middleware/validateQuery.js";
 //   getFilterCombinations,
 // } from "../controllers/filterCombinationController.js";
 // import path from "path";
-import { createScheduledEdit } from "../controllers/productController.js";
+import { createScheduledEdit } from "../controllers/productBulkEditController.js";
 import { productExportSchema } from "../validations/productExportQuerySchema.js";
 import { uploadCsv } from "../middleware/uploadCsv.js";
 // import { getRecurringEditById, getRecurringEdits } from "../controllers/historyController.js";
