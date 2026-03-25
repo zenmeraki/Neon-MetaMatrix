@@ -131,6 +131,8 @@ export default function EditDetails() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalChanges, setTotalChanges] = useState(0);
+  const [displayProgress, setDisplayProgress] = useState(0);
+
 
   const itemsPerPage = 10;
 
@@ -230,6 +232,15 @@ export default function EditDetails() {
   [id],
 );
 
+// Move these up — right after your useState declarations, before any useEffect
+const status = historyItem?.status || "Unknown";
+const totalItems = Number(historyItem?.totalItems) || 0;
+const progressCount = Number(historyItem?.progressCount) || 0;
+const processedCount = Number(historyItem?.processedCount) || 0;
+const actual = progressCount || processedCount || 0;
+const completion = totalItems > 0 ? Math.round((actual / totalItems) * 100) : 0;
+const undo = historyItem?.undo || null; 
+
   useEffect(() => {
     fetchHistoryDetails();
   }, [fetchHistoryDetails]);
@@ -283,6 +294,32 @@ export default function EditDetails() {
 
     return () => clearInterval(interval);
   }, [historyItem?.id, historyItem?.status, historyItem?.undo?.status, id, currentPage, fetchChanges]);
+
+useEffect(() => {
+  const normalized = String(status).toLowerCase();
+
+  if (normalized === "completed") {
+    setDisplayProgress(100);
+    return;
+  }
+
+  if (normalized !== "processing" && normalized !== "pending") {
+    setDisplayProgress(completion);
+    return;
+  }
+
+  setDisplayProgress((prev) => Math.max(prev, completion));
+
+  const timer = setInterval(() => {
+    setDisplayProgress((prev) => {
+      const floor = Math.max(prev, completion);
+      if (floor >= 90) return 90;
+      return floor + 0.3;
+    });
+  }, 150);
+
+  return () => clearInterval(timer);
+}, [status, completion]);
 
  const flattenedRows = useMemo(() => {
   if (!Array.isArray(changes) || changes.length === 0) return [];
@@ -430,14 +467,7 @@ export default function EditDetails() {
   if (!historyItem) return null;
 
   const title = historyItem?.title || t("EditDetails");
-  const status = historyItem?.status || "Unknown";
-  const processedCount = Number(historyItem?.processedCount) || 0;
-  const totalItems = Number(historyItem?.totalItems) || 0;
-  const progressCount = Number(historyItem?.progressCount) || 0;
-  const undo = historyItem?.undo || null;
-
-  const actual = progressCount || processedCount || 0;
-  const completion = totalItems > 0 ? Math.round((actual / totalItems) * 100) : 0;
+  
 
   const undoActual = Number(undo?.processedCount) || 0;
   const undoCompletion =
@@ -498,7 +528,7 @@ export default function EditDetails() {
                 </InlineStack>
 
                 <ProgressBar
-                  progress={completion}
+                  progress={displayProgress}
                   animated={String(status).toLowerCase() === "processing"}
                   size="small"
                   tone="primary"

@@ -200,6 +200,37 @@ const HistoryTable = memo(
       setLocalHistories(histories);
     }, [histories]);
 
+    useEffect(() => {
+  const activeUndoIds = localHistories
+    .filter((h) => h.undo?.status === "processing" || h.undo?.status === "pending")
+    .map((h) => h.id);
+
+  if (activeUndoIds.length === 0) return;
+
+  const interval = setInterval(async () => {
+    try {
+      const updates = await Promise.all(
+        activeUndoIds.map((id) =>
+          fetch(`/api/history/get-edit-history-details/${id}`)
+            .then((r) => r.ok ? r.json() : null)
+            .then((json) => json?.data || null)
+        )
+      );
+
+      setLocalHistories((prev) =>
+        prev.map((h) => {
+          const updated = updates.find((u) => u?.id === h.id);
+          return updated ? { ...h, ...updated } : h;
+        })
+      );
+    } catch (err) {
+      console.warn("Undo polling error:", err);
+    }
+  }, 3000);
+
+  return () => clearInterval(interval);
+}, [localHistories]);
+
     /**
      * Formats edit time with proper handling for processing states
      */

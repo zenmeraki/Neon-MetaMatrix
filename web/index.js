@@ -159,7 +159,6 @@ app.use("/api/suggestion", SuggestionRoutes);
 app.use("/api/subscription", SubscriptionRoutes);
 app.use("/api/history", HistoryRoutes);
 app.use("/api/store", StoreRoutes);
-// app.use("/api/location", LocationRoutes);
 app.use("/api/sync", SyncRoutes);
 app.use("/admin", AdminRoutes);
 app.use("/metrics", metricsRoute);
