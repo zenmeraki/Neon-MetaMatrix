@@ -6,7 +6,25 @@ import {
 import {
   countProducts,
   findProductsForListing,
+  findDistinctProductFieldValues,
 } from "./productQueryRepository.js";
+
+const FILTER_VALUE_FIELD_MAP = {
+  googleShoppingCategory: "googleShoppingCategory",
+  googleShoppingColor: "googleShoppingColor",
+  googleShoppingCustomLabel0: "googleShoppingCustomLabel0",
+  googleShoppingCustomLabel1: "googleShoppingCustomLabel1",
+  googleShoppingCustomLabel2: "googleShoppingCustomLabel2",
+  googleShoppingCustomLabel3: "googleShoppingCustomLabel3",
+  googleShoppingCustomLabel4: "googleShoppingCustomLabel4",
+  googleShoppingMpn: "googleShoppingMpn",
+  googleShoppingMaterial: "googleShoppingMaterial",
+  googleShoppingSize: "googleShoppingSize",
+  categoryColor: "categoryColor",
+  categoryFabric: "categoryFabric",
+  categoryFit: "categoryFit",
+  categorySize: "categorySize",
+};
 
 export async function getProductsWithFilters({
   queryParams = {},
@@ -51,4 +69,36 @@ export async function getProductsWithFilters({
   await setCache(cacheKey, returnData, 300);
 
   return returnData;
+}
+
+export async function getDistinctProductFilterValues({
+  shop,
+  field,
+  search = "",
+  take = 20,
+}) {
+  const prismaField = FILTER_VALUE_FIELD_MAP[field];
+  if (!prismaField) {
+    throw new Error("Unsupported filter field");
+  }
+
+  const cacheKey = `${shop}:ProductFilterValues:${field}:${search.toLowerCase()}:${take}`;
+  const cachedData = await getCache(cacheKey);
+  if (cachedData) return cachedData;
+
+  const rows = await findDistinctProductFieldValues({
+    shop,
+    field: prismaField,
+    search,
+    take,
+  });
+
+  const result = rows
+    .map((row) => row?.[prismaField])
+    .filter((value) => typeof value === "string" && value.trim().length > 0)
+    .map((title) => ({ title }));
+
+  await setCache(cacheKey, result, 300);
+
+  return result;
 }

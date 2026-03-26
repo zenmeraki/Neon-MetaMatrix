@@ -27,6 +27,30 @@ model Product {
   totalInventory       Int?
   categoryId           String?
   categoryName         String?
+  googleShoppingEnabled Boolean?
+  googleShoppingAgeGroup String?
+  googleShoppingCategory String?
+  googleShoppingColor String?
+  googleShoppingCondition String?
+  googleShoppingCustomLabel0 String?
+  googleShoppingCustomLabel1 String?
+  googleShoppingCustomLabel2 String?
+  googleShoppingCustomLabel3 String?
+  googleShoppingCustomLabel4 String?
+  googleShoppingCustomProduct Boolean?
+  googleShoppingGender String?
+  googleShoppingMpn String?
+  googleShoppingMaterial String?
+  googleShoppingSize String?
+  googleShoppingSizeSystem String?
+  googleShoppingSizeType String?
+  categoryAgeGroup     String?
+  categoryColor        String?
+  categoryFabric       String?
+  categoryFit          String?
+  categorySize         String?
+  categoryTargetGender String?
+  categoryWaistRise    String?
   featuredImageUrl     String?
   featuredImageAltText String?
   optionsJson          Json?
@@ -48,6 +72,14 @@ model Product {
   @@index([shop, updatedAt])
   @@index([shop, publishedAt])
   @@index([shop, categoryName])
+  @@index([shop, googleShoppingEnabled])
+  @@index([shop, googleShoppingCategory])
+  @@index([shop, googleShoppingCondition])
+  @@index([shop, googleShoppingGender])
+  @@index([shop, googleShoppingAgeGroup])
+  @@index([shop, categoryColor])
+  @@index([shop, categorySize])
+  @@index([shop, categoryTargetGender])
   @@index([shop, templateSuffix])
   @@index([shop, option1Name])
   @@index([shop, option2Name])

@@ -5,7 +5,10 @@ import { Worker } from "bullmq";
 import { connection } from "../../Config/redis.js";
 import CacheService from "../../utils/cacheService.js";
 import { clearKeyCaches } from "../../utils/cacheUtils.js";
-import { transformWebhookPayload } from "../../utils/webhookTransformers.js";
+import {
+  extractVariantsForPrisma,
+  transformWebhookPayload,
+} from "../../utils/webhookTransformers.js";
 
 import { prisma } from "../../config/database.js";
 
@@ -31,7 +34,8 @@ const productCreateWorker = new Worker(
 
       // 🔄 Transform webhook payload into Product + Variants DTO for Prisma
       // You should shape this to match your Prisma models (Product, Variant)
-      const { product, variants } = transformWebhookPayload(payload, shop);
+      const product = transformWebhookPayload(payload, shop);
+      const variants = extractVariantsForPrisma(payload, id, shop);
 
       // ─────────────────────────────────────────────────────────────
       // Prisma upsert: Product + full variant replacement

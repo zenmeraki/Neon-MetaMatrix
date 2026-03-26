@@ -137,3 +137,34 @@ export const getProductTypes = async (req, res) => {
     });
   }
 };
+
+export const getProductFilterValues = async (req, res) => {
+  const session = res.locals.shopify?.session;
+
+  try {
+    if (!session?.shop) {
+      return res.status(401).json({ message: "Shopify session missing" });
+    }
+
+    const field = String(req.params.field || "").trim();
+    const search =
+      typeof req.query.search === "string" ? req.query.search.trim() : "";
+
+    const data = await productService.getDistinctProductFilterValues({
+      shop: session.shop,
+      field,
+      search,
+      take: 20,
+    });
+
+    return res.status(200).json({
+      data,
+      message: "Product filter values fetched successfully",
+    });
+  } catch (error) {
+    return res.status(400).json({
+      error: error.message,
+      message: "Failed to fetch product filter values",
+    });
+  }
+};

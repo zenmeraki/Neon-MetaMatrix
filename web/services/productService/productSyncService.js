@@ -10,10 +10,12 @@ import {
 import { runProductBulkFetch } from "./productSyncGateway.js";
 import {
   extractCollections,
+  extractMetafields,
   extractVariants,
   flattenProduct,
   flattenVariant,
 } from "./productSyncTransformers.js";
+import { fetchMetaobjectLookup } from "./productSyncMetaobjects.js";
 
 export async function startBulkOperationToFetchProducts({
   session,
@@ -39,9 +41,13 @@ export async function startBulkOperationToFetchProducts({
 export async function formatAndSyncProductsToDB({
   dataStream,
   shop,
+  session,
   replaceShopData = true,
 }) {
+        const metaobjectLookup = await fetchMetaobjectLookup(session);
+
   return new Promise((resolve, reject) => {
+
     const PRODUCT_BATCH_SIZE = 1000;
 
     let productBatch = [];
@@ -60,7 +66,7 @@ export async function formatAndSyncProductsToDB({
       const variantRows = [];
 
       for (const rawProduct of currentProducts) {
-        productRows.push(flattenProduct(rawProduct, shop));
+        productRows.push(flattenProduct(rawProduct, shop, metaobjectLookup));
 
         const rawVariants = Array.isArray(rawProduct.variants)
           ? rawProduct.variants
@@ -98,6 +104,7 @@ export async function formatAndSyncProductsToDB({
             productsMap.set(json.id, {
               ...json,
               variants: extractVariants(json.variants),
+              metafields: extractMetafields(json.metafields),
               collections: extractCollections(json.collections),
               options: Array.isArray(json.options) ? json.options : [],
               featuredMedia: json.featuredMedia || null,
@@ -134,6 +141,15 @@ export async function formatAndSyncProductsToDB({
             parent.collections.push({
               id: json.id,
               title: json.title,
+            });
+            break;
+
+          case "Metafield":
+            parent.metafields.push({
+              namespace: json.namespace,
+              key: json.key,
+              type: json.type,
+              value: json.value,
             });
             break;
 

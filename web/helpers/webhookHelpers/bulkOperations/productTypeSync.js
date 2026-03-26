@@ -108,6 +108,7 @@ export async function handleSyncOperation(bulkOperationId) {
       const syncResult = await service.formatAndSyncProductsToDB({
         dataStream: urlResponse.data,
         shop: session.shop,
+        session: session,
         replaceShopData: true,
       });
 
@@ -164,7 +165,7 @@ export async function handleSyncOperation(bulkOperationId) {
         data: {
           status: "failed",
         },
-      }).catch(() => {});
+      }).catch(() => { });
     }
 
     if (syncHistory?.shop) {
@@ -176,7 +177,7 @@ export async function handleSyncOperation(bulkOperationId) {
           isProductTypeSyncing: false,
           isProductInitialySyning: false,
         },
-      }).catch(() => {});
+      }).catch(() => { });
     }
 
     throw err;

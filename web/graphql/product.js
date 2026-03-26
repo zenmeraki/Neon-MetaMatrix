@@ -30,6 +30,18 @@ export const graphqlProductsAllFieldQuery = `{
           name
         }
 
+        metafields(first: 100) {
+          edges {
+            node {
+              __typename
+              namespace
+              key
+              type
+              value
+            }
+          }
+        }
+
         options {
           __typename
           id
@@ -108,4 +120,3 @@ export const graphqlProductsAllFieldQuery = `{
     }
   }
 }`;
-

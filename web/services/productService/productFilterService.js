@@ -8,7 +8,10 @@ import {
   buildPrismaStringFilter,
   getProductPrismaWhere,
 } from "./productFilterCompiler.js";
-import { getProductsWithFilters } from "./productQueryService.js";
+import {
+  getDistinctProductFilterValues,
+  getProductsWithFilters,
+} from "./productQueryService.js";
 import {
   formatAndSyncProductsToDB,
   startBulkOperationToFetchProducts,
@@ -27,6 +30,10 @@ export class Services {
     } catch (err) {
       throw new Error(err.message);
     }
+  }
+
+  async getDistinctProductFilterValues({ shop, field, search = "", take = 20 }) {
+    return getDistinctProductFilterValues({ shop, field, search, take });
   }
 
   getProductPrismaWhere(filterParams = [], shop) {

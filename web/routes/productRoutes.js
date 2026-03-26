@@ -18,6 +18,7 @@ import {
 
 import {
   checkEditStatus,
+  getProductFilterValues,
   getProductTypes,
   getProductsWithQuery,
 } from "../controllers/productQueryController.js";
@@ -65,6 +66,7 @@ router.get(
 
 
 router.get("/product-type-all", getProductTypes);
+router.get("/filter-values/:field", getProductFilterValues);
 router.get("/product-type-refresh", clearProductTypes);
 router.post("/edit-preview", subscriptionMiddleware, trackEditPreview);
 router.get("/bulk-edit-status/:id", checkEditStatus);
