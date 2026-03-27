@@ -13,6 +13,7 @@ export default function useProducts() {
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [hasFetched, setHasFetched] = useState(false);
 
     const limit = 20;
 
@@ -49,6 +50,7 @@ export default function useProducts() {
             } catch (err) {
                 setError(err.message);
             } finally {
+                setHasFetched(true);
                 setLoading(false);
             }
         },
@@ -58,6 +60,7 @@ export default function useProducts() {
     return {
         loading,
         error,
+        hasFetched,
         fetchProducts,
     };
 }

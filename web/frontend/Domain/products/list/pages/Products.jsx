@@ -10,8 +10,9 @@ import {
     Layout,
     Box,
     BlockStack,
+    SkeletonBodyText,
 } from "@shopify/polaris";
-import { useState, useMemo, useEffect } from "react";
+import { useMemo, useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { t } from "i18next";
@@ -54,8 +55,27 @@ export default function ProductsPage() {
     const {
         loading,
         error,
+        hasFetched,
         fetchProducts,
     } = useProducts();
+
+    const [syncStatus, setSyncStatus] = useState(null);
+    const [syncStatusLoading, setSyncStatusLoading] = useState(true);
+
+    const fetchSyncStatus = useCallback(async () => {
+        try {
+            const response = await fetch("/api/sync/sync-status");
+            const result = await response.json();
+
+            if (response.ok && result?.syncStatus) {
+                setSyncStatus(result.syncStatus);
+            }
+        } catch {
+            // Keep product list usable even if sync-status check fails.
+        } finally {
+            setSyncStatusLoading(false);
+        }
+    }, []);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -92,6 +112,26 @@ export default function ProductsPage() {
     useEffect(() => {
         fetchProducts(1, filterState);
     }, [filterState, fetchProducts]);
+
+    useEffect(() => {
+        fetchSyncStatus();
+    }, [fetchSyncStatus]);
+
+    useEffect(() => {
+        const isSyncRunning =
+            syncStatus?.isProductSyncing || syncStatus?.isProductInitialySyning;
+
+        if (!isSyncRunning) {
+            return undefined;
+        }
+
+        const interval = setInterval(fetchSyncStatus, 4000);
+        return () => clearInterval(interval);
+    }, [
+        syncStatus?.isProductSyncing,
+        syncStatus?.isProductInitialySyning,
+        fetchSyncStatus,
+    ]);
 
     /* ===============================
        Filter handlers
@@ -136,6 +176,22 @@ export default function ProductsPage() {
                 };
             });
     }, [filterState, dispatch]);
+
+    const isSyncInProgress =
+        Boolean(syncStatus?.isProductSyncing) ||
+        Boolean(syncStatus?.isProductInitialySyning);
+
+    const shouldShowLoadingState =
+        loading ||
+        !hasFetched ||
+        (!products.length && (syncStatusLoading || isSyncInProgress));
+
+    const shouldShowEmptyState =
+        !shouldShowLoadingState &&
+        !error &&
+        hasFetched &&
+        !isSyncInProgress &&
+        totalCount === 0;
 
     /* ===============================
        Render
@@ -187,7 +243,7 @@ export default function ProductsPage() {
                         onClearAll={onClearAll}
                     />
                     <Box paddingBlockEnd="200">
-                        {loading ? (
+                        {shouldShowLoadingState ? (
                             <Text variant="bodySm" tone="subdued">
                                 {t("loadingProductsMatch")}
                             </Text>
@@ -195,16 +251,25 @@ export default function ProductsPage() {
                             <Text variant="bodySm" tone="subdued">
                                 <strong>{totalCount}</strong> {t("productsMatch")}
                             </Text>
-                        ) : (
+                        ) : shouldShowEmptyState ? (
                             <Text variant="bodySm" tone="subdued">
                                 {t("noProductsMatch")}
                             </Text>
+                        ) : isSyncInProgress ? (
+                            <SkeletonBodyText lines={1} />
+                        ) : null}
+                        {isSyncInProgress && !products.length && (
+                            <Box paddingBlockStart="100">
+                                <Text variant="bodySm" tone="subdued">
+                                    Products are syncing in the background.
+                                </Text>
+                            </Box>
                         )}
                     </Box>
                     <Card>
                         <ProductsTable
                             products={products}
-                            loading={loading}
+                            loading={shouldShowLoadingState}
                             pagination={pagination}
                             onNext={() => fetchProducts(page + 1, filterState)}
                             onPrev={() => fetchProducts(page - 1, filterState)}
