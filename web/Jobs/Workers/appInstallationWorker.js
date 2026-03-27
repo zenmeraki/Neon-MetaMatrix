@@ -36,28 +36,66 @@ const appInstallationWorker = new Worker(
     `);
     const count = countResponse?.data?.productsCount?.count || 0;
 
-    // 4️⃣ Kick off bulk product sync
-    const service = new Services();
-    await service.startBulkOperationToFetchProducts({
-      session,
-      isInitialSync: true,
-    });
+    const [store, mirroredProductCount, latestCompletedSync] = await Promise.all([
+      prisma.store.findUnique({
+        where: { shopUrl: shop },
+        select: {
+          isProductSyncing: true,
+          isProductInitialySyning: true,
+          shopifyBulkJobCompleted: true,
+        },
+      }),
+      prisma.product.count({
+        where: { shop },
+      }),
+      prisma.syncHistory.findFirst({
+        where: {
+          shop,
+          operationType: "Product",
+          status: "completed",
+        },
+        orderBy: { updatedAt: "desc" },
+        select: { id: true },
+      }),
+    ]);
 
-    // 5️⃣ Update sync flags
-    await prisma.store.update({
-      where: { shopUrl: shop },
-      data: {
-        storeTotalProducts: count,
-        isProductInitialySyning: true,
-        shopifyBulkJobCompleted: false,
-      },
-    });
+    const shouldStartInitialSync =
+      !store ||
+      mirroredProductCount === 0 ||
+      !latestCompletedSync ||
+      store.shopifyBulkJobCompleted !== true;
 
-    // 6️⃣ Send emails last — non-critical, fine to be slow
+    // 4️⃣ Only auto-sync on first install / empty mirror / incomplete bootstrap
+    if (shouldStartInitialSync) {
+      const service = new Services();
+      await service.startBulkOperationToFetchProducts({
+        session,
+        isInitialSync: true,
+      });
+
+      await prisma.store.update({
+        where: { shopUrl: shop },
+        data: {
+          storeTotalProducts: count,
+          isProductInitialySyning: true,
+          shopifyBulkJobCompleted: false,
+        },
+      });
+    } else {
+      await prisma.store.update({
+        where: { shopUrl: shop },
+        data: {
+          storeTotalProducts: count,
+          isProductInitialySyning: false,
+        },
+      });
+    }
+
+    // 5️⃣ Send emails last — non-critical, fine to be slow
     await sentWelcomeMailToStore({ email, shopOwner, shop });
     await sentInstalledMailToAdmin({ email, shop });
 
-    return { success: true };
+    return { success: true, startedInitialSync: shouldStartInitialSync };
   },
   {
     connection,
