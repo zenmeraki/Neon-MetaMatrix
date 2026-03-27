@@ -20,6 +20,13 @@ export function normalizeBoolean(value) {
   return typeof value === "boolean" ? value : null;
 }
 
+function isMetaobjectReferenceString(value) {
+  return (
+    typeof value === "string" &&
+    value.includes("gid://shopify/Metaobject/")
+  );
+}
+
 export function getOptionNameByPosition(options = [], position) {
   const found = options.find((o) => Number(o?.position) === position);
   return normalizeNullableString(found?.name);
@@ -112,9 +119,19 @@ function parseNullableBoolean(value) {
 export function resolveMetaobjectRefs(rawValue, metaobjectLookup) {
   if (!rawValue || !metaobjectLookup) return null;
 
+  const normalized = normalizeNullableString(rawValue);
+  if (
+    normalized &&
+    normalized.startsWith("gid://shopify/Metaobject/")
+  ) {
+    return metaobjectLookup.get(normalized) || null;
+  }
+
   try {
     const parsed = JSON.parse(rawValue); // e.g. ["gid://shopify/Metaobject/123"]
-    if (!Array.isArray(parsed)) return normalizeNullableString(rawValue);
+    if (!Array.isArray(parsed)) {
+      return isMetaobjectReferenceString(normalized) ? null : normalized;
+    }
 
     const labels = parsed
       .map((gid) => metaobjectLookup.get(gid))
@@ -122,8 +139,8 @@ export function resolveMetaobjectRefs(rawValue, metaobjectLookup) {
 
     return labels.length > 0 ? labels.join(", ") : null;
   } catch {
-    // Not a JSON array, return as plain string
-    return normalizeNullableString(rawValue);
+    // Never leak raw metaobject IDs into flat mirror columns.
+    return isMetaobjectReferenceString(normalized) ? null : normalized;
   }
 }
 function mapExtendedProductFields(product, metaobjectLookup = new Map()) {
@@ -141,6 +158,7 @@ function mapExtendedProductFields(product, metaobjectLookup = new Map()) {
       getMetafieldValue(metafieldLookup, [
         "google.enabled",
         "google_shopping.enabled",
+        "mm_google_shopping.enabled",
         "custom.google_shopping_enabled",
         "custom.googleshoppingenabled",
       ]),
@@ -149,6 +167,7 @@ function mapExtendedProductFields(product, metaobjectLookup = new Map()) {
       getMetafieldValue(metafieldLookup, [
         "google.age_group",
         "google_shopping.age_group",
+        "mm_google_shopping.age_group",
         "custom.google_shopping_age_group",
         "custom.googleshoppingagegroup",
       ]),
@@ -157,6 +176,8 @@ function mapExtendedProductFields(product, metaobjectLookup = new Map()) {
       getMetafieldValue(metafieldLookup, [
         "google.google_product_category",
         "google_shopping.category",
+        "mm_google_shopping.google_product_category",
+        "mm_google_shopping.category",
         "custom.google_shopping_category",
         "custom.googleshoppingcategory",
       ]),
@@ -165,6 +186,7 @@ function mapExtendedProductFields(product, metaobjectLookup = new Map()) {
       getMetafieldValue(metafieldLookup, [
         "google.color",
         "google_shopping.color",
+        "mm_google_shopping.color",
         "custom.google_shopping_color",
         "custom.googleshoppingcolor",
       ]),
@@ -173,6 +195,7 @@ function mapExtendedProductFields(product, metaobjectLookup = new Map()) {
       getMetafieldValue(metafieldLookup, [
         "google.condition",
         "google_shopping.condition",
+        "mm_google_shopping.condition",
         "custom.google_shopping_condition",
         "custom.googleshoppingcondition",
       ]),
@@ -181,6 +204,7 @@ function mapExtendedProductFields(product, metaobjectLookup = new Map()) {
       getMetafieldValue(metafieldLookup, [
         "google.custom_label_0",
         "google_shopping.custom_label_0",
+        "mm_google_shopping.custom_label_0",
         "custom.google_shopping_custom_label_0",
         "custom.googleshoppingcustomlabel0",
       ]),
@@ -189,6 +213,7 @@ function mapExtendedProductFields(product, metaobjectLookup = new Map()) {
       getMetafieldValue(metafieldLookup, [
         "google.custom_label_1",
         "google_shopping.custom_label_1",
+        "mm_google_shopping.custom_label_1",
         "custom.google_shopping_custom_label_1",
         "custom.googleshoppingcustomlabel1",
       ]),
@@ -197,6 +222,7 @@ function mapExtendedProductFields(product, metaobjectLookup = new Map()) {
       getMetafieldValue(metafieldLookup, [
         "google.custom_label_2",
         "google_shopping.custom_label_2",
+        "mm_google_shopping.custom_label_2",
         "custom.google_shopping_custom_label_2",
         "custom.googleshoppingcustomlabel2",
       ]),
@@ -205,6 +231,7 @@ function mapExtendedProductFields(product, metaobjectLookup = new Map()) {
       getMetafieldValue(metafieldLookup, [
         "google.custom_label_3",
         "google_shopping.custom_label_3",
+        "mm_google_shopping.custom_label_3",
         "custom.google_shopping_custom_label_3",
         "custom.googleshoppingcustomlabel3",
       ]),
@@ -213,6 +240,7 @@ function mapExtendedProductFields(product, metaobjectLookup = new Map()) {
       getMetafieldValue(metafieldLookup, [
         "google.custom_label_4",
         "google_shopping.custom_label_4",
+        "mm_google_shopping.custom_label_4",
         "custom.google_shopping_custom_label_4",
         "custom.googleshoppingcustomlabel4",
       ]),
@@ -221,6 +249,7 @@ function mapExtendedProductFields(product, metaobjectLookup = new Map()) {
       getMetafieldValue(metafieldLookup, [
         "google.custom_product",
         "google_shopping.custom_product",
+        "mm_google_shopping.custom_product",
         "custom.google_shopping_custom_product",
         "custom.googleshoppingcustomproduct",
       ]),
@@ -229,6 +258,7 @@ function mapExtendedProductFields(product, metaobjectLookup = new Map()) {
       getMetafieldValue(metafieldLookup, [
         "google.gender",
         "google_shopping.gender",
+        "mm_google_shopping.gender",
         "custom.google_shopping_gender",
         "custom.googleshoppinggender",
       ]),
@@ -237,6 +267,7 @@ function mapExtendedProductFields(product, metaobjectLookup = new Map()) {
       getMetafieldValue(metafieldLookup, [
         "google.mpn",
         "google_shopping.mpn",
+        "mm_google_shopping.mpn",
         "custom.google_shopping_mpn",
         "custom.googleshoppingmpn",
       ]),
@@ -245,6 +276,7 @@ function mapExtendedProductFields(product, metaobjectLookup = new Map()) {
       getMetafieldValue(metafieldLookup, [
         "google.material",
         "google_shopping.material",
+        "mm_google_shopping.material",
         "custom.google_shopping_material",
         "custom.googleshoppingmaterial",
       ]),
@@ -253,6 +285,7 @@ function mapExtendedProductFields(product, metaobjectLookup = new Map()) {
       getMetafieldValue(metafieldLookup, [
         "google.size",
         "google_shopping.size",
+        "mm_google_shopping.size",
         "custom.google_shopping_size",
         "custom.googleshoppingsize",
       ]),
@@ -261,6 +294,7 @@ function mapExtendedProductFields(product, metaobjectLookup = new Map()) {
       getMetafieldValue(metafieldLookup, [
         "google.size_system",
         "google_shopping.size_system",
+        "mm_google_shopping.size_system",
         "custom.google_shopping_size_system",
         "custom.googleshoppingsizesystem",
       ]),
@@ -269,6 +303,7 @@ function mapExtendedProductFields(product, metaobjectLookup = new Map()) {
       getMetafieldValue(metafieldLookup, [
         "google.size_type",
         "google_shopping.size_type",
+        "mm_google_shopping.size_type",
         "custom.google_shopping_size_type",
         "custom.googleshoppingsizetype",
       ]),
@@ -280,6 +315,7 @@ function mapExtendedProductFields(product, metaobjectLookup = new Map()) {
     ]),
     categoryColor: getString([
       "shopify.color",
+      "shopify.color_pattern",
       "custom.category_color",
       "custom.categorycolor",
     ]),
@@ -311,7 +347,7 @@ function mapExtendedProductFields(product, metaobjectLookup = new Map()) {
   };
 }
 
-export function flattenProduct(product, shop) {
+export function flattenProduct(product, shop, metaobjectLookup = new Map()) {
   const options = Array.isArray(product.options) ? product.options : [];
   const variants = Array.isArray(product.variants) ? product.variants : [];
   const extendedFields = mapExtendedProductFields(product, metaobjectLookup);

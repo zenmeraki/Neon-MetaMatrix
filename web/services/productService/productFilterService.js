@@ -79,10 +79,16 @@ export class Services {
     }
   }
 
-  async formatAndSyncProductsToDB({ dataStream, shop, replaceShopData = true }) {
+  async formatAndSyncProductsToDB({
+    dataStream,
+    shop,
+    session,
+    replaceShopData = true,
+  }) {
     return formatAndSyncProductsToDB({
       dataStream,
       shop,
+      session,
       replaceShopData,
     });
   }

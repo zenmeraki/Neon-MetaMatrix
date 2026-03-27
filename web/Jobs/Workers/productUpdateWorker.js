@@ -52,6 +52,7 @@ const productUpdateWorker = new Worker(
 
       await clearKeyCaches(`${shop}:ProductFetch:`);
       await clearKeyCaches(`${shop}:productTypes:`);
+      await clearKeyCaches(`${shop}:ProductFilterValues:`);
 
       return { success: true, productId: id };
     } catch (err) {

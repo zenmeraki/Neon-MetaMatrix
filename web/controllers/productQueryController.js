@@ -7,6 +7,15 @@ import { prisma } from "../config/database.js";
 
 const productService = new Services();
 
+function successOptionResponse(message, data) {
+  return {
+    success: true,
+    message,
+    count: Array.isArray(data) ? data.length : 0,
+    data,
+  };
+}
+
 /**
  * GET /api/products
  * Product listing with filters (still backed by your Mongo/PG filter engine in Services)
@@ -88,48 +97,30 @@ export const getProductTypes = async (req, res) => {
     }
 
     const shop = session.shop;
-
     const cacheKey = `${shop}:productTypes:${search.toLowerCase()}`;
     const cached = await getCache(cacheKey);
+
     if (cached) {
-      return res.status(200).json({
-        data: cached,
-        message: "Product types fetched from cache",
-      });
+      return res
+        .status(200)
+        .json(successOptionResponse("Product types fetched from cache", cached));
     }
 
-    // Prisma equivalent of aggregate-distinct productType
-    const result = await prisma.product.findMany({
-      where: {
-        shop,
-        NOT: [{ productType: null }, { productType: "" }],
-        ...(search
-          ? {
-              productType: {
-                contains: search,
-                mode: "insensitive",
-              },
-            }
-          : {}),
-      },
-      select: {
-        productType: true,
-      },
-      distinct: ["productType"],
-      orderBy: {
-        productType: "asc",
-      },
+    const productTypes = await productService.getDistinctProductFilterValues({
+      shop,
+      field: "product_type",
+      search,
       take: 20,
     });
 
-    const productTypes = result.map((r) => ({ title: r.productType }));
-
     await setCache(cacheKey, productTypes, 300);
 
-    return res.status(200).json({
-      data: productTypes,
-      message: "Product types fetched from product mirror",
-    });
+    return res.status(200).json(
+      successOptionResponse(
+        "Product types fetched from product mirror",
+        productTypes,
+      ),
+    );
   } catch (error) {
     return res.status(500).json({
       error: error.message,
@@ -157,10 +148,9 @@ export const getProductFilterValues = async (req, res) => {
       take: 20,
     });
 
-    return res.status(200).json({
-      data,
-      message: "Product filter values fetched successfully",
-    });
+    return res
+      .status(200)
+      .json(successOptionResponse("Product filter values fetched successfully", data));
   } catch (error) {
     return res.status(400).json({
       error: error.message,

@@ -3,7 +3,7 @@
 client_id = "20f31d269398d5f23df95d0450e772e9"
 web_directories = [ "web", "web/frontend" ]
 name = "test-app"
-application_url = "https://macro-paying-franklin-pale.trycloudflare.com"
+application_url = "https://reef-forty-promotion-geography.trycloudflare.com"
 embedded = true
 handle = "test-app-11537"
 
@@ -31,15 +31,15 @@ api_version = "2025-04"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "read_inventory,read_locations,read_products,write_products"
+scopes = "read_inventory,read_locations,read_products,write_products,read_metaobjects"
 optional_scopes = [ ]
 use_legacy_install_flow = false
 
 [auth]
 redirect_urls = [
-  "https://macro-paying-franklin-pale.trycloudflare.com/auth/callback",
-  "https://macro-paying-franklin-pale.trycloudflare.com/auth/shopify/callback",
-  "https://macro-paying-franklin-pale.trycloudflare.com/api/auth/callback"
+  "https://reef-forty-promotion-geography.trycloudflare.com/auth/callback",
+  "https://reef-forty-promotion-geography.trycloudflare.com/auth/shopify/callback",
+  "https://reef-forty-promotion-geography.trycloudflare.com/api/auth/callback"
 ]
 
 [app_proxy]

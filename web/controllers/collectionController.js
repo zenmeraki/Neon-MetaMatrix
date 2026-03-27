@@ -37,7 +37,24 @@ export const getAllCollection =
         session,
         searchText,
       );
-      return res.status(200).json(result);
+
+      const data = Array.isArray(result?.data)
+        ? result.data
+            .filter((item) => item?.title)
+            .map((item) => ({
+              label: item.title,
+              value: item.shopifyId || item.id,
+              title: item.title,
+              id: item.shopifyId || item.id,
+            }))
+        : [];
+
+      return res.status(200).json({
+        success: true,
+        count: data.length,
+        message: result?.message || "Collections fetched successfully",
+        data,
+      });
     } catch (error) {
       logger.error("Failed to get collections", { error: error.message });
       return res.status(500).json({

@@ -54,7 +54,9 @@ export const getAllCategories = async (req, res) => {
     const categories = response.body.data.taxonomy.categories.edges.map(
       (e) => ({
         id: e.node.id,
+        value: e.node.id,
         title: isNameOnly ? e.node.name : e.node.fullName,
+        label: isNameOnly ? e.node.name : e.node.fullName,
       })
     );
     await setCache(keyCache, categories, 300); // Cache for 1 hour

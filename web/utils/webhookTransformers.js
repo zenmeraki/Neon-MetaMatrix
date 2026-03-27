@@ -17,6 +17,37 @@ const normalizeNullableBoolean = (value) => {
   return undefined;
 };
 
+const normalizeNullableStringWithoutMetaobjectIds = (value) => {
+  const normalized = normalizeNullableString(value);
+
+  if (normalized === undefined || normalized === null) {
+    return normalized;
+  }
+
+  if (normalized.startsWith("gid://shopify/Metaobject/")) {
+    return undefined;
+  }
+
+  try {
+    const parsed = JSON.parse(normalized);
+
+    if (
+      Array.isArray(parsed) &&
+      parsed.every(
+        (item) =>
+          typeof item === "string" &&
+          item.startsWith("gid://shopify/Metaobject/"),
+      )
+    ) {
+      return undefined;
+    }
+  } catch {
+    // Keep plain strings as-is.
+  }
+
+  return normalized;
+};
+
 const normalizeMetafieldKey = (value) =>
   normalizeNullableString(value)?.toLowerCase().replace(/-/g, "_");
 
@@ -62,6 +93,7 @@ const PRODUCT_EXTRA_FIELD_CONFIG = {
     metafieldKeys: [
       "google.enabled",
       "google_shopping.enabled",
+      "mm_google_shopping.enabled",
       "custom.google_shopping_enabled",
       "custom.googleshoppingenabled",
     ],
@@ -72,6 +104,7 @@ const PRODUCT_EXTRA_FIELD_CONFIG = {
     metafieldKeys: [
       "google.age_group",
       "google_shopping.age_group",
+      "mm_google_shopping.age_group",
       "custom.google_shopping_age_group",
       "custom.googleshoppingagegroup",
     ],
@@ -82,6 +115,8 @@ const PRODUCT_EXTRA_FIELD_CONFIG = {
     metafieldKeys: [
       "google.google_product_category",
       "google_shopping.category",
+      "mm_google_shopping.google_product_category",
+      "mm_google_shopping.category",
       "custom.google_shopping_category",
       "custom.googleshoppingcategory",
     ],
@@ -92,6 +127,7 @@ const PRODUCT_EXTRA_FIELD_CONFIG = {
     metafieldKeys: [
       "google.color",
       "google_shopping.color",
+      "mm_google_shopping.color",
       "custom.google_shopping_color",
       "custom.googleshoppingcolor",
     ],
@@ -102,6 +138,7 @@ const PRODUCT_EXTRA_FIELD_CONFIG = {
     metafieldKeys: [
       "google.condition",
       "google_shopping.condition",
+      "mm_google_shopping.condition",
       "custom.google_shopping_condition",
       "custom.googleshoppingcondition",
     ],
@@ -112,6 +149,7 @@ const PRODUCT_EXTRA_FIELD_CONFIG = {
     metafieldKeys: [
       "google.custom_label_0",
       "google_shopping.custom_label_0",
+      "mm_google_shopping.custom_label_0",
       "custom.google_shopping_custom_label_0",
       "custom.googleshoppingcustomlabel0",
     ],
@@ -122,6 +160,7 @@ const PRODUCT_EXTRA_FIELD_CONFIG = {
     metafieldKeys: [
       "google.custom_label_1",
       "google_shopping.custom_label_1",
+      "mm_google_shopping.custom_label_1",
       "custom.google_shopping_custom_label_1",
       "custom.googleshoppingcustomlabel1",
     ],
@@ -132,6 +171,7 @@ const PRODUCT_EXTRA_FIELD_CONFIG = {
     metafieldKeys: [
       "google.custom_label_2",
       "google_shopping.custom_label_2",
+      "mm_google_shopping.custom_label_2",
       "custom.google_shopping_custom_label_2",
       "custom.googleshoppingcustomlabel2",
     ],
@@ -142,6 +182,7 @@ const PRODUCT_EXTRA_FIELD_CONFIG = {
     metafieldKeys: [
       "google.custom_label_3",
       "google_shopping.custom_label_3",
+      "mm_google_shopping.custom_label_3",
       "custom.google_shopping_custom_label_3",
       "custom.googleshoppingcustomlabel3",
     ],
@@ -152,6 +193,7 @@ const PRODUCT_EXTRA_FIELD_CONFIG = {
     metafieldKeys: [
       "google.custom_label_4",
       "google_shopping.custom_label_4",
+      "mm_google_shopping.custom_label_4",
       "custom.google_shopping_custom_label_4",
       "custom.googleshoppingcustomlabel4",
     ],
@@ -162,6 +204,7 @@ const PRODUCT_EXTRA_FIELD_CONFIG = {
     metafieldKeys: [
       "google.custom_product",
       "google_shopping.custom_product",
+      "mm_google_shopping.custom_product",
       "custom.google_shopping_custom_product",
       "custom.googleshoppingcustomproduct",
     ],
@@ -172,6 +215,7 @@ const PRODUCT_EXTRA_FIELD_CONFIG = {
     metafieldKeys: [
       "google.gender",
       "google_shopping.gender",
+      "mm_google_shopping.gender",
       "custom.google_shopping_gender",
       "custom.googleshoppinggender",
     ],
@@ -182,6 +226,7 @@ const PRODUCT_EXTRA_FIELD_CONFIG = {
     metafieldKeys: [
       "google.mpn",
       "google_shopping.mpn",
+      "mm_google_shopping.mpn",
       "custom.google_shopping_mpn",
       "custom.googleshoppingmpn",
     ],
@@ -192,6 +237,7 @@ const PRODUCT_EXTRA_FIELD_CONFIG = {
     metafieldKeys: [
       "google.material",
       "google_shopping.material",
+      "mm_google_shopping.material",
       "custom.google_shopping_material",
       "custom.googleshoppingmaterial",
     ],
@@ -202,6 +248,7 @@ const PRODUCT_EXTRA_FIELD_CONFIG = {
     metafieldKeys: [
       "google.size",
       "google_shopping.size",
+      "mm_google_shopping.size",
       "custom.google_shopping_size",
       "custom.googleshoppingsize",
     ],
@@ -212,6 +259,7 @@ const PRODUCT_EXTRA_FIELD_CONFIG = {
     metafieldKeys: [
       "google.size_system",
       "google_shopping.size_system",
+      "mm_google_shopping.size_system",
       "custom.google_shopping_size_system",
       "custom.googleshoppingsizesystem",
     ],
@@ -222,6 +270,7 @@ const PRODUCT_EXTRA_FIELD_CONFIG = {
     metafieldKeys: [
       "google.size_type",
       "google_shopping.size_type",
+      "mm_google_shopping.size_type",
       "custom.google_shopping_size_type",
       "custom.googleshoppingsizetype",
     ],
@@ -234,16 +283,17 @@ const PRODUCT_EXTRA_FIELD_CONFIG = {
       "custom.category_age_group",
       "custom.categoryagegroup",
     ],
-    normalize: normalizeNullableString,
+    normalize: normalizeNullableStringWithoutMetaobjectIds,
   },
   categoryColor: {
     payloadFields: ["categoryColor", "category_color"],
     metafieldKeys: [
       "shopify.color",
+      "shopify.color_pattern",
       "custom.category_color",
       "custom.categorycolor",
     ],
-    normalize: normalizeNullableString,
+    normalize: normalizeNullableStringWithoutMetaobjectIds,
   },
   categoryFabric: {
     payloadFields: ["categoryFabric", "category_fabric"],
@@ -252,7 +302,7 @@ const PRODUCT_EXTRA_FIELD_CONFIG = {
       "custom.category_fabric",
       "custom.categoryfabric",
     ],
-    normalize: normalizeNullableString,
+    normalize: normalizeNullableStringWithoutMetaobjectIds,
   },
   categoryFit: {
     payloadFields: ["categoryFit", "category_fit"],
@@ -261,7 +311,7 @@ const PRODUCT_EXTRA_FIELD_CONFIG = {
       "custom.category_fit",
       "custom.categoryfit",
     ],
-    normalize: normalizeNullableString,
+    normalize: normalizeNullableStringWithoutMetaobjectIds,
   },
   categorySize: {
     payloadFields: ["categorySize", "category_size"],
@@ -270,7 +320,7 @@ const PRODUCT_EXTRA_FIELD_CONFIG = {
       "custom.category_size",
       "custom.categorysize",
     ],
-    normalize: normalizeNullableString,
+    normalize: normalizeNullableStringWithoutMetaobjectIds,
   },
   categoryTargetGender: {
     payloadFields: ["categoryTargetGender", "category_target_gender"],
@@ -279,7 +329,7 @@ const PRODUCT_EXTRA_FIELD_CONFIG = {
       "custom.category_target_gender",
       "custom.categorytargetgender",
     ],
-    normalize: normalizeNullableString,
+    normalize: normalizeNullableStringWithoutMetaobjectIds,
   },
   categoryWaistRise: {
     payloadFields: ["categoryWaistRise", "category_waist_rise"],
@@ -288,7 +338,7 @@ const PRODUCT_EXTRA_FIELD_CONFIG = {
       "custom.category_waist_rise",
       "custom.categorywaistrise",
     ],
-    normalize: normalizeNullableString,
+    normalize: normalizeNullableStringWithoutMetaobjectIds,
   },
 };
 

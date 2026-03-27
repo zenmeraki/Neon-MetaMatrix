@@ -14,6 +14,64 @@ import {
 import { getAllFilters } from "../constants";
 import { t } from "i18next";
 
+const VALUE_OPTION_OPERATORS = new Set([
+    "contains",
+    "does not contain",
+    "equals",
+    "does not equal",
+    "starts with",
+    "ends with",
+    "is",
+    "is not",
+]);
+
+function normalizeAutocompleteOption(item) {
+    if (item === null || item === undefined) return null;
+
+    if (typeof item === "string" || typeof item === "number") {
+        const normalized = String(item).trim();
+        if (!normalized) return null;
+
+        return {
+            label: normalized,
+            value: normalized,
+        };
+    }
+
+    const label =
+        item.label ??
+        item.title ??
+        item.name ??
+        item.value ??
+        item.id;
+    const value =
+        item.value ??
+        item.title ??
+        item.name ??
+        item.label ??
+        item.id;
+
+    if (label === undefined || value === undefined) {
+        return null;
+    }
+
+    const normalizedLabel = String(label).trim();
+    const normalizedValue = String(value).trim();
+
+    if (!normalizedLabel || !normalizedValue) {
+        return null;
+    }
+
+    return {
+        label: normalizedLabel,
+        value: normalizedValue,
+    };
+}
+
+function operatorRequiresValue(operator) {
+    return VALUE_OPTION_OPERATORS.has(operator);
+}
+
 export default function ProductsFilters({
     queryValue,
     appliedFilters,
@@ -42,7 +100,7 @@ export default function ProductsFilters({
        Fetch autocomplete options
     ------------------------------ */
     const fetchAutocompleteOptions = async (filter, query) => {
-        if (!filter.api || !query) return;
+        if (!filter.api) return;
 
         setAutocompleteLoading((prev) => ({
             ...prev,
@@ -57,13 +115,17 @@ export default function ProductsFilters({
             if (!res.ok) throw new Error("Failed");
 
             const data = await res.json();
+            const items = Array.isArray(data?.data)
+                ? data.data
+                : Array.isArray(data)
+                    ? data
+                    : [];
 
             setAutocompleteOptions((prev) => ({
                 ...prev,
-                [filter.key]: data?.data?.map((item) => ({
-                    label: item.title,
-                    value: item.title,
-                })),
+                [filter.key]: items
+                    .map(normalizeAutocompleteOption)
+                    .filter(Boolean),
             }));
         } catch {
             setAutocompleteOptions((prev) => ({
@@ -82,10 +144,6 @@ export default function ProductsFilters({
        Build filters
     ------------------------------ */
     const filters = allFilters.map((filter) => {
-        const committed = filterState.find(
-            (f) => f.field === filter.key
-        );
-
         const draft = draftFilters[filter.key] || {
             operator: filter.operators[0] || "",
             value: "",
@@ -147,7 +205,11 @@ export default function ProductsFilters({
                     <Box paddingBlockStart="300">
                         <Button
                             variant="primary"
-                            disabled={!draft.value}
+                            disabled={
+                                operatorRequiresValue(draft.operator)
+                                    ? !String(draft.value || "").trim()
+                                    : false
+                            }
                             onClick={() => {
                                 onFilterChange(filter.key, draft);
                                 setFiltersKey((k) => k + 1); // close popover
@@ -218,6 +280,7 @@ function FilterValueInput({
                         placeholder={`Search ${filter.label}`}
                         autoComplete="off"
                         value={inputValue}
+                        onFocus={() => onSearch(inputValue)}
                         onChange={(text) => {
                             setInputValue(text);
                             onSearch(text);

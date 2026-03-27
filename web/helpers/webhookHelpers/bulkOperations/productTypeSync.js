@@ -93,6 +93,8 @@ export async function handleSyncOperation(bulkOperationId) {
       });
 
       await clearKeyCaches(`${session.shop}:sync_details`);
+      await clearKeyCaches(`${session.shop}:fetchCollections`);
+      await clearKeyCaches(`${session.shop}:ProductFilterValues:collection`);
     }
 
     if (syncHistory.operationType === "Product") {
@@ -104,7 +106,8 @@ export async function handleSyncOperation(bulkOperationId) {
       });
 
       const service = new Services();
-
+      
+      
       const syncResult = await service.formatAndSyncProductsToDB({
         dataStream: urlResponse.data,
         shop: session.shop,
@@ -116,6 +119,7 @@ export async function handleSyncOperation(bulkOperationId) {
 
       await clearKeyCaches(`${session.shop}:ProductFetch:`);
       await clearKeyCaches(`${session.shop}:productTypes:`);
+      await clearKeyCaches(`${session.shop}:ProductFilterValues:`);
 
       await prisma.store.update({
         where: { shopUrl: session.shop },

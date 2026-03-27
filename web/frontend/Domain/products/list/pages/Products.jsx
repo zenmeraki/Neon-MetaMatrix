@@ -128,7 +128,7 @@ export default function ProductsPage() {
 
                 return {
                     key: field,
-                    label: `${filter.label} ${operator} ${value}`,
+                    label: `${filter?.label || field} ${operator} ${value}`,
                     onRemove: () =>
                         dispatch(
                             setFilters(filterState.filter((f) => f.field !== field))

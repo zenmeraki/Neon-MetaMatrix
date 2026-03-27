@@ -15,7 +15,10 @@ import {
   flattenProduct,
   flattenVariant,
 } from "./productSyncTransformers.js";
-import { fetchMetaobjectLookup } from "./productSyncMetaobjects.js";
+import {
+  extractMetaobjectIds,
+  fetchMetaobjectLookupByIds,
+} from "./productSyncMetaobjects.js";
 
 export async function startBulkOperationToFetchProducts({
   session,
@@ -44,17 +47,18 @@ export async function formatAndSyncProductsToDB({
   session,
   replaceShopData = true,
 }) {
-        const metaobjectLookup = await fetchMetaobjectLookup(session);
+  let metaobjectLookup = new Map();
 
   return new Promise((resolve, reject) => {
-
     const PRODUCT_BATCH_SIZE = 1000;
 
+    
     let productBatch = [];
     let totalProductsProcessed = 0;
     let totalVariantsProcessed = 0;
 
     const productsMap = new Map();
+    const referencedMetaobjectIds = new Set();
 
     const flushProductsAndVariants = async () => {
       if (productBatch.length === 0) return;
@@ -101,10 +105,18 @@ export async function formatAndSyncProductsToDB({
 
         if (!json.__parentId && json.__typename === "Product") {
           if (!productsMap.has(json.id)) {
+            const productMetafields = extractMetafields(json.metafields);
+
+            for (const metafield of productMetafields) {
+              for (const id of extractMetaobjectIds(metafield?.value)) {
+                referencedMetaobjectIds.add(id);
+              }
+            }
+
             productsMap.set(json.id, {
               ...json,
               variants: extractVariants(json.variants),
-              metafields: extractMetafields(json.metafields),
+              metafields: productMetafields,
               collections: extractCollections(json.collections),
               options: Array.isArray(json.options) ? json.options : [],
               featuredMedia: json.featuredMedia || null,
@@ -145,6 +157,10 @@ export async function formatAndSyncProductsToDB({
             break;
 
           case "Metafield":
+            for (const id of extractMetaobjectIds(json.value)) {
+              referencedMetaobjectIds.add(id);
+            }
+
             parent.metafields.push({
               namespace: json.namespace,
               key: json.key,
@@ -167,6 +183,19 @@ export async function formatAndSyncProductsToDB({
 
     rl.on("close", async () => {
       try {
+        if (session?.accessToken && referencedMetaobjectIds.size > 0) {
+          try {
+            metaobjectLookup = await fetchMetaobjectLookupByIds(
+              session,
+              Array.from(referencedMetaobjectIds),
+            );
+          } catch (error) {
+            console.error(
+              `Failed to resolve metaobject labels for shop ${shop}: ${error.message}`,
+            );
+          }
+        }
+
         if (replaceShopData) {
           await replaceShopProducts(shop);
         }

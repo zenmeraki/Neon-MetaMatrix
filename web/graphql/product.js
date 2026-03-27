@@ -30,6 +30,7 @@ export const graphqlProductsAllFieldQuery = `{
           name
         }
 
+        
         metafields(first: 100) {
           edges {
             node {
