@@ -272,6 +272,10 @@ model EditHistory {
   user              String?
   isFavourite       Boolean        @default(false)
   isSpreadsheetEdit Boolean        @default(false)
+  isRecurring       Boolean        @default(false)
+  recurringEditId   String?
+  recurringRunId    String?
+  triggerType       EditHistoryTriggerType @default(MANUAL)
   error             Json?
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
@@ -279,7 +283,61 @@ model EditHistory {
 
   @@index([shop, status, type, updatedAt], map: "shop_status_type_recent")
   @@index([shop])
-  @@index([isSpreadsheetEdit]) 
+  @@index([isSpreadsheetEdit])
+  @@index([recurringEditId])
+  @@index([recurringRunId])
+}
+
+model RecurringEdit {
+  id                String                @id @default(cuid())
+  shop              String
+  title             String
+  status            RecurringEditStatus   @default(ACTIVE)
+  scheduleType      RecurringScheduleType
+  timezone          String
+  scheduleConfig    Json
+  cronExpression    String?
+  intervalMinutes   Int?
+  startAt           DateTime?
+  endAt             DateTime?
+  filterParams      Json
+  rules             Json
+  runCount          Int                   @default(0)
+  lastRunAt         DateTime?
+  nextRunAt         DateTime?
+  lastSuccessAt     DateTime?
+  lastFailureAt     DateTime?
+  lastFailureReason String?
+  isDeleted         Boolean               @default(false)
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  runs              RecurringEditRun[]
+
+  @@index([shop])
+  @@index([shop, status])
+  @@index([shop, nextRunAt])
+  @@index([nextRunAt])
+}
+
+model RecurringEditRun {
+  id              String                 @id @default(cuid())
+  recurringEditId String
+  shop            String
+  scheduledFor    DateTime
+  startedAt       DateTime?
+  completedAt     DateTime?
+  status          RecurringEditRunStatus @default(PENDING)
+  executionKey    String                 @unique
+  errorMessage    String?
+  editHistoryId   String?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  recurringEdit   RecurringEdit          @relation(fields: [recurringEditId], references: [id], onDelete: Cascade)
+
+  @@index([recurringEditId])
+  @@index([shop, status])
+  @@index([shop, scheduledFor])
+  @@index([editHistoryId])
 }
 
 model Collection {
@@ -481,4 +539,34 @@ enum SyncOperationType {
 enum FilterTrackType {
   filter
   preview
+}
+
+enum RecurringEditStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum RecurringScheduleType {
+  CRON
+  DAILY
+  WEEKLY
+  MONTHLY
+  EVERY_X_MINUTES
+}
+
+enum RecurringEditRunStatus {
+  PENDING
+  PROCESSING
+  SUCCESS
+  FAILED
+  SKIPPED
+}
+
+enum EditHistoryTriggerType {
+  MANUAL
+  SCHEDULED_ONCE
+  RECURRING
 }

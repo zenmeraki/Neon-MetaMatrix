@@ -53,7 +53,7 @@ const HistoryComponent = () => {
     () => [
       { id: "manual-edits", content: t("ManualEdit") },
       { id: "scheduled-edits", content: t("ScheduledEdit") },
-      // { id: "recurring-edits", content: t("recurringEdit") },
+      { id: "recurring-edits", content: t("RecurringEdit") },
     ],
     [t]
   );

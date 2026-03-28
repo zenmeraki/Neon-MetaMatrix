@@ -19,6 +19,7 @@ import EditTypeSelector from "../components/EditTypeSelector";
 import ValueInput from "../components/ValueInput";
 import PreviewTable from "../components/PreviewTable";
 import ScheduleEdit from "../components/ScheduleEdit";
+import RecurringEditModal from "../components/RecurringEditModal";
 import useDebounce from "../hooks/useDebounce";
 import { selectFilters, selectProductCount } from "../../../../store/slices/productSlice";
 
@@ -60,6 +61,7 @@ export default function EditPreviewPage() {
 
   const [modalState, setModalState] = useState({
     scheduleEdit: false,
+    recurringEdit: false,
   });
 
   // =========================
@@ -282,6 +284,10 @@ export default function EditPreviewPage() {
           content: t("ScheduleEdit"),
           onAction: () => setModalState((p) => ({ ...p, scheduleEdit: true })),
         },
+        {
+          content: "Recurring Edit",
+          onAction: () => setModalState((p) => ({ ...p, recurringEdit: true })),
+        },
       ]}
     >
       <Layout>
@@ -366,6 +372,24 @@ export default function EditPreviewPage() {
         <ScheduleEdit
           show
           onHide={() => setModalState((p) => ({ ...p, scheduleEdit: false }))}
+          count={count}
+          editedField={selectedField.value}
+          editedBy={editType?.value}
+          value={debouncedValue}
+          searchKey={debouncedSearchReplace.search}
+          replaceText={debouncedSearchReplace.replace}
+          location={locationValue}
+          filters={filters}
+          supportValue={supportValue}
+        />
+      )}
+
+      {modalState.recurringEdit && (
+        <RecurringEditModal
+          show
+          onHide={() =>
+            setModalState((p) => ({ ...p, recurringEdit: false }))
+          }
           count={count}
           editedField={selectedField.value}
           editedBy={editType?.value}

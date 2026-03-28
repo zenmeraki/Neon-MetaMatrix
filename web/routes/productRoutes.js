@@ -26,17 +26,18 @@ import {
   csvBulkProductsEdit,
   importCsvController,
 } from "../controllers/productImportController.js";
+import {
+  createRecurringEditController,
+  deleteRecurringEditController,
+  getRecurringEditByIdController,
+  listRecurringEditsController,
+  toggleRecurringEditStatusController,
+  updateRecurringEditController,
+} from "../controllers/recurringEditController.js";
 
 import { subscriptionMiddleware, requirePaidPlanMiddleware } from "../middleware/subscriptionMiddleware.js";
 import productQuerySchema from "../validations/productQuerySchema.js";
 import { validateBody, validateQuery } from "../middleware/validateQuery.js";
-// import { recurringEditSchema } from "../validations/recurringEditValidator.js";
-// import {
-//   createRecurringEdit,
-//   deleteRecurringEdit,
-//   toggleRecurringEditStatus,
-//   updateRecurringEdit,
-// } from "../controllers/productController.js";
 // import {
 //   addFilterCombination,
 //   deleteFilterCombination,
@@ -46,7 +47,6 @@ import { validateBody, validateQuery } from "../middleware/validateQuery.js";
 import { createScheduledEdit } from "../controllers/productBulkEditController.js";
 import { productExportSchema } from "../validations/productExportQuerySchema.js";
 import { uploadCsv } from "../middleware/uploadCsv.js";
-// import { getRecurringEditById, getRecurringEdits } from "../controllers/historyController.js";
 
 const router = express.Router();
 
@@ -77,16 +77,24 @@ router.post(
 );
 
 router.put("/undo-edit/:id", undoEdit);
-// router.post(
-//   "/create-recurring-edit",
-//   validateBody(recurringEditSchema),
-//   createRecurringEdit
-// );
-// router.get("/get-recurring-edits", getRecurringEdits);
-// router.get("/get-recurring-edit/:id", getRecurringEditById);
-// router.put("/update-recurring-edit/:id", updateRecurringEdit);
-// router.delete("/delete-recurring-edit/:id", deleteRecurringEdit);
-// router.put("/update-recurring-edit-status/:id", toggleRecurringEditStatus);
+router.post(
+  "/create-recurring-edit",
+  subscriptionMiddleware,
+  createRecurringEditController
+);
+router.get("/get-recurring-edits", listRecurringEditsController);
+router.get("/get-recurring-edit/:id", getRecurringEditByIdController);
+router.put(
+  "/update-recurring-edit/:id",
+  subscriptionMiddleware,
+  updateRecurringEditController
+);
+router.put(
+  "/update-recurring-edit/:id/toggle",
+  subscriptionMiddleware,
+  toggleRecurringEditStatusController
+);
+router.delete("/delete-recurring-edit/:id", deleteRecurringEditController);
 router.post(
   "/schedule-task",
   subscriptionMiddleware,

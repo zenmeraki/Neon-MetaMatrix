@@ -45,6 +45,8 @@ import "./Jobs/Workers/appInstallationWorker.js";
 import "./Jobs/Workers/scheduledEditWorker.js";
 import "./Jobs/Workers/appUninstallWorker.js";
 import "./Jobs/Workers/bulkImportEditWorker.js";
+import "./workers/recurringEditExecutionWorker.js";
+import "./workers/recurringEditSchedulerWorker.js";
 
 // Utils / Middleware
 import logger from "./utils/loggerUtils.js";

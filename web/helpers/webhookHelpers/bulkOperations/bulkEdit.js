@@ -12,6 +12,7 @@ import { addbulkUndoJob } from "../../../Jobs/Queues/bulkUndoJob.js";
 import { addbulkEditJob } from "../../../Jobs/Queues/bulkEditJob.js";
 import { clearKeyCaches } from "../../../utils/cacheUtils.js";
 import { prisma } from "../../../config/database.js";
+import { finalizeRecurringRunFromHistory } from "../../../services/recurringEditExecutionService.js";
 
 /* ────────────────────────────────────────────────────────────── */
 /*  HELPERS                                                      */
@@ -369,6 +370,14 @@ export async function handleProductEditOperation(bulkOperationId) {
         });
       }
 
+      if (updateData.status === "failed") {
+        await finalizeRecurringRunFromHistory({
+          historyId: history.id,
+          status: "FAILED",
+          errorMessage: "Shopify bulk operation failed",
+        });
+      }
+
       return { success: false };
     }
 
@@ -571,6 +580,13 @@ export async function handleProductEditOperation(bulkOperationId) {
       where: { id: history.id },
       data: updates,
     });
+
+    if (updates.status === "completed") {
+      await finalizeRecurringRunFromHistory({
+        historyId: history.id,
+        status: "SUCCESS",
+      });
+    }
 
     await clearKeyCaches(`${history.shop}:historyDetails:${history.id}`);
 

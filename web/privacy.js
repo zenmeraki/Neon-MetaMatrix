@@ -380,6 +380,20 @@ APP_SUBSCRIPTIONS_UPDATE: {
         }
 
         // 2C. Safety: Ensure webhook sub-id matches DB sub-id
+        if (
+          existing.subscriptionId !== incomingSubId &&
+          existing.status === "ACTIVE" &&
+          existing.subscriptionId
+        ) {
+          console.log(
+            "Ignoring cancellation for replaced subscription during plan change",
+          );
+          console.log(`   Active subscription: ${existing.subscriptionId}`);
+          console.log(`   Cancelled webhook:   ${incomingSubId}`);
+          console.log(`   Active plan:         ${existing.planKey}`);
+          return;
+        }
+
         if (existing.subscriptionId !== incomingSubId) {
           console.log("❌ BLOCKED: Subscription ID mismatch!");
           console.log(`   Expected: ${existing.subscriptionId}`);
@@ -389,9 +403,26 @@ APP_SUBSCRIPTIONS_UPDATE: {
 
         console.log("✅ IDs match, proceeding with downgrade");
 
+        if (
+          existing.pendingSubscriptionId &&
+          existing.pendingSubscriptionId !== incomingSubId
+        ) {
+          console.log(
+            "Ignoring cancellation because a replacement subscription is still pending",
+          );
+          console.log(`   Active subscription:   ${existing.subscriptionId}`);
+          console.log(`   Pending replacement:   ${existing.pendingSubscriptionId}`);
+          console.log(`   Cancelled webhook:     ${incomingSubId}`);
+          return;
+        }
+
         // Downgrade to FREE plan
-        await prisma.subscription.updateMany({
-          where: { shop },
+        const downgradeResult = await prisma.subscription.updateMany({
+          where: {
+            shop,
+            subscriptionId: incomingSubId,
+            pendingSubscriptionId: null,
+          },
           data: {
             status: "FREE",
             planKey: "FREE",

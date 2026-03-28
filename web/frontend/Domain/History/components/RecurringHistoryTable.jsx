@@ -7,7 +7,7 @@ import {
   Button,
   ButtonGroup,
   Spinner,
-  InlineStack,
+  Box,
   Text,
   Modal,
   TextContainer,
@@ -240,12 +240,7 @@ const RecurringHistoryTable = memo(
         createdAt,
       } = item;
 
-      const user = shop?.split(".")[0] || "N/A";
       const normalizedStatus = status?.toLowerCase();
-      const canToggle =
-        normalizedStatus === "active" || normalizedStatus === "inactive";
-      const canDelete = normalizedStatus !== "processing";
-      const isActive = normalizedStatus === "active";
 
       return [
         title || "Untitled",

@@ -5,6 +5,7 @@ import { getCurrentBulkOperationStatus } from "../../utils/bulkOperationHelper.j
 import ProductBulkService from "../../services/productService/productBulkEditService.js";
 import { clearKeyCaches } from "../../utils/cacheUtils.js";
 import { logWorkerError } from "../../utils/errorLogUtils.js";
+import { finalizeRecurringRunFromHistory } from "../../services/recurringEditExecutionService.js";
 
 // 🔹 Prisma
 import { prisma } from "../../config/database.js";
@@ -148,6 +149,12 @@ async function processBulkEdit(job) {
 
     await clearKeyCaches(`${session.shop}:fetchHistories`);
     await clearKeyCaches(`${session.shop}:historyDetails:${historyId}`);
+
+    await finalizeRecurringRunFromHistory({
+      historyId,
+      status: "FAILED",
+      errorMessage: err.message,
+    }).catch(() => {});
 
     await logWorkerError({
       shop: session?.shop,
