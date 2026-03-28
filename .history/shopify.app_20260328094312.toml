@@ -3,7 +3,7 @@
 client_id = "20f31d269398d5f23df95d0450e772e9"
 web_directories = [ "web", "web/frontend" ]
 name = "test-app"
-application_url = "https://mambo-clean-peterson-hospitality.trycloudflare.com"
+application_url = "https://smallest-intermediate-quebec-light.trycloudflare.com"
 embedded = true
 handle = "test-app-11537"
 
@@ -37,9 +37,9 @@ use_legacy_install_flow = false
 
 [auth]
 redirect_urls = [
-  "https://mambo-clean-peterson-hospitality.trycloudflare.com/auth/callback",
-  "https://mambo-clean-peterson-hospitality.trycloudflare.com/auth/shopify/callback",
-  "https://mambo-clean-peterson-hospitality.trycloudflare.com/api/auth/callback"
+  "https://smallest-intermediate-quebec-light.trycloudflare.com/auth/callback",
+  "https://smallest-intermediate-quebec-light.trycloudflare.com/auth/shopify/callback",
+  "https://smallest-intermediate-quebec-light.trycloudflare.com/api/auth/callback"
 ]
 
 [app_proxy]

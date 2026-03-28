@@ -179,16 +179,28 @@ export const appInstallMiddleware = async (req, res, next) => {
       },
     });
 
-    // ✅ Fast cache invalidation
-    await clearKeyCaches(`${shop}:storeDetails`);
-    await clearKeyCaches(`${shop}:sync_details`);
+    // Redirect immediately. Background setup should never block OAuth callback.
+    next();
 
-    // ✅ Everything else runs in the worker
-    await addAppInstallationJob({
-      session: { shop, accessToken, scope: session.scope },
+    setImmediate(async () => {
+      try {
+        await clearKeyCaches(`${shop}:storeDetails`);
+        await clearKeyCaches(`${shop}:sync_details`);
+
+        await addAppInstallationJob({
+          session: { shop, accessToken, scope: session.scope },
+        });
+      } catch (backgroundError) {
+        await logApiError({
+          shop,
+          err: backgroundError,
+          req,
+          source: "appInstallMiddleware.backgroundSetup",
+        }).catch(() => {});
+
+        console.error("App install background setup error:", backgroundError);
+      }
     });
-
-    next(); // 🚀 redirect fires in < 100ms
   } catch (err) {
     await logApiError({
       shop: session?.shop,
