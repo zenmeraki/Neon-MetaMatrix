@@ -3,6 +3,7 @@ import parser from "cron-parser";
 import { assertValidTimezone, toTimezoneMoment } from "./timezoneUtils.js";
 
 export const RECURRING_SCHEDULE_TYPES = {
+  ONE_TIME: "ONE_TIME",
   CRON: "CRON",
   DAILY: "DAILY",
   WEEKLY: "WEEKLY",
@@ -73,6 +74,22 @@ function applyTimeParts(baseMoment, time) {
     .minute(minute)
     .second(0)
     .millisecond(0);
+}
+
+function getOneTimeNextRunAt({ scheduleConfig, timezone }, fromDate) {
+  const runAt = scheduleConfig?.runAt;
+  if (!runAt) {
+    throw new Error("One-time schedules require runAt");
+  }
+
+  const candidate = toTimezoneMoment(runAt, timezone);
+  const base = toTimezoneMoment(fromDate, timezone);
+
+  if (!candidate.isAfter(base)) {
+    return null;
+  }
+
+  return candidate;
 }
 
 function getDailyNextRunAt({ scheduleConfig, timezone, startAt }, fromDate) {
@@ -182,6 +199,9 @@ export function computeNextRecurringRunAt(edit, fromDate = new Date()) {
 
   let candidate;
   switch (scheduleType) {
+    case RECURRING_SCHEDULE_TYPES.ONE_TIME:
+      candidate = getOneTimeNextRunAt(edit, fromDate);
+      break;
     case RECURRING_SCHEDULE_TYPES.DAILY:
       candidate = getDailyNextRunAt(edit, fromDate);
       break;

@@ -34,6 +34,14 @@ import {
   toggleRecurringEditStatusController,
   updateRecurringEditController,
 } from "../controllers/recurringEditController.js";
+import {
+  createScheduledExportController,
+  deleteScheduledExportController,
+  getScheduledExportByIdController,
+  listScheduledExportsController,
+  toggleScheduledExportStatusController,
+  updateScheduledExportController,
+} from "../controllers/scheduledExportController.js";
 
 import { subscriptionMiddleware, requirePaidPlanMiddleware } from "../middleware/subscriptionMiddleware.js";
 import productQuerySchema from "../validations/productQuerySchema.js";
@@ -58,6 +66,24 @@ router.post(
   
   createProductExport
 );
+router.post(
+  "/create-scheduled-export",
+  subscriptionMiddleware,
+  createScheduledExportController
+);
+router.get("/get-scheduled-exports", listScheduledExportsController);
+router.get("/get-scheduled-export/:id", getScheduledExportByIdController);
+router.put(
+  "/update-scheduled-export/:id",
+  subscriptionMiddleware,
+  updateScheduledExportController
+);
+router.put(
+  "/update-scheduled-export/:id/toggle",
+  subscriptionMiddleware,
+  toggleScheduledExportStatusController
+);
+router.delete("/delete-scheduled-export/:id", deleteScheduledExportController);
 router.get(
   "/download-export/:id",
   // restrictSubscribeUserWork,

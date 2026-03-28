@@ -39,6 +39,10 @@ function normalizeScheduleType(rawValue, fallback = null) {
   }
 
   switch (value.toLowerCase()) {
+    case "one_time":
+    case "one-time":
+    case "once":
+      return RECURRING_SCHEDULE_TYPES.ONE_TIME;
     case "daily":
       return RECURRING_SCHEDULE_TYPES.DAILY;
     case "weekly":
@@ -84,6 +88,22 @@ function buildScheduleConfig({
     input && typeof input.scheduleConfig === "object" ? input.scheduleConfig : {};
 
   switch (scheduleType) {
+    case RECURRING_SCHEDULE_TYPES.ONE_TIME: {
+      const runAt =
+        input.scheduledAt ??
+        providedConfig.runAt ??
+        existingConfig.runAt;
+
+      const parsedRunAt = parseNullableDate(runAt, "scheduledAt");
+      if (!parsedRunAt) {
+        throw new Error("scheduledAt is required");
+      }
+
+      return {
+        runAt: parsedRunAt.toISOString(),
+      };
+    }
+
     case RECURRING_SCHEDULE_TYPES.DAILY: {
       const time =
         input.timeToRun ??

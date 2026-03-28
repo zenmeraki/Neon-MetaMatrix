@@ -11,6 +11,7 @@ import { allFields } from "../constants";
 import ExportSettingsCard from "../components/ExportSettingsCard";
 import FieldSelectionCard from "../components/FieldSelectionCard";
 import InfoCard from "../components/InfoCard";
+import ScheduledExportModal from "../components/ScheduledExportModal";
 
 export default function CsvExportPage() {
   const navigate = useNavigate();
@@ -22,6 +23,7 @@ export default function CsvExportPage() {
   const [fileError, setFileError] = useState("");
   const [loading, setLoading] = useState(false);
   const [banner, setBanner] = useState(null);
+  const [showScheduledExportModal, setShowScheduledExportModal] = useState(false);
 
   const productFields = allFields.filter((f) => f.group === "product");
   const variantFields = allFields.filter((f) => f.group === "variant");
@@ -108,6 +110,16 @@ export default function CsvExportPage() {
       backAction={{
         onAction: () => navigate("/products"),
       }}
+      secondaryActions={[
+        {
+          content: "Scheduled Export",
+          onAction: () => setShowScheduledExportModal(true),
+          disabled:
+            loading ||
+            selectedFields.length === 0 ||
+            !fileName.trim(),
+        },
+      ]}
     >
       <BlockStack gap="400">
 
@@ -142,6 +154,17 @@ export default function CsvExportPage() {
         <InfoCard />
 
       </BlockStack>
+
+      {showScheduledExportModal && (
+        <ScheduledExportModal
+          show
+          onHide={() => setShowScheduledExportModal(false)}
+          fileName={fileName.endsWith(".csv") ? fileName : `${fileName}.csv`}
+          selectedFields={selectedFields}
+          filters={filters}
+          count={count}
+        />
+      )}
     </Page>
   );
 }

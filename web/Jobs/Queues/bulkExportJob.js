@@ -14,7 +14,14 @@ export const bulkExportQueue = new Queue(process.env.EXPORT_QUEUE, {
 export const addbulkExportJob = async (data) => {
   try {
     const job = await bulkExportQueue.add("AddingBulkExport", data, {
-      removeOnComplete: true,
+      jobId: data.exportJobId || undefined,
+      removeOnComplete: 100,
+      removeOnFail: 100,
+      attempts: 5,
+      backoff: {
+        type: "exponential",
+        delay: 30_000,
+      },
     });
     return job;
   } catch (error) {

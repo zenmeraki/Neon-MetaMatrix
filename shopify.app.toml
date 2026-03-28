@@ -3,7 +3,7 @@
 client_id = "20f31d269398d5f23df95d0450e772e9"
 web_directories = [ "web", "web/frontend" ]
 name = "test-app"
-application_url = "https://cassette-three-isolated-throwing.trycloudflare.com"
+application_url = "https://reservoir-brothers-log-adjusted.trycloudflare.com"
 embedded = true
 handle = "test-app-11537"
 
@@ -37,9 +37,9 @@ use_legacy_install_flow = false
 
 [auth]
 redirect_urls = [
-  "https://cassette-three-isolated-throwing.trycloudflare.com/auth/callback",
-  "https://cassette-three-isolated-throwing.trycloudflare.com/auth/shopify/callback",
-  "https://cassette-three-isolated-throwing.trycloudflare.com/api/auth/callback"
+  "https://reservoir-brothers-log-adjusted.trycloudflare.com/auth/callback",
+  "https://reservoir-brothers-log-adjusted.trycloudflare.com/auth/shopify/callback",
+  "https://reservoir-brothers-log-adjusted.trycloudflare.com/api/auth/callback"
 ]
 
 [app_proxy]

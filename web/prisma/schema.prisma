@@ -377,25 +377,87 @@ model ExportHistory {
   @@index([shop, exportTime])
 }
 
+model ScheduledExport {
+  id                String                @id @default(cuid())
+  shop              String
+  title             String
+  status            ScheduledExportStatus @default(ACTIVE)
+  scheduleType      RecurringScheduleType
+  timezone          String
+  scheduleConfig    Json
+  cronExpression    String?
+  intervalMinutes   Int?
+  startAt           DateTime?
+  endAt             DateTime?
+  filterParams      Json
+  fields            String[]
+  filename          String
+  runCount          Int                   @default(0)
+  lastRunAt         DateTime?
+  nextRunAt         DateTime?
+  lastSuccessAt     DateTime?
+  lastFailureAt     DateTime?
+  lastFailureReason String?
+  isDeleted         Boolean               @default(false)
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  runs              ScheduledExportRun[]
+
+  @@index([shop])
+  @@index([shop, status])
+  @@index([shop, nextRunAt])
+  @@index([nextRunAt])
+}
+
+model ScheduledExportRun {
+  id                String                   @id @default(cuid())
+  scheduledExportId String
+  shop              String
+  scheduledFor      DateTime
+  startedAt         DateTime?
+  completedAt       DateTime?
+  status            ScheduledExportRunStatus @default(PENDING)
+  executionKey      String                   @unique
+  errorMessage      String?
+  exportJobId       String?
+  fileUrl           String?
+  totalItems        Int?
+  durationMs        Int?
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+  scheduledExport   ScheduledExport          @relation(fields: [scheduledExportId], references: [id], onDelete: Cascade)
+
+  @@index([scheduledExportId])
+  @@index([shop, status])
+  @@index([shop, scheduledFor])
+  @@index([exportJobId])
+}
+
 model ExportJob {
-  id          String    @id @default(cuid())
-  shop        String
-  filterQuery String    @default("{}")
-  filename    String
-  fields      String[]
-  status      String    @default("PENDING")
-  fileUrl     String?
-  type        String    @default("Manual export")
-  totalItems  Int?
-  durationMs  Int?
-  startedAt   DateTime?
-  completedAt DateTime?
-  error       String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id                  String             @id @default(cuid())
+  shop                String
+  filterQuery         String             @default("{}")
+  filename            String
+  fields              String[]
+  status              String             @default("PENDING")
+  fileUrl             String?
+  type                String             @default("Manual export")
+  isScheduled         Boolean            @default(false)
+  scheduledExportId   String?
+  scheduledExportRunId String?
+  triggerType         ExportJobTriggerType @default(MANUAL)
+  totalItems          Int?
+  durationMs          Int?
+  startedAt           DateTime?
+  completedAt         DateTime?
+  error               String?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
 
   @@index([shop])
   @@index([status])
+  @@index([scheduledExportId])
+  @@index([scheduledExportRunId])
 }
 
 model ChangeRecord {
@@ -550,6 +612,7 @@ enum RecurringEditStatus {
 }
 
 enum RecurringScheduleType {
+  ONE_TIME
   CRON
   DAILY
   WEEKLY
@@ -569,4 +632,25 @@ enum EditHistoryTriggerType {
   MANUAL
   SCHEDULED_ONCE
   RECURRING
+}
+
+enum ScheduledExportStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum ScheduledExportRunStatus {
+  PENDING
+  PROCESSING
+  SUCCESS
+  FAILED
+  SKIPPED
+}
+
+enum ExportJobTriggerType {
+  MANUAL
+  SCHEDULED
 }

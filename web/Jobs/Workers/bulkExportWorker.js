@@ -9,6 +9,7 @@ import os from "os";
 import { format } from "@fast-csv/format";
 import { clearKeyCaches } from "../../utils/cacheUtils.js";
 import { prisma } from "../../config/database.js";
+import { finalizeScheduledExportRunFromExportJob } from "../../services/scheduledExportExecutionService.js";
 
 const QUEUE_NAME = process.env.EXPORT_QUEUE;
 
@@ -93,6 +94,67 @@ function parseExportWhere(filterQuery, shop) {
   };
 }
 
+async function claimExportJob(exportJobId, shop) {
+  return prisma.$transaction(async (tx) => {
+    const currentJob = await tx.exportJob.findUnique({
+      where: { id: exportJobId },
+    });
+
+    if (!currentJob) {
+      throw new Error("Export job not found");
+    }
+
+    if (currentJob.status === "COMPLETED") {
+      return { state: "completed", exportJob: currentJob };
+    }
+
+    if (currentJob.status === "FAILED") {
+      return { state: "failed", exportJob: currentJob };
+    }
+
+    if (currentJob.status === "PROCESSING") {
+      return { state: "processing", exportJob: currentJob };
+    }
+
+    const activeExport = await tx.exportJob.findFirst({
+      where: {
+        shop,
+        status: "PROCESSING",
+        id: {
+          not: exportJobId,
+        },
+      },
+      select: { id: true },
+    });
+
+    if (activeExport) {
+      return { state: "shop_busy", exportJob: currentJob };
+    }
+
+    const updated = await tx.exportJob.updateMany({
+      where: {
+        id: exportJobId,
+        status: "PENDING",
+      },
+      data: {
+        status: "PROCESSING",
+        startedAt: new Date(),
+        error: null,
+      },
+    });
+
+    if (updated.count !== 1) {
+      return { state: "not_claimed", exportJob: currentJob };
+    }
+
+    const claimedJob = await tx.exportJob.findUnique({
+      where: { id: exportJobId },
+    });
+
+    return { state: "claimed", exportJob: claimedJob };
+  });
+}
+
 /* =========================
    WORKER
 ========================= */
@@ -105,12 +167,23 @@ const bulkExportWorker = new Worker(
     logger.info("[Export] Started", { exportJobId, shop });
     logMemoryUsage("Before Job Start");
 
-    const exportJob = await prisma.exportJob.findUnique({
-      where: { id: exportJobId },
-    });
+    const claimResult = await claimExportJob(exportJobId, shop);
+    const exportJob = claimResult.exportJob;
 
     if (!exportJob) {
       throw new Error("Export job not found");
+    }
+
+    if (claimResult.state === "completed" || claimResult.state === "failed") {
+      return { skipped: true, reason: `job_${claimResult.state}` };
+    }
+
+    if (claimResult.state === "processing" || claimResult.state === "not_claimed") {
+      return { skipped: true, reason: "job_already_claimed" };
+    }
+
+    if (claimResult.state === "shop_busy") {
+      throw new Error("Another export is already processing for this shop");
     }
 
     const startTime = Date.now();
@@ -121,14 +194,6 @@ const bulkExportWorker = new Worker(
     }, 30000);
 
     try {
-      await prisma.exportJob.update({
-        where: { id: exportJobId },
-        data: {
-          status: "PROCESSING",
-          startedAt: new Date(),
-        },
-      });
-
       await clearKeyCaches(`${shop}:fetchExportHistories:`);
 
       filePath = path.join(os.tmpdir(), exportJob.filename);
@@ -181,7 +246,7 @@ const bulkExportWorker = new Worker(
           if (!variants.length) {
             const row = { id: productId };
 
-            for (const field of fields) {
+            for (const field of fields || exportJob.fields) {
               const productResolver = PRODUCT_FIELD_RESOLVERS[field];
               if (productResolver) {
                 row[field] = productResolver(product);
@@ -199,7 +264,7 @@ const bulkExportWorker = new Worker(
                 variant_id: variant.id,
               };
 
-              for (const field of fields) {
+              for (const field of fields || exportJob.fields) {
                 const productResolver = PRODUCT_FIELD_RESOLVERS[field];
                 if (productResolver) {
                   row[field] = i === 0 ? productResolver(product) : "";
@@ -255,6 +320,11 @@ const bulkExportWorker = new Worker(
         },
       });
 
+      await finalizeScheduledExportRunFromExportJob({
+        exportJobId,
+        status: "SUCCESS",
+      }).catch(() => {});
+
       await clearKeyCaches(`${shop}:fetchExportHistories:`);
 
       logger.info("[Export] Completed", {
@@ -277,6 +347,7 @@ const bulkExportWorker = new Worker(
           data: {
             status: "FAILED",
             error: error.message,
+            completedAt: new Date(),
           },
         });
       } catch (updateError) {
@@ -285,6 +356,12 @@ const bulkExportWorker = new Worker(
           error: updateError.message,
         });
       }
+
+      await finalizeScheduledExportRunFromExportJob({
+        exportJobId,
+        status: "FAILED",
+        errorMessage: error.message,
+      }).catch(() => {});
 
       await clearKeyCaches(`${shop}:fetchExportHistories:`);
 
