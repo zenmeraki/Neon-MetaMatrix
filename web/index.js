@@ -59,7 +59,7 @@ import {
 
 /* ------------------------------------------------------------------ */
 
-const PORT = parseInt(process.env.PORT || "3000", 10);
+const PORT = process.env.PORT || 8080;
 
 const STATIC_PATH =
   process.env.NODE_ENV === "production"
