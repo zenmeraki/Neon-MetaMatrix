@@ -30,7 +30,7 @@ import AdminRoutes from "./routes/adminRoutes.js";
 import metricsRoute from "./routes/metricsRoute.js";
 
 // DB + Redis
-import prisma from "./config/database.js";
+import prisma from "./Config/database.js";
 import { connection as redis } from "./Config/redis.js";
 
 // Socket
