@@ -9,6 +9,7 @@ import { generateReferralCode } from "../utils/referralUtils.js";
 import { clearKeyCaches } from "../utils/cacheUtils.js";
 import { logApiError } from "../utils/errorLogUtils.js";
 import { prisma } from "../config/database.js";
+import shopify from "../shopify.js";
 
 /* ------------------------------------------------------------------ */
 /*  Email helpers (called from worker)                                 */
