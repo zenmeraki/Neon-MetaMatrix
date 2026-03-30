@@ -3,7 +3,7 @@
 client_id = "20f31d269398d5f23df95d0450e772e9"
 web_directories = [ "web", "web/frontend" ]
 name = "test-app"
-application_url = "https://squad-viewers-permissions-imaging.trycloudflare.com"
+application_url = "https://remarkable-turns-economies-albuquerque.trycloudflare.com"
 embedded = true
 handle = "test-app-11537"
 
@@ -45,9 +45,9 @@ use_legacy_install_flow = false
 
 [auth]
 redirect_urls = [
-  "https://squad-viewers-permissions-imaging.trycloudflare.com/auth/callback",
-  "https://squad-viewers-permissions-imaging.trycloudflare.com/auth/shopify/callback",
-  "https://squad-viewers-permissions-imaging.trycloudflare.com/api/auth/callback"
+  "https://remarkable-turns-economies-albuquerque.trycloudflare.com/auth/callback",
+  "https://remarkable-turns-economies-albuquerque.trycloudflare.com/auth/shopify/callback",
+  "https://remarkable-turns-economies-albuquerque.trycloudflare.com/api/auth/callback"
 ]
 
 [app_proxy]
