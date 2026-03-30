@@ -8,7 +8,10 @@ import { emitToUser } from "../../../socket.js";
 import { clearKeyCaches } from "../../../utils/cacheUtils.js";
 import { enqueueAutomaticProductRuleSignalJob } from "../../../services/automaticProductRuleExecutionService.js";
 import { prisma } from "../../../config/database.js";
-import { markFullSyncFailed } from "../../../services/mirrorHealthService.js";
+import {
+  createMirrorBatchId,
+  markFullSyncFailed,
+} from "../../../services/mirrorHealthService.js";
 import { recordMirrorAnomaly } from "../../../services/mirrorAnomalyService.js";
 
 export async function handleSyncOperation({ bulkOperationId, shop = null }) {
@@ -20,10 +23,20 @@ export async function handleSyncOperation({ bulkOperationId, shop = null }) {
         bulkOperationId,
         ...(shop ? { shop } : {}),
       },
+      orderBy: { createdAt: "desc" },
     });
 
     if (!syncHistory) {
       return;
+    }
+
+    if (syncHistory.operationType === "Product" && !syncHistory.syncBatchId) {
+      const syncBatchId = createMirrorBatchId("product_sync");
+
+      syncHistory = await prisma.syncHistory.update({
+        where: { id: syncHistory.id },
+        data: { syncBatchId },
+      });
     }
 
     let recordCount = 0;

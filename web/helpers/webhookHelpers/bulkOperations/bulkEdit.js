@@ -122,10 +122,9 @@ function mergeProductForBulkMirror(existing, incoming) {
   };
 }
 
-function toVariantNestedCreateInput(variant, mirrorBatchId = "legacy") {
+function toVariantNestedCreateInput(variant) {
   return {
     id: String(variant.id),
-    mirrorBatchId,
     title: variant.title ?? null,
     sku: variant.sku ?? null,
     barcode: variant.barcode ?? null,
@@ -182,7 +181,7 @@ function toProductCreateInput(product, variants, mirrorBatchId = "legacy") {
     variantCount: toNullableInt(product.variantCount),
     visibleOnlineStore: toNullableBoolean(product.visibleOnlineStore),
     variants: {
-      create: asArray(variants).map((variant) => toVariantNestedCreateInput(variant, mirrorBatchId)),
+      create: asArray(variants).map((variant) => toVariantNestedCreateInput(variant)),
     },
   };
 }

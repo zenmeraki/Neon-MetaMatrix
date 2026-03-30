@@ -83,12 +83,16 @@ export class Services {
     dataStream,
     shop,
     session,
+    syncBatchId,
+    syncHistoryId = null,
     replaceShopData = true,
   }) {
     return formatAndSyncProductsToDB({
       dataStream,
       shop,
       session,
+      syncBatchId,
+      syncHistoryId,
       replaceShopData,
     });
   }
