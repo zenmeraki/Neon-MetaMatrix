@@ -201,17 +201,6 @@ app.use((err, req, res, _next) => {
 /*  Start Server                                                       */
 /* ------------------------------------------------------------------ */
 
-server.listen(PORT, () => {
-  (async () => {
-    try {
-
-      console.log(
-        `🚀 Worker ${process.pid} running at http://localhost:${PORT}`
-      );
-
-    } catch (err) {
-      console.error("Startup failed", err);
-      process.exit(1);
-    }
-  })();
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server running on port ${PORT}`);
 });
