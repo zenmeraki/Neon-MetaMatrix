@@ -3,7 +3,7 @@
 import { getPlansArray, PLANS } from "../services/SubscriptionService/SubscriptionService.js";
 import shopify from "../shopify.js";
 
-import { prisma } from "../config/database.js";
+import { prisma } from "../Config/database.js";
 
 
 export const getPlansController = async (req, res) => {

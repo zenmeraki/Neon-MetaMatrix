@@ -1,7 +1,7 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { getCurrentBulkOperationStatus } from "../utils/bulkOperationHelper.js";
 import { clearKeyCaches } from "../utils/cacheUtils.js";
-import { prisma } from "../config/database.js";
+import { prisma } from "../Config/database.js";
 import shopify from "../shopify.js";
 
 export const clearProductTypes = asyncHandler(async (req, res) => {

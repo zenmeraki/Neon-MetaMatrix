@@ -1,4 +1,4 @@
-import { prisma } from "../../config/database.js";
+import { prisma } from "../../Config/database.js";
 import { clearKeyCaches } from "../../utils/cacheUtils.js";
 
 export async function markProductSyncStarted({ shop }) {

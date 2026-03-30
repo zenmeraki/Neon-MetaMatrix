@@ -10,7 +10,7 @@ import {
   sentWelcomeMailToStore,
 } from "../../middleware/appInstallMiddleware.js";
 import { logWorkerError } from "../../utils/errorLogUtils.js";
-import { prisma } from "../../config/database.js";
+import { prisma } from "../../Config/database.js";
 
 const appInstallationWorker = new Worker(
   process.env.APP_INSTALLATION_QUEUE,

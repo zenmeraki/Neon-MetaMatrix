@@ -7,7 +7,7 @@ import CacheService from "./utils/cacheService.js";
 import { addAppUninstallJob } from "./Jobs/Queues/appUninstallJob.js";
 import { addbulkOperatonQueryJob } from "./Jobs/Queues/bulkOperationQueryJob.js";
 import { mapPlanKeyFromName } from "./services/SubscriptionService/SubscriptionService.js";
-import {prisma} from "./config/database.js"
+import {prisma} from "./Config/database.js"
 import { clearKeyCaches } from "./utils/cacheUtils.js";
 import { addbulkOperatonMutationJob } from "./Jobs/Queues/bulkOperationMutationJob.js";
 

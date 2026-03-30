@@ -1,7 +1,7 @@
 import { Prisma } from "../generated/prisma/index.js";
 import { Queue } from "bullmq";
 import { connection } from "../Config/redis.js";
-import { prisma } from "../config/database.js";
+import { prisma } from "../Config/database.js";
 import { scheduledExportRepository } from "../repositories/scheduledExportRepository.js";
 import { scheduledExportRunRepository } from "../repositories/scheduledExportRunRepository.js";
 import { computeScheduledExportNextRunAt } from "./scheduledExportScheduleService.js";

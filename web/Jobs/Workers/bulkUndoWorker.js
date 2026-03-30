@@ -11,7 +11,7 @@ import { clearKeyCaches } from "../../utils/cacheUtils.js";
 import logger from "../../utils/loggerUtils.js";
 import { logWorkerError } from "../../utils/errorLogUtils.js";
 
-import { prisma } from "../../config/database.js";
+import { prisma } from "../../Config/database.js";
 
 
 const bulkUndoWorker = new Worker(

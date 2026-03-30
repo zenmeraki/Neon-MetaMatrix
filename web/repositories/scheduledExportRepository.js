@@ -1,4 +1,4 @@
-import { prisma } from "../config/database.js";
+import { prisma } from "../Config/database.js";
 
 function getClient(db) {
   return db || prisma;

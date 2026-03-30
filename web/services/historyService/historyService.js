@@ -1,7 +1,7 @@
 import { NotFoundError } from "../../utils/errorUtils.js";
 import { EDIT_TYPES, FIELD_TRANSLATIONS } from "../../Config/constants.js";
 import { getCache, setCache } from "../../utils/cacheUtils.js";
-import { prisma } from "../../config/database.js";
+import { prisma } from "../../Config/database.js";
 
 const validTypes = ["Manual edit", "Scheduled edit", "Recurring edit"];
 

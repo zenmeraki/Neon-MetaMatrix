@@ -5,7 +5,7 @@ import {
   createMultiLanguageForFileEdit,
 } from "../utils/googleTranslator.js";
 import { clearAllCachesForShop, clearKeyCaches } from "../utils/cacheUtils.js";
-import { prisma } from "../config/database.js";
+import { prisma } from "../Config/database.js";
 import { addbulkImportEditJob } from "../Jobs/Queues/bulkImportEditJob.js";
 
 export const csvBulkProductsEdit = asyncHandler(async (req, res) => {

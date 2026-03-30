@@ -9,7 +9,7 @@ import {
 import shopify from "../../shopify.js";
 import { clearKeyCaches } from "../../utils/cacheUtils.js";
 import { FIELD_CONFIGS } from "../../helpers/productBulkOperationHelpers/constants.js";
-import { prisma } from "../../config/database.js";
+import { prisma } from "../../Config/database.js";
 
 const OPTION_NAME_FIELDS = new Set([
   "option1Name",

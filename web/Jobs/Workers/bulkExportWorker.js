@@ -8,7 +8,7 @@ import path from "path";
 import os from "os";
 import { format } from "@fast-csv/format";
 import { clearKeyCaches } from "../../utils/cacheUtils.js";
-import { prisma } from "../../config/database.js";
+import { prisma } from "../../Config/database.js";
 import { finalizeScheduledExportRunFromExportJob } from "../../services/scheduledExportExecutionService.js";
 
 const QUEUE_NAME = process.env.EXPORT_QUEUE;

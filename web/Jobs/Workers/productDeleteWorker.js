@@ -5,7 +5,7 @@ import { Worker } from "bullmq";
 import { connection } from "../../Config/redis.js";
 import { clearKeyCaches } from "../../utils/cacheUtils.js";
 
-import { prisma } from "../../config/database.js";
+import { prisma } from "../../Config/database.js";
 
 const QueueName =
   process.env.NODE_ENV === "production"

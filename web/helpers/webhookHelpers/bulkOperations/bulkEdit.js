@@ -11,7 +11,7 @@ import { sendEmail } from "../../../utils/emailHelper.js";
 import { addbulkUndoJob } from "../../../Jobs/Queues/bulkUndoJob.js";
 import { addbulkEditJob } from "../../../Jobs/Queues/bulkEditJob.js";
 import { clearKeyCaches } from "../../../utils/cacheUtils.js";
-import { prisma } from "../../../config/database.js";
+import { prisma } from "../../../Config/database.js";
 import { finalizeRecurringRunFromHistory } from "../../../services/recurringEditExecutionService.js";
 
 /* ────────────────────────────────────────────────────────────── */

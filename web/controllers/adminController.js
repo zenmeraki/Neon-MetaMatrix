@@ -6,7 +6,7 @@
 import adminService from "../services/adminService.js";
 
 // ✅ Add Prisma
-import  {prisma} from "../config/database.js"
+import  {prisma} from "../Config/database.js"
 
 // Dashboard Overview
 export const getDashboard = async (req, res) => {

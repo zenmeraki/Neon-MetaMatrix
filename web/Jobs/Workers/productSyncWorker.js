@@ -8,7 +8,7 @@ import { getCurrentBulkOperationStatus } from "../../utils/bulkOperationHelper.j
 import { productSyncQueue } from "../Queues/productSyncQueue.js";
 
 // 🔹 Use the shared Prisma client (Neon / Postgres)
-import { prisma } from "../../config/database.js";
+import { prisma } from "../../Config/database.js";
 
 // 🔹 Use the same Shopify app instance that is configured
 //     with PostgreSQLSessionStorage (DATABASE_URL)

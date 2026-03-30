@@ -8,7 +8,7 @@ import { logWorkerError } from "../../utils/errorLogUtils.js";
 import { finalizeRecurringRunFromHistory } from "../../services/recurringEditExecutionService.js";
 
 // 🔹 Prisma
-import { prisma } from "../../config/database.js";
+import { prisma } from "../../Config/database.js";
 
 const QUEUE_NAME = process.env.EDIT_QUEUE;
 

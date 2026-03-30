@@ -3,7 +3,7 @@ import Joi from "joi";
 import nodemailer from "nodemailer";
 import { sendEmail } from "../../utils/emailHelper.js";
 
-import { prisma } from "../../config/database.js";
+import { prisma } from "../../Config/database.js";
 
 export class SuggestionService {
   constructor() {

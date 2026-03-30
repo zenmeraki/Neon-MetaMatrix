@@ -10,7 +10,7 @@ import { logApiError } from "../utils/errorLogUtils.js";
 // import Store from "../schema/Store.js";
 
 // ✅ ADD Prisma
-import { prisma } from "../config/database.js";
+import { prisma } from "../Config/database.js";
 
 
 // ✅ Validate query param "search"

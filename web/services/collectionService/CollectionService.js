@@ -2,7 +2,7 @@ import logger from "../../utils/loggerUtils.js";
 import promClient from "prom-client";
 import { getCache, setCache } from "../../utils/cacheUtils.js";
 
-import { prisma } from "../../config/database.js";
+import { prisma } from "../../Config/database.js";
 
 export const metrics = {
   collectionFetchLatency: new promClient.Histogram({

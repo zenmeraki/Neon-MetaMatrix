@@ -2,7 +2,7 @@
 
 import { PLANS } from "../services/SubscriptionService/SubscriptionService.js";
 
-import { prisma } from "../config/database.js";
+import { prisma } from "../Config/database.js";
 
 
 export const subscriptionMiddleware = async (req, res, next) => {

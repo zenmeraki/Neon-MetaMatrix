@@ -7,7 +7,7 @@ import {
 } from "../utils/bulkOperationHelper.js";
 import { setCache, getCache, clearKeyCaches } from "../utils/cacheUtils.js";
 import { logApiError } from "../utils/errorLogUtils.js";
-import { prisma } from "../config/database.js";
+import { prisma } from "../Config/database.js";
 
 const service = new Services();
 

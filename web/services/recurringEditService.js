@@ -1,4 +1,4 @@
-import { prisma } from "../config/database.js";
+import { prisma } from "../Config/database.js";
 import { Services } from "./productService/productFilterService.js";
 import { getUpdatedProducts } from "../helpers/productBulkOperationHelpers/productUpdateHandler.js";
 import { recurringEditRepository } from "../repositories/recurringEditRepository.js";

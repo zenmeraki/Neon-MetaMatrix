@@ -6,7 +6,7 @@ import { clearKeyCaches } from "../../utils/cacheUtils.js";
 import { getSession } from "../../utils/sessionHandler.js";
 
 // ✅ Prisma
-import { prisma } from "../../config/database.js";
+import { prisma } from "../../Config/database.js";
 
 
 /**

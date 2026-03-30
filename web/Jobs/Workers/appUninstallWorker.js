@@ -5,7 +5,7 @@ import { uninstallFeedbackHTML } from "../../Config/templates/uninstallTemplate.
 import { clearKeyCaches } from "../../utils/cacheUtils.js";
 import { logWebhookError } from "../../utils/errorLogUtils.js";
 
-import { prisma } from "../../config/database.js";
+import { prisma } from "../../Config/database.js";
 
 
 const appUninstallWorker = new Worker(

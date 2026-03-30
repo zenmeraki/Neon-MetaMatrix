@@ -1,6 +1,6 @@
 // FILE: web/utils/errorLogUtils.js
 
-import { prisma } from "../config/database.js";
+import { prisma } from "../Config/database.js";
 
 function safeJson(value) {
   try {

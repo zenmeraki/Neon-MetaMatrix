@@ -1,7 +1,7 @@
 import { Prisma } from "../generated/prisma/index.js";
 import { Queue } from "bullmq";
 import { connection } from "../Config/redis.js";
-import { prisma } from "../config/database.js";
+import { prisma } from "../Config/database.js";
 import { recurringEditRepository } from "../repositories/recurringEditRepository.js";
 import { recurringEditRunRepository } from "../repositories/recurringEditRunRepository.js";
 import { computeRecurringEditNextRunAt } from "./recurringEditScheduleService.js";

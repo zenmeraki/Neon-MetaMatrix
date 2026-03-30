@@ -1,7 +1,7 @@
 // web/utils/sessionHandler.js
 import shopify from "../shopify.js";
 
-import { prisma } from "../config/database.js";
+import { prisma } from "../Config/database.js";
 
 
 // Legacy reference (kept as a comment for context)

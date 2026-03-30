@@ -10,7 +10,7 @@ import {
   transformWebhookPayload,
 } from "../../utils/webhookTransformers.js";
 
-import { prisma } from "../../config/database.js";
+import { prisma } from "../../Config/database.js";
 
 
 const QueueName =

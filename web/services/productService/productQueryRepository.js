@@ -1,5 +1,5 @@
 import { Prisma } from "../../generated/prisma/index.js";
-import { prisma } from "../../config/database.js";
+import { prisma } from "../../Config/database.js";
 
 export async function findProductsForListing({ where, orderBy, skip, take }) {
   return prisma.product.findMany({

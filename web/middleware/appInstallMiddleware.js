@@ -8,7 +8,7 @@ import { sendEmail } from "../utils/emailHelper.js";
 import { generateReferralCode } from "../utils/referralUtils.js";
 import { clearKeyCaches } from "../utils/cacheUtils.js";
 import { logApiError } from "../utils/errorLogUtils.js";
-import { prisma } from "../config/database.js";
+import { prisma } from "../Config/database.js";
 
 /* ------------------------------------------------------------------ */
 /*  Email helpers (called from worker)                                 */

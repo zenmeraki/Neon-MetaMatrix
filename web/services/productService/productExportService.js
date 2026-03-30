@@ -6,7 +6,7 @@ import CacheService from "../../utils/cacheService.js";
 import { EXPORT_TYPES } from "../../Config/constants.js";
 import logger from "../../utils/loggerUtils.js";
 import { getCache, setCache } from "../../utils/cacheUtils.js";
-import { prisma } from "../../config/database.js";
+import { prisma } from "../../Config/database.js";
 
 export class ProductExportService {
   constructor(session) {

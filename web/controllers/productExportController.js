@@ -4,7 +4,7 @@ import { addbulkExportJob } from "../Jobs/Queues/bulkExportJob.js";
 import { ProductExportService } from "../services/productService/productExportService.js";
 import { clearKeyCaches } from "../utils/cacheUtils.js";
 import { logApiError } from "../utils/errorLogUtils.js";
-import { prisma } from "../config/database.js";
+import { prisma } from "../Config/database.js";
 
 export const handleExportProductsData = async (req, res) => {
   const session = res.locals.shopify?.session;

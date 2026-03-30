@@ -1,4 +1,4 @@
-import { prisma } from "../config/database.js";
+import { prisma } from "../Config/database.js";
 
 const SCHEDULED_EXPORT_PLAN_KEYS = new Set([
   "ADVANCED_MONTHLY",
