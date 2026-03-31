@@ -1,4 +1,5 @@
 import { Modal, Banner, Text, Box } from "@shopify/polaris";
+import { useTranslation } from "react-i18next";
 
 export default function ConfirmImportModal({
     open,
@@ -6,13 +7,17 @@ export default function ConfirmImportModal({
     onConfirm,
     loading,
 }) {
+    const { t } = useTranslation();
+
     return (
         <Modal
             open={open}
-            onClose={loading ? () => { } : onClose} // ✅ prevent close while loading
-            title="Confirm Product Import"
+            onClose={loading ? () => {} : onClose}
+            title={t("spreadsheetConfirmTitle", { defaultValue: "Confirm Product Import" })}
             primaryAction={{
-                content: "Yes, Import Products",
+                content: t("spreadsheetConfirmPrimary", {
+                    defaultValue: "Yes, Import Products",
+                }),
                 destructive: true,
                 onAction: onConfirm,
                 loading,
@@ -20,18 +25,27 @@ export default function ConfirmImportModal({
             }}
             secondaryActions={[
                 {
-                    content: "Cancel",
+                    content: t("spreadsheetCancel", { defaultValue: "Cancel" }),
                     onAction: onClose,
-                    disabled: loading, // ✅ disable cancel while uploading
+                    disabled: loading,
                 },
             ]}
         >
             <Modal.Section>
-                <Text>Are you sure you want to import this CSV?</Text>
+                <Text>
+                    {t("spreadsheetConfirmMessage", {
+                        defaultValue: "Are you sure you want to import this CSV?",
+                    })}
+                </Text>
 
                 <Box paddingBlockStart="300">
                     <Banner tone="critical">
-                        <p>Products will be updated based on Product ID and Variant ID.</p>
+                        <p>
+                            {t("spreadsheetConfirmBanner", {
+                                defaultValue:
+                                    "Products will be updated based on Product ID and Variant ID.",
+                            })}
+                        </p>
                     </Banner>
                 </Box>
             </Modal.Section>
