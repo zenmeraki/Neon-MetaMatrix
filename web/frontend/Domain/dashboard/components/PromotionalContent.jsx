@@ -28,6 +28,7 @@ const PromotionalContent = () => {
       </Box>
 
       <Divider />
+      
 
       {/* Demo Video Section */}
       <BlockStack gap="400">

@@ -13,6 +13,7 @@ import {
   Banner,
   Select,
   SkeletonBodyText,
+  Grid,
 } from "@shopify/polaris";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -42,22 +43,44 @@ const LANGUAGE_OPTIONS = [
   { label: "Русский", value: "ru" },
 ];
 
-const MetricCard = memo(function MetricCard({ title, value, icon, tone = "info" }) {
+const MetricCard = memo(function MetricCard({
+  title,
+  value,
+  icon,
+  tone = "info",
+}) {
   return (
-    <Card>
-      <Box padding="400" minHeight="112px">
-        <BlockStack gap="300">
-          <InlineStack align="space-between" blockAlign="center">
-            <InlineStack gap="200" blockAlign="center">
-              <Icon source={icon} tone="subdued" />
-              <Text as="span" variant="bodyMd" tone="subdued">
-                {title}
-              </Text>
+    <Card roundedAbove="sm">
+      <Box padding="500" minHeight="140px">
+        <BlockStack gap="400">
+          <InlineStack align="space-between" blockAlign="start">
+            <InlineStack gap="300" blockAlign="center">
+              <Box
+                background="bg-surface-secondary"
+                borderRadius="200"
+                padding="300"
+              >
+                <Icon source={icon} tone={tone} />
+              </Box>
+
+              <BlockStack gap="100">
+                <Text as="span" variant="bodyLg" fontWeight="semibold">
+                  {title}
+                </Text>
+                <Text
+                  as="p"
+                  variant="heading2xl"
+                  tone={Number(value) > 0 ? "success" : "subdued"}
+                >
+                  {value}
+                </Text>
+              </BlockStack>
             </InlineStack>
-            <Badge tone={tone}>{value}</Badge>
+
+            <Badge tone={tone}>{title}</Badge>
           </InlineStack>
-          <Text as="p" variant="headingLg">
-            {value}
+          <Text as="p" variant="bodyMd" fontWeight="medium">
+            {title}
           </Text>
         </BlockStack>
       </Box>
@@ -67,10 +90,33 @@ const MetricCard = memo(function MetricCard({ title, value, icon, tone = "info" 
 
 function MetricSkeleton() {
   return (
-    <Card>
-      <Box padding="400" minHeight="112px">
+    <Card roundedAbove="sm">
+      <Box padding="500" minHeight="140px">
+        <SkeletonBodyText lines={3} />
+      </Box>
+    </Card>
+  );
+}
+
+function QuickActionCard({ title, description, buttonText, onAction }) {
+  return (
+    <Card roundedAbove="sm">
+      <Box padding="500">
         <BlockStack gap="300">
-          <SkeletonBodyText lines={2} />
+          <BlockStack gap="100">
+            <Text as="h3" variant="headingMd">
+              {title}
+            </Text>
+            <Text as="p" variant="bodyMd" tone="subdued">
+              {description}
+            </Text>
+          </BlockStack>
+
+          <Box paddingBlockStart="200">
+            <Button fullWidth variant="primary" onClick={onAction}>
+              {buttonText}
+            </Button>
+          </Box>
         </BlockStack>
       </Box>
     </Card>
@@ -119,44 +165,81 @@ export default function DashboardPage() {
       fullWidth
       title={t("dashboard")}
       subtitle={t("manageStoreOperations")}
-      primaryAction={{
-        content: t("editNow"),
-        icon: PlusIcon,
-        onAction: () => navigate("/products"),
-      }}
-      secondaryActions={[
-        {
-          content: t("History"),
-          onAction: () => navigate("/history"),
-        },
-        {
-          content: t("SyncData"),
-          onAction: () => navigate("/refresh"),
-        },
-      ]}
+
     >
       <Layout>
         <Layout.Section>
-          <Card>
+          <Card roundedAbove="sm">
             <Box padding="500">
-              <InlineStack align="space-between" blockAlign="start" gap="400" wrap>
-                <BlockStack gap="200">
-                  <Text as="h2" variant="headingLg">
-                    {t("overview")}
-                  </Text>
-                  <Text as="p" variant="bodyMd" tone="subdued">
-                    Review activity, check store readiness, and jump back into the workflows merchants use most.
-                  </Text>
-                </BlockStack>
-                <Box minWidth="220px">
-                  <Select
-                    label="Language"
-                    options={LANGUAGE_OPTIONS}
-                    value={i18n.language}
-                    onChange={handleLanguageChange}
-                  />
-                </Box>
-              </InlineStack>
+           
+              <Grid>
+  <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 3, lg: 7, xl: 7 }}>
+                  <Box paddingBlock="200">
+                    <BlockStack gap="300">
+                      <Text as="h2" variant="heading2xl">
+                        {t("overview")}
+                      </Text>
+
+                      <Text as="p" variant="bodyMd" tone="subdued">
+                        Review activity, check store readiness, and jump back into the workflows merchants use most.
+                      </Text>
+                     <Box paddingBlockStart="400">
+  <InlineStack gap="500" wrap blockAlign="center">
+    <Box>
+      <Button onClick={() => navigate("/history")}>
+        {t("History")}
+      </Button>
+    </Box>
+
+    <Box>
+      <Button onClick={() => navigate("/refresh")}>
+        {t("SyncData")}
+      </Button>
+    </Box>
+
+    <Box>
+      <Button
+        variant="primary"
+        icon={PlusIcon}
+        onClick={() => navigate("/products")}
+      >
+        {t("editNow")}
+      </Button>
+    </Box>
+  </InlineStack>
+</Box>
+                    </BlockStack>
+                  </Box>
+                </Grid.Cell>
+
+              <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 3, lg: 5, xl: 5 }}>
+  <InlineStack align="start">
+    <Box width="100%" maxWidth="420px">
+      <Card background="bg-surface-secondary" roundedAbove="sm">
+        <Box padding="350">
+          <BlockStack gap="150">
+            <Text as="h3" variant="headingMd">
+              Language
+            </Text>
+
+            <Text as="p" variant="bodySm" tone="subdued">
+              Choose dashboard language.
+            </Text>
+
+            <Select
+              label="Language"
+              labelHidden
+              options={LANGUAGE_OPTIONS}
+              value={i18n.language}
+              onChange={handleLanguageChange}
+            />
+          </BlockStack>
+        </Box>
+      </Card>
+    </Box>
+  </InlineStack>
+</Grid.Cell>
+              </Grid>
             </Box>
           </Card>
         </Layout.Section>
@@ -174,10 +257,12 @@ export default function DashboardPage() {
                   }}
                 >
                   <p>
-                    You can keep using the app at no cost for the current access window. If you need more time, we can extend it for you.
+                    You can keep using the app at no cost for the current access
+                    window. If you need more time, we can extend it for you.
                   </p>
                 </Banner>
               )}
+
               {storeAccess?.isProductInitialySyning && (
                 <Banner
                   tone="info"
@@ -188,7 +273,9 @@ export default function DashboardPage() {
                   }}
                 >
                   <p>
-                    Your product mirror is updating in the background. You can continue using the app and refresh the sync page for live status.
+                    Your product mirror is updating in the background. You can
+                    continue using the app and refresh the sync page for live
+                    status.
                   </p>
                 </Banner>
               )}
@@ -197,52 +284,95 @@ export default function DashboardPage() {
         )}
 
         <Layout.Section>
-          <InlineStack gap="400" wrap>
+          <Grid>
             {loadingStoreData
               ? metricCards.map((card) => (
-                  <Box key={card.key} minWidth="220px" maxWidth="320px" width="100%">
-                    <MetricSkeleton />
-                  </Box>
-                ))
+                <Grid.Cell
+                  key={card.key}
+                  columnSpan={{ xs: 6, sm: 3, md: 2, lg: 4, xl: 4 }}
+                >
+                  <MetricSkeleton />
+                </Grid.Cell>
+              ))
               : metricCards.map((card) => (
-                  <Box key={card.key} minWidth="220px" maxWidth="320px" width="100%">
-                    <MetricCard {...card} />
-                  </Box>
-                ))}
-          </InlineStack>
+                <Grid.Cell
+                  key={card.key}
+                  columnSpan={{ xs: 6, sm: 3, md: 2, lg: 4, xl: 4 }}
+                >
+                  <MetricCard {...card} />
+                </Grid.Cell>
+              ))}
+          </Grid>
         </Layout.Section>
 
-        <Layout.Section variant="oneThird">
-          <Card>
+        <Layout.Section>
+          <Card roundedAbove="sm">
             <Box padding="500">
-              <BlockStack gap="300">
-                <Text as="h3" variant="headingMd">
-                  Quick actions
-                </Text>
-                <Button fullWidth onClick={() => navigate("/products")}>
-                  Open products
-                </Button>
-                <Button fullWidth onClick={() => navigate("/edit")}>
-                  Create bulk edit
-                </Button>
-                <Button fullWidth onClick={() => navigate("/exportdata")}>
-                  Create export
-                </Button>
-                <Button fullWidth onClick={() => navigate("/product-code-snippets")}>
-                  Open snippet studio
-                </Button>
+              <BlockStack gap="400">
+                <BlockStack gap="100">
+                  <Text as="h3" variant="headingLg">
+                    Quick actions
+                  </Text>
+                  <Text as="p" variant="bodyMd" tone="subdued">
+                    Jump directly into the tasks merchants use most often.
+                  </Text>
+                </BlockStack>
+
+                <Grid>
+                  <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3, xl: 3 }}>
+                    <QuickActionCard
+                      title="Products"
+                      description="Browse your catalog and start working on product data."
+                      buttonText="Open products"
+                      onAction={() => navigate("/products")}
+                    />
+                  </Grid.Cell>
+
+                  <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3, xl: 3 }}>
+                    <QuickActionCard
+                      title="Bulk edit"
+                      description="Create and manage edits across products faster."
+                      buttonText="Create bulk edit"
+                      onAction={() => navigate("/edit")}
+                    />
+                  </Grid.Cell>
+
+                  <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3, xl: 3 }}>
+                    <QuickActionCard
+                      title="Exports"
+                      description="Generate product exports for reporting or external workflows."
+                      buttonText="Create export"
+                      onAction={() => navigate("/exportdata")}
+                    />
+                  </Grid.Cell>
+
+                  <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3, xl: 3 }}>
+                    <QuickActionCard
+                      title="Snippet studio"
+                      description="Open reusable product snippets and code utilities."
+                      buttonText="Open snippet studio"
+                      onAction={() => navigate("/product-code-snippets")}
+                    />
+                  </Grid.Cell>
+                </Grid>
               </BlockStack>
             </Box>
           </Card>
         </Layout.Section>
 
         <Layout.Section>
-          <Card>
+          <Card roundedAbove="sm">
             <Box padding="500">
               <BlockStack gap="400">
-                <Text as="h3" variant="headingMd">
-                  Learn and optimize
-                </Text>
+                <BlockStack gap="100">
+                  <Text as="h3" variant="headingLg">
+                    Learn and optimize
+                  </Text>
+                  <Text as="p" variant="bodyMd" tone="subdued">
+                    Best practices, guidance, and product education for faster execution.
+                  </Text>
+                </BlockStack>
+
                 <Suspense
                   fallback={
                     <Box minHeight="320px">
