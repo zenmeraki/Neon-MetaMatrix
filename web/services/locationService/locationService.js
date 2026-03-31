@@ -6,6 +6,7 @@ export class LocationService {
   constructor(locationModel) {
     this.Location = locationModel;
   }
+  
 
   async getLocationsByShop(shop) {
     try {
