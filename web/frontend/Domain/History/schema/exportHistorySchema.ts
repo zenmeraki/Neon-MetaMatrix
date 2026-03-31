@@ -26,6 +26,7 @@ export const ExportHistoryItemSchema = z.object({
   status: z.string().optional(),
   executionState: z.string().optional(),
   failureStage: z.string().nullable().optional(),
+  rawType: z.string().optional(),
   type: z.string().optional(),
   totalItems: z.number().optional().default(0),
   targetSnapshotCount: z.number().optional().default(0),

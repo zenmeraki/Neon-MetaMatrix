@@ -16,23 +16,57 @@ import {
 } from "@shopify/polaris";
 import { ArrowDownIcon } from "@shopify/polaris-icons";
 
-function getPrimaryStatus(item) {
-  if (item?.primaryStatus) return item.primaryStatus;
-
-  const status = String(item?.status || "").toLowerCase();
-  if (status === "completed") {
-    return { key: "completed", label: "Completed", tone: "success", isTerminal: true };
-  }
-  if (status === "failed") {
-    return { key: "failed", label: "Failed", tone: "critical", isTerminal: true };
-  }
-  if (status === "processing") {
-    return { key: "running", label: "Building file", tone: "info", isTerminal: false };
-  }
-  return { key: "queued", label: "Queued", tone: "attention", isTerminal: false };
+function getNormalizedExportType(item) {
+  return String(item?.rawType || item?.type || "").trim().toLowerCase();
 }
 
-const ExportTable = ({ onExportSuccess, onExportError }) => {
+function getPrimaryStatus(item) {
+  const statusKey = String(
+    item?.primaryStatus?.key || item?.status || "pending",
+  ).toLowerCase();
+
+  if (statusKey === "completed") {
+    return { key: "completed", label: "Completed", tone: "success", isTerminal: true };
+  }
+  if (statusKey === "failed") {
+    return { key: "failed", label: "Failed", tone: "critical", isTerminal: true };
+  }
+  if (statusKey === "processing") {
+    return { key: "processing", label: "Processing", tone: "info", isTerminal: false };
+  }
+
+  return { key: "pending", label: "Pending", tone: "attention", isTerminal: false };
+}
+
+function getProgressValue(item, primaryStatus) {
+  const explicitProgress = Number(
+    item?.progressPercent ?? item?.progressSummary?.percent,
+  );
+
+  if (Number.isFinite(explicitProgress) && explicitProgress > 0) {
+    return Math.max(0, Math.min(100, explicitProgress));
+  }
+
+  if (primaryStatus.key === "completed") {
+    return 100;
+  }
+
+  const processedCount = Number(item?.processedCount ?? 0);
+  const totalItems = Number(
+    item?.targetSnapshotCount ?? item?.totalItems ?? 0,
+  );
+
+  if (totalItems > 0) {
+    return Math.max(
+      0,
+      Math.min(100, Math.round((processedCount / totalItems) * 100)),
+    );
+  }
+
+  return 0;
+}
+
+const ExportTable = ({ selectedType = "Manual export", onExportSuccess, onExportError }) => {
   const [histories, setHistories] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [historyError, setHistoryError] = useState(null);
@@ -98,6 +132,14 @@ const ExportTable = ({ onExportSuccess, onExportError }) => {
     return () => clearInterval(interval);
   }, [histories]);
 
+  const filteredHistories = useMemo(() => {
+    const normalizedSelectedType = String(selectedType).trim().toLowerCase();
+
+    return histories.filter(
+      (item) => getNormalizedExportType(item) === normalizedSelectedType,
+    );
+  }, [histories, selectedType]);
+
   const handleDownloadClick = async (id, fileUrl, filename) => {
     if (!fileUrl) {
       onExportError?.("Download link not available.");
@@ -156,13 +198,13 @@ const ExportTable = ({ onExportSuccess, onExportError }) => {
 
   const historyRowMarkup = useMemo(
     () =>
-      histories.map((item, index) => {
+      filteredHistories.map((item, index) => {
         const id = item.id || item._id;
         const primaryStatus = getPrimaryStatus(item);
         const filename = item.filename || "Untitled export";
         const isDownloading = downloadingItems.has(id);
         const isDownloadable = primaryStatus.key === "completed" && Boolean(item.fileUrl);
-        const progress = Number(item?.progressPercent ?? item?.progressSummary?.percent ?? 0);
+        const progress = getProgressValue(item, primaryStatus);
         const progressLabel = item?.progressSummary?.label || primaryStatus.label;
         const supportDetail =
           item?.supportStatus?.failureStage || primaryStatus.detail || null;
@@ -228,7 +270,7 @@ const ExportTable = ({ onExportSuccess, onExportError }) => {
           </IndexTable.Row>
         );
       }),
-    [downloadingItems, histories],
+    [downloadingItems, filteredHistories],
   );
 
   if (historyLoading) {
@@ -256,7 +298,7 @@ const ExportTable = ({ onExportSuccess, onExportError }) => {
               </Text>
             </BlockStack>
             <Text as="span" tone="subdued" variant="bodySm">
-              {histories.length} items
+              {filteredHistories.length} items
             </Text>
           </InlineStack>
         </Box>
@@ -269,7 +311,7 @@ const ExportTable = ({ onExportSuccess, onExportError }) => {
           </Box>
         )}
 
-        {histories.length === 0 ? (
+        {filteredHistories.length === 0 ? (
           <Box padding="1200">
             <EmptyState heading="No exports yet">
               <p>Completed export files will appear here once a CSV has been generated.</p>
@@ -278,7 +320,7 @@ const ExportTable = ({ onExportSuccess, onExportError }) => {
         ) : (
           <IndexTable
             resourceName={{ singular: "export", plural: "exports" }}
-            itemCount={histories.length}
+            itemCount={filteredHistories.length}
             selectable={false}
             headings={[
               { title: "Title" },

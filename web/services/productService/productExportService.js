@@ -187,6 +187,7 @@ export class ProductExportService {
 
     const formatedHistory = histories.map((history) => ({
       ...history,
+      rawType: history.type || "",
       type: EXPORT_TYPES[history.type]?.[lang] || history.type || "",
     }));
 

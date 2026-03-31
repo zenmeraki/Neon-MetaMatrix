@@ -1,13 +1,4 @@
 import Joi from "joi";
-import mongoose from "mongoose";
-
-const objectIdValidator = (value, helpers) => {
-  if (!value) return value; // allow undefined/null
-  if (!mongoose.Types.ObjectId.isValid(value)) {
-    return helpers.message("Cursor must be a valid ObjectId");
-  }
-  return value;
-};
 
 const editHistoryQuerySchema = Joi.object({
   type: Joi.string()
