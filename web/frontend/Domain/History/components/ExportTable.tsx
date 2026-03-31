@@ -38,6 +38,34 @@ function getPrimaryStatus(item) {
   return { key: "pending", label: "Pending", tone: "attention", isTerminal: false };
 }
 
+function getProgressValue(item, primaryStatus) {
+  const explicitProgress = Number(
+    item?.progressPercent ?? item?.progressSummary?.percent,
+  );
+
+  if (Number.isFinite(explicitProgress) && explicitProgress > 0) {
+    return Math.max(0, Math.min(100, explicitProgress));
+  }
+
+  if (primaryStatus.key === "completed") {
+    return 100;
+  }
+
+  const processedCount = Number(item?.processedCount ?? 0);
+  const totalItems = Number(
+    item?.targetSnapshotCount ?? item?.totalItems ?? 0,
+  );
+
+  if (totalItems > 0) {
+    return Math.max(
+      0,
+      Math.min(100, Math.round((processedCount / totalItems) * 100)),
+    );
+  }
+
+  return 0;
+}
+
 const ExportTable = ({ selectedType = "Manual export", onExportSuccess, onExportError }) => {
   const [histories, setHistories] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(true);
@@ -176,7 +204,7 @@ const ExportTable = ({ selectedType = "Manual export", onExportSuccess, onExport
         const filename = item.filename || "Untitled export";
         const isDownloading = downloadingItems.has(id);
         const isDownloadable = primaryStatus.key === "completed" && Boolean(item.fileUrl);
-        const progress = Number(item?.progressPercent ?? item?.progressSummary?.percent ?? 0);
+        const progress = getProgressValue(item, primaryStatus);
         const progressLabel = item?.progressSummary?.label || primaryStatus.label;
         const supportDetail =
           item?.supportStatus?.failureStage || primaryStatus.detail || null;
