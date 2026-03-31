@@ -29,7 +29,7 @@ export default function App() {
               <>
                 <a href="/products">{t("Products")}</a>
                 <a href="/history">{t("History")}</a>
-                <a href="/product-code-snippets">{t("Snippet Studio")}</a>
+                {/* <a href="/product-code-snippets">{t("Snippet Studio")}</a> */}
                 <a href="/refresh">{t("SyncData")}</a>
                 <a href="/spreadsheet">{t("Spreadsheet Edit")}</a>
                 <a href="/suggestionpage">{t("Suggestion")}</a>
