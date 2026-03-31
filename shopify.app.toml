@@ -45,3 +45,6 @@ redirect_urls = [
 url = "https://automatic-learners-excluded-decorative.trycloudflare.com/storefront/subscription"
 subpath = "proxy"
 prefix = "apps"
+
+[build]
+automatically_update_urls_on_dev = true
