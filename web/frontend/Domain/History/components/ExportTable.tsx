@@ -21,19 +21,21 @@ function getNormalizedExportType(item) {
 }
 
 function getPrimaryStatus(item) {
-  if (item?.primaryStatus) return item.primaryStatus;
+  const statusKey = String(
+    item?.primaryStatus?.key || item?.status || "pending",
+  ).toLowerCase();
 
-  const status = String(item?.status || "").toLowerCase();
-  if (status === "completed") {
+  if (statusKey === "completed") {
     return { key: "completed", label: "Completed", tone: "success", isTerminal: true };
   }
-  if (status === "failed") {
+  if (statusKey === "failed") {
     return { key: "failed", label: "Failed", tone: "critical", isTerminal: true };
   }
-  if (status === "processing") {
-    return { key: "running", label: "Building file", tone: "info", isTerminal: false };
+  if (statusKey === "processing") {
+    return { key: "processing", label: "Processing", tone: "info", isTerminal: false };
   }
-  return { key: "queued", label: "Queued", tone: "attention", isTerminal: false };
+
+  return { key: "pending", label: "Pending", tone: "attention", isTerminal: false };
 }
 
 const ExportTable = ({ selectedType = "Manual export", onExportSuccess, onExportError }) => {
