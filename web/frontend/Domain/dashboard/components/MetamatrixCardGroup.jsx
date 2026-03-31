@@ -16,9 +16,10 @@ import {
   ImportIcon,
 } from "@shopify/polaris-icons";
 import { useTranslation } from "react-i18next";
+import { i18n as appI18n } from "../../../utils/i18nUtils";
 
 export const MetamatrixCardGroup = () => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(undefined, { i18n: appI18n });
 
   const cards = [
     {
@@ -26,28 +27,28 @@ export const MetamatrixCardGroup = () => {
       title: t("tipsForBulkEditing"),
       description: t("bulkEditingTipDescription"),
       iconColor: "critical",
-      badge: "Guide",
+      badge: t("dashboardBadgeGuide", { defaultValue: "Guide" }),
     },
     {
       icon: ImportIcon,
       title: t("editWithSpreadsheet"),
       description: t("editWithSpreadsheetDescription"),
       iconColor: "critical",
-      badge: "Import",
+      badge: t("dashboardBadgeImport", { defaultValue: "Import" }),
     },
     {
       icon: ExportIcon,
       title: t("exportProductData"),
       description: t("exportProductDataDescription"),
       iconColor: "critical",
-      badge: "Export",
+      badge: t("dashboardBadgeExport", { defaultValue: "Export" }),
     },
     {
       icon: PageClockFilledIcon,
       title: t("metamatrixChangelog"),
       description: t("metamatrixChangelogDescription"),
       iconColor: "critical",
-      badge: "Updates",
+      badge: t("dashboardBadgeUpdates", { defaultValue: "Updates" }),
     },
   ];
 

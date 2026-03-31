@@ -23,6 +23,7 @@ import {
   ImportIcon,
   PlusIcon,
 } from "@shopify/polaris-icons";
+import { i18n as appI18n } from "../../../utils/i18nUtils";
 import { useStoreAccess } from "../hooks/useStoreAccess";
 
 const PromotionalContent = React.lazy(() =>
@@ -124,12 +125,12 @@ function QuickActionCard({ title, description, buttonText, onAction }) {
 }
 
 export default function DashboardPage() {
-  const { i18n, t } = useTranslation();
+  const { t } = useTranslation(undefined, { i18n: appI18n });
   const { storeAccess, loadingStoreData } = useStoreAccess();
   const navigate = useNavigate();
 
   const handleLanguageChange = (value) => {
-    i18n.changeLanguage(value);
+    appI18n.changeLanguage(value);
     localStorage.setItem("appLanguage", value);
   };
 
@@ -181,7 +182,10 @@ export default function DashboardPage() {
                       </Text>
 
                       <Text as="p" variant="bodyMd" tone="subdued">
-                        Review activity, check store readiness, and jump back into the workflows merchants use most.
+                        {t("dashboardOverviewDescription", {
+                          defaultValue:
+                            "Review activity, check store readiness, and jump back into the workflows merchants use most.",
+                        })}
                       </Text>
                       <Box paddingBlockStart="400">
                         <InlineStack gap="500" wrap blockAlign="center">
@@ -219,18 +223,24 @@ export default function DashboardPage() {
                         <Box padding="350">
                           <BlockStack gap="150">
                             <Text as="h3" variant="headingMd">
-                              Language
+                              {t("dashboardLanguageTitle", {
+                                defaultValue: "Language",
+                              })}
                             </Text>
 
                             <Text as="p" variant="bodySm" tone="subdued">
-                              Choose dashboard language.
+                              {t("dashboardLanguageDescription", {
+                                defaultValue: "Choose dashboard language.",
+                              })}
                             </Text>
 
                             <Select
-                              label="Language"
+                              label={t("dashboardLanguageLabel", {
+                                defaultValue: "Language",
+                              })}
                               labelHidden
                               options={LANGUAGE_OPTIONS}
-                              value={i18n.language}
+                              value={appI18n.language}
                               onChange={handleLanguageChange}
                             />
                           </BlockStack>
@@ -250,15 +260,21 @@ export default function DashboardPage() {
               {storeAccess?.isCreditAvailable && (
                 <Banner
                   tone="success"
-                  title="Free access active"
+                  title={t("dashboardFreeAccessTitle", {
+                    defaultValue: "Free access active",
+                  })}
                   action={{
-                    content: "Request extension",
+                    content: t("dashboardFreeAccessAction", {
+                      defaultValue: "Request extension",
+                    }),
                     onAction: () => navigate("/suggestionpage"),
                   }}
                 >
                   <p>
-                    You can keep using the app at no cost for the current access
-                    window. If you need more time, we can extend it for you.
+                    {t("dashboardFreeAccessBody", {
+                      defaultValue:
+                        "You can keep using the app at no cost for the current access window. If you need more time, we can extend it for you.",
+                    })}
                   </p>
                 </Banner>
               )}
@@ -266,16 +282,21 @@ export default function DashboardPage() {
               {storeAccess?.isProductInitialySyning && (
                 <Banner
                   tone="info"
-                  title="Product sync in progress"
+                  title={t("dashboardSyncInProgressTitle", {
+                    defaultValue: "Product sync in progress",
+                  })}
                   action={{
-                    content: "Check status",
+                    content: t("dashboardSyncInProgressAction", {
+                      defaultValue: "Check status",
+                    }),
                     onAction: () => navigate("/refresh"),
                   }}
                 >
                   <p>
-                    Your product mirror is updating in the background. You can
-                    continue using the app and refresh the sync page for live
-                    status.
+                    {t("dashboardSyncInProgressBody", {
+                      defaultValue:
+                        "Your product mirror is updating in the background. You can continue using the app and refresh the sync page for live status.",
+                    })}
                   </p>
                 </Banner>
               )}
@@ -311,46 +332,77 @@ export default function DashboardPage() {
               <BlockStack gap="400">
                 <BlockStack gap="100">
                   <Text as="h3" variant="headingLg">
-                    Quick actions
+                    {t("dashboardQuickActionsTitle", {
+                      defaultValue: "Quick actions",
+                    })}
                   </Text>
                   <Text as="p" variant="bodyMd" tone="subdued">
-                    Jump directly into the tasks merchants use most often.
+                    {t("dashboardQuickActionsDescription", {
+                      defaultValue:
+                        "Jump directly into the tasks merchants use most often.",
+                    })}
                   </Text>
                 </BlockStack>
 
                 <Grid>
                   <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3, xl: 3 }}>
                     <QuickActionCard
-                      title="Products"
-                      description="Browse your catalog and start working on product data."
-                      buttonText="Open products"
+                      title={t("Products", { defaultValue: "Products" })}
+                      description={t("dashboardQuickProductsDescription", {
+                        defaultValue:
+                          "Browse your catalog and start working on product data.",
+                      })}
+                      buttonText={t("dashboardQuickProductsButton", {
+                        defaultValue: "Open products",
+                      })}
                       onAction={() => navigate("/products")}
                     />
                   </Grid.Cell>
 
                   <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3, xl: 3 }}>
                     <QuickActionCard
-                      title="Bulk edit"
-                      description="Create and manage edits across products faster."
-                      buttonText="Create bulk edit"
+                      title={t("dashboardQuickBulkEditTitle", {
+                        defaultValue: "Bulk edit",
+                      })}
+                      description={t("dashboardQuickBulkEditDescription", {
+                        defaultValue:
+                          "Create and manage edits across products faster.",
+                      })}
+                      buttonText={t("dashboardQuickBulkEditButton", {
+                        defaultValue: "Create bulk edit",
+                      })}
                       onAction={() => navigate("/edit")}
                     />
                   </Grid.Cell>
 
                   <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3, xl: 3 }}>
                     <QuickActionCard
-                      title="Exports"
-                      description="Generate product exports for reporting or external workflows."
-                      buttonText="Create export"
+                      title={t("dashboardQuickExportsTitle", {
+                        defaultValue: "Exports",
+                      })}
+                      description={t("dashboardQuickExportsDescription", {
+                        defaultValue:
+                          "Generate product exports for reporting or external workflows.",
+                      })}
+                      buttonText={t("dashboardQuickExportsButton", {
+                        defaultValue: "Create export",
+                      })}
                       onAction={() => navigate("/exportdata")}
                     />
                   </Grid.Cell>
 
                   <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3, xl: 3 }}>
                     <QuickActionCard
-                      title="Snippet studio"
-                      description="Open reusable product snippets and code utilities."
-                      buttonText="Open snippet studio"
+                      title={t("dashboardQuickSnippetTitle", {
+                        defaultValue: "Snippet studio",
+                      })}
+                      description={t("dashboardQuickSnippetDescription", {
+                        defaultValue:
+                          "Open reusable product snippets and code utilities.",
+                      })}
+                      buttonText={t("dashboardQuickSnippetButton", {
+                        defaultValue: "Open snippet studio",
+                      })}
                       onAction={() => navigate("/product-code-snippets")}
                     />
                   </Grid.Cell>
@@ -366,10 +418,15 @@ export default function DashboardPage() {
               <BlockStack gap="400">
                 <BlockStack gap="100">
                   <Text as="h3" variant="headingLg">
-                    Learn and optimize
+                    {t("dashboardLearnTitle", {
+                      defaultValue: "Learn and optimize",
+                    })}
                   </Text>
                   <Text as="p" variant="bodyMd" tone="subdued">
-                    Best practices, guidance, and product education for faster execution.
+                    {t("dashboardLearnDescription", {
+                      defaultValue:
+                        "Best practices, guidance, and product education for faster execution.",
+                    })}
                   </Text>
                 </BlockStack>
 
