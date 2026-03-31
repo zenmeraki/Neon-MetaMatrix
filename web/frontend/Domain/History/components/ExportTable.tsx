@@ -16,6 +16,10 @@ import {
 } from "@shopify/polaris";
 import { ArrowDownIcon } from "@shopify/polaris-icons";
 
+function getNormalizedExportType(item) {
+  return String(item?.rawType || item?.type || "").trim().toLowerCase();
+}
+
 function getPrimaryStatus(item) {
   if (item?.primaryStatus) return item.primaryStatus;
 
@@ -32,7 +36,7 @@ function getPrimaryStatus(item) {
   return { key: "queued", label: "Queued", tone: "attention", isTerminal: false };
 }
 
-const ExportTable = ({ onExportSuccess, onExportError }) => {
+const ExportTable = ({ selectedType = "Manual export", onExportSuccess, onExportError }) => {
   const [histories, setHistories] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [historyError, setHistoryError] = useState(null);
@@ -98,6 +102,14 @@ const ExportTable = ({ onExportSuccess, onExportError }) => {
     return () => clearInterval(interval);
   }, [histories]);
 
+  const filteredHistories = useMemo(() => {
+    const normalizedSelectedType = String(selectedType).trim().toLowerCase();
+
+    return histories.filter(
+      (item) => getNormalizedExportType(item) === normalizedSelectedType,
+    );
+  }, [histories, selectedType]);
+
   const handleDownloadClick = async (id, fileUrl, filename) => {
     if (!fileUrl) {
       onExportError?.("Download link not available.");
@@ -156,7 +168,7 @@ const ExportTable = ({ onExportSuccess, onExportError }) => {
 
   const historyRowMarkup = useMemo(
     () =>
-      histories.map((item, index) => {
+      filteredHistories.map((item, index) => {
         const id = item.id || item._id;
         const primaryStatus = getPrimaryStatus(item);
         const filename = item.filename || "Untitled export";
@@ -228,7 +240,7 @@ const ExportTable = ({ onExportSuccess, onExportError }) => {
           </IndexTable.Row>
         );
       }),
-    [downloadingItems, histories],
+    [downloadingItems, filteredHistories],
   );
 
   if (historyLoading) {
@@ -256,7 +268,7 @@ const ExportTable = ({ onExportSuccess, onExportError }) => {
               </Text>
             </BlockStack>
             <Text as="span" tone="subdued" variant="bodySm">
-              {histories.length} items
+              {filteredHistories.length} items
             </Text>
           </InlineStack>
         </Box>
@@ -269,7 +281,7 @@ const ExportTable = ({ onExportSuccess, onExportError }) => {
           </Box>
         )}
 
-        {histories.length === 0 ? (
+        {filteredHistories.length === 0 ? (
           <Box padding="1200">
             <EmptyState heading="No exports yet">
               <p>Completed export files will appear here once a CSV has been generated.</p>
@@ -278,7 +290,7 @@ const ExportTable = ({ onExportSuccess, onExportError }) => {
         ) : (
           <IndexTable
             resourceName={{ singular: "export", plural: "exports" }}
-            itemCount={histories.length}
+            itemCount={filteredHistories.length}
             selectable={false}
             headings={[
               { title: "Title" },
