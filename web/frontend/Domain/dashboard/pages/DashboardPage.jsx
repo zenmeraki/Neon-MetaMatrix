@@ -171,9 +171,9 @@ export default function DashboardPage() {
         <Layout.Section>
           <Card roundedAbove="sm">
             <Box padding="500">
-           
+
               <Grid>
-  <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 3, lg: 7, xl: 7 }}>
+                <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 3, lg: 7, xl: 7 }}>
                   <Box paddingBlock="200">
                     <BlockStack gap="300">
                       <Text as="h2" variant="heading2xl">
@@ -183,62 +183,62 @@ export default function DashboardPage() {
                       <Text as="p" variant="bodyMd" tone="subdued">
                         Review activity, check store readiness, and jump back into the workflows merchants use most.
                       </Text>
-                     <Box paddingBlockStart="400">
-  <InlineStack gap="500" wrap blockAlign="center">
-    <Box>
-      <Button onClick={() => navigate("/history")}>
-        {t("History")}
-      </Button>
-    </Box>
+                      <Box paddingBlockStart="400">
+                        <InlineStack gap="500" wrap blockAlign="center">
+                          <Box>
+                            <Button onClick={() => navigate("/history")}>
+                              {t("History")}
+                            </Button>
+                          </Box>
 
-    <Box>
-      <Button onClick={() => navigate("/refresh")}>
-        {t("SyncData")}
-      </Button>
-    </Box>
+                          <Box>
+                            <Button onClick={() => navigate("/refresh")}>
+                              {t("SyncData")}
+                            </Button>
+                          </Box>
 
-    <Box>
-      <Button
-        variant="primary"
-        icon={PlusIcon}
-        onClick={() => navigate("/products")}
-      >
-        {t("editNow")}
-      </Button>
-    </Box>
-  </InlineStack>
-</Box>
+                          <Box>
+                            <Button
+                              variant="primary"
+                              icon={PlusIcon}
+                              onClick={() => navigate("/products")}
+                            >
+                              {t("editNow")}
+                            </Button>
+                          </Box>
+                        </InlineStack>
+                      </Box>
                     </BlockStack>
                   </Box>
                 </Grid.Cell>
 
-              <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 3, lg: 5, xl: 5 }}>
-  <InlineStack align="start">
-    <Box width="100%" maxWidth="420px">
-      <Card background="bg-surface-secondary" roundedAbove="sm">
-        <Box padding="350">
-          <BlockStack gap="150">
-            <Text as="h3" variant="headingMd">
-              Language
-            </Text>
+                <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 3, lg: 5, xl: 5 }}>
+                  <InlineStack align="start">
+                    <Box width="100%" maxWidth="420px">
+                      <Card background="bg-surface-secondary" roundedAbove="sm">
+                        <Box padding="350">
+                          <BlockStack gap="150">
+                            <Text as="h3" variant="headingMd">
+                              Language
+                            </Text>
 
-            <Text as="p" variant="bodySm" tone="subdued">
-              Choose dashboard language.
-            </Text>
+                            <Text as="p" variant="bodySm" tone="subdued">
+                              Choose dashboard language.
+                            </Text>
 
-            <Select
-              label="Language"
-              labelHidden
-              options={LANGUAGE_OPTIONS}
-              value={i18n.language}
-              onChange={handleLanguageChange}
-            />
-          </BlockStack>
-        </Box>
-      </Card>
-    </Box>
-  </InlineStack>
-</Grid.Cell>
+                            <Select
+                              label="Language"
+                              labelHidden
+                              options={LANGUAGE_OPTIONS}
+                              value={i18n.language}
+                              onChange={handleLanguageChange}
+                            />
+                          </BlockStack>
+                        </Box>
+                      </Card>
+                    </Box>
+                  </InlineStack>
+                </Grid.Cell>
               </Grid>
             </Box>
           </Card>
