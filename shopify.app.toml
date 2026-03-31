@@ -6,14 +6,12 @@ application_url = "https://impression-receive-wallace-surprised.trycloudflare.co
 embedded = true
 handle = "new-270"
 
+
 [webhooks]
 api_version = "2025-04"
 
   [[webhooks.subscriptions]]
-  topics = [ "products/create", "bulk_operations/finish" ]
-  uri = "https://a50e-2409-4073-307-d512-1554-bf40-8d5f-a82.ngrok-free.app/api/webhooks"
 
-  [[webhooks.subscriptions]]
   uri = "https://contributing-cole-senate-dried.trycloudflare.com/gdpr/customer_data_erasure"
   compliance_topics = [ "customers/redact" ]
 
@@ -25,24 +23,25 @@ api_version = "2025-04"
   uri = "https://contributing-cole-senate-dried.trycloudflare.com/gdpr/shop_data_erasure"
   compliance_topics = [ "shop/redact" ]
 
+
+  [[webhooks.subscriptions]]
+  topics = [ "products/create", "bulk_operations/finish" ]
+  uri = "https://a50e-2409-4073-307-d512-1554-bf40-8d5f-a82.ngrok-free.app/api/webhooks"
+
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "read_inventory,read_locations,read_products,write_inventory,write_products"
+scopes = "read_inventory,read_locations,read_products,write_products,read_metaobjects"
+optional_scopes = [ ]
+use_legacy_install_flow = false
 
 [auth]
 redirect_urls = [
-  "https://impression-receive-wallace-surprised.trycloudflare.com/auth/callback",
-  "https://impression-receive-wallace-surprised.trycloudflare.com/auth/shopify/callback",
-  "https://impression-receive-wallace-surprised.trycloudflare.com/api/auth/callback"
+  "https://cheaper-undertake-codes-disclaimer.trycloudflare.com/auth/callback",
+  "https://cheaper-undertake-codes-disclaimer.trycloudflare.com/auth/shopify/callback",
+  "https://cheaper-undertake-codes-disclaimer.trycloudflare.com/api/auth/callback"
 ]
 
 [app_proxy]
-url = "https://impression-receive-wallace-surprised.trycloudflare.com/storefront/subscription"
+url = "https://automatic-learners-excluded-decorative.trycloudflare.com/storefront/subscription"
 subpath = "proxy"
 prefix = "apps"
-
-[pos]
-embedded = false
-
-[build]
-automatically_update_urls_on_dev = true
