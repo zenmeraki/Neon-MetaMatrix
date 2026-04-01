@@ -3,7 +3,7 @@
 client_id = "20f31d269398d5f23df95d0450e772e9"
 web_directories = [ "web", "web/frontend" ]
 name = "test-app"
-application_url = "https://essays-creation-replies-leslie.trycloudflare.com"
+application_url = "https://acne-michelle-flour-antibodies.trycloudflare.com"
 embedded = true
 handle = "test-app-11537"
 
@@ -45,9 +45,9 @@ use_legacy_install_flow = false
 
 [auth]
 redirect_urls = [
-  "https://essays-creation-replies-leslie.trycloudflare.com/auth/callback",
-  "https://essays-creation-replies-leslie.trycloudflare.com/auth/shopify/callback",
-  "https://essays-creation-replies-leslie.trycloudflare.com/api/auth/callback"
+  "https://acne-michelle-flour-antibodies.trycloudflare.com/auth/callback",
+  "https://acne-michelle-flour-antibodies.trycloudflare.com/auth/shopify/callback",
+  "https://acne-michelle-flour-antibodies.trycloudflare.com/api/auth/callback"
 ]
 
 [app_proxy]

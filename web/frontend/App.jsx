@@ -14,7 +14,7 @@ export default function App() {
 
   useEffect(() => {
     const savedLang = localStorage.getItem("appLanguage");
-    i18n.changeLanguage(savedLang || "en");
+    i18n.changeLanguage(savedLang || i18n.resolvedLanguage || i18n.language || "en");
   }, [i18n]);
 
   return (
