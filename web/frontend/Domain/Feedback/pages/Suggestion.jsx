@@ -19,6 +19,7 @@ import {
 
 import { useSuggestionForm } from "../hooks/useSuggestionForm";
 import { useTranslation } from "react-i18next";
+import { i18n as appI18n } from "../../../utils/i18nUtils";
 
 /**
  * Page component for suggestion/feedback submission
@@ -36,23 +37,11 @@ const Suggestion = () => {
     resetForm,
   } = useSuggestionForm();
 
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation(undefined, { i18n: appI18n });
 
   // Toast state
   const [toastActive, setToastActive] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
-
-  useEffect(() => {
-    // Detect browser language
-    const browserLang = navigator.language.split("-")[0];
-    const supportedLanguages = ["en", "es", "fr", "de", "pt", "ar", "hi", "zh", "ja", "ko", "ru"];
-    const languageToUse = supportedLanguages.includes(browserLang) ? browserLang : "en";
-
-    // If user previously selected language in localStorage, use it
-    const storedLang = localStorage.getItem("selectedLanguage");
-
-    i18n.changeLanguage(storedLang || languageToUse);
-  }, [i18n]);
 
   // Show toast when success or error changes
   useEffect(() => {
@@ -66,10 +55,12 @@ const Suggestion = () => {
   }, [success, error, t]);
 
   return (
-    <Frame>
+        <Frame>
       <Page
-        title={t("suggestionPageTitle")}
-        subtitle={t("suggestionPageSubtitle")}
+        title={t("suggestionPageTitle", { defaultValue: "We Value Your Feedback" })}
+        subtitle={t("suggestionPageSubtitle", {
+          defaultValue: "Help us improve! Share your thoughts and suggestions.",
+        })}
         // backAction={{ content: 'Back', url: '/' }}
       >
         <BlockStack gap="500">
@@ -81,7 +72,9 @@ const Suggestion = () => {
                 {success && (
                   <Banner status="success" title="Thank you for your feedback!">
                     <Text as="p">
-                      {t("suggestionSuccessBanner")}
+                      {t("suggestionSuccessBanner", {
+                        defaultValue: "Thank you for your feedback! We appreciate your input.",
+                      })}
                     </Text>
                   </Banner>
                 )}
@@ -99,7 +92,10 @@ const Suggestion = () => {
                           </Text>
                         </Stack> */}
                         <Text as="p" variant="bodyMd" color="subdued">
-                          {t("suggestionIntroText")}
+                          {t("suggestionIntroText", {
+                            defaultValue:
+                              "Your feedback is invaluable to us! Share your suggestions, ideas, or any issues you've encountered, and we'll do our best to improve the app experience.",
+                          })}
                         </Text>
                       </BlockStack>
 
@@ -109,11 +105,13 @@ const Suggestion = () => {
                       <FormLayout>
                         <FormLayout.Group>
                           <TextField
-                            label={t("emailLabel")}
+                            label={t("emailLabel", { defaultValue: "Your Email" })}
                             type="email"
                             value={email}
                             onChange={setEmail}
-                            helpText={t("emailHelpText")}
+                            helpText={t("emailHelpText", {
+                              defaultValue: "We'll only use this to reach out for clarification.",
+                            })}
                             disabled={loading}
                             error={error && error.includes("email") ? error : undefined}
                             placeholder="your.email@example.com"
@@ -122,13 +120,15 @@ const Suggestion = () => {
                         </FormLayout.Group>
 
                         <TextField
-                          label={t("suggestionLabel")}
+                          label={t("suggestionLabel", { defaultValue: "Your Suggestion" })}
                           value={suggestion}
                           onChange={setSuggestion}
                           multiline={4}
                           showCharacterCount
                           maxLength={500}
-                          helpText={t("suggestionHelpText")}
+                          helpText={t("suggestionHelpText", {
+                            defaultValue: "Max 500 characters.",
+                          })}
                           disabled={loading}
                           error={error && error.includes("suggestion") ? error : undefined}
                         />
@@ -141,7 +141,7 @@ const Suggestion = () => {
                                   onClick={resetForm}
                                   disabled={loading}
                                 >
-                                  {t("submitAnotherButton")}
+                                  {t("submitAnotherButton", { defaultValue: "Submit Another" })}
                                 </Button>
                               )}
                               <Button
@@ -150,7 +150,9 @@ const Suggestion = () => {
                                 loading={loading}
                                 disabled={!email.trim() || !suggestion.trim()}
                               >
-                                {loading ? "Submitting..." : t("submitButton")}
+                                {loading
+                                  ? "Submitting..."
+                                  : t("submitButton", { defaultValue: "Submit Suggestion" })}
                               </Button>
                             </ButtonGroup>
                           </Stack>

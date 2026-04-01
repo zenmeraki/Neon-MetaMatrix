@@ -16,8 +16,10 @@ import CsvPreviewTable from "../components/CsvPreviewTable";
 import ConfirmImportModal from "../components/ConfirmImportModal";
 import { parseCSV } from "../utils/csvParser";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 export default function Spreadsheet() {
+    const { t } = useTranslation();
     const [file, setFile] = useState(null);
     const [parsedData, setParsedData] = useState([]);
     const [columnMappings, setColumnMappings] = useState({});
@@ -32,13 +34,13 @@ export default function Spreadsheet() {
         setFile(selectedFile);
         setStatus(null);
 
-        parseCSV(selectedFile, setParsedData, setColumnMappings, setStatus);
+        parseCSV(selectedFile, setParsedData, setColumnMappings, setStatus, t);
     };
 
     const handleUpload = async () => {
         try {
             if (!file) {
-                throw new Error("No file selected");
+                throw new Error(t("spreadsheetNoFileSelected", { defaultValue: "No file selected" }));
             }
 
             setUploading(true);
@@ -56,16 +58,16 @@ export default function Spreadsheet() {
             try {
                 result = await res.json();
             } catch {
-                throw new Error("Invalid server response");
+                throw new Error(t("spreadsheetInvalidServerResponse", { defaultValue: "Invalid server response" }));
             }
 
             if (!res.ok) {
-                throw new Error(result?.message || "Upload failed");
+                throw new Error(result?.message || t("spreadsheetUploadFailed", { defaultValue: "Upload failed" }));
             }
 
             setStatus({
                 type: "success",
-                message: result?.message || "Import queued successfully",
+                message: result?.message || t("spreadsheetImportQueued", { defaultValue: "Import queued successfully" }),
             });
 
             setFile(null);
@@ -77,7 +79,7 @@ export default function Spreadsheet() {
         } catch (err) {
             setStatus({
                 type: "error",
-                message: err.message || "Something went wrong",
+                message: err.message || t("spreadsheetSomethingWentWrong", { defaultValue: "Something went wrong" }),
             });
             return false;
         } finally {
@@ -86,7 +88,7 @@ export default function Spreadsheet() {
     };
 
     return (
-        <Page title="Import Products" fullWidth>
+        <Page title={t("spreadsheetImportTitle", { defaultValue: "Import Products" })} fullWidth>
 
             <BlockStack gap="500">
 
@@ -97,24 +99,34 @@ export default function Spreadsheet() {
                         <Banner tone="warning">
                             <BlockStack gap="200">
                                 <Text as="p" fontWeight="semibold">
-                                    Important before importing CSV
+                                    {t("spreadsheetWarningTitle", { defaultValue: "Important before importing CSV" })}
                                 </Text>
 
                                 <List type="bullet">
                                     <List.Item>
-                                        The uploaded file must be a <b>.csv file</b>.
+                                        {t("spreadsheetWarningFileType", {
+                                            defaultValue: "The uploaded file must be a .csv file.",
+                                        })}
                                     </List.Item>
                                     <List.Item>
-                                        The first column should contain the <b>Product ID</b>.
+                                        {t("spreadsheetWarningProductId", {
+                                            defaultValue: "The first column should contain the Product ID.",
+                                        })}
                                     </List.Item>
                                     <List.Item>
-                                        The second column should contain the <b>Variant ID</b>.
+                                        {t("spreadsheetWarningVariantId", {
+                                            defaultValue: "The second column should contain the Variant ID.",
+                                        })}
                                     </List.Item>
                                     <List.Item>
-                                        Each row must contain the correct <b>Product ID</b> and <b>Variant ID</b>.
+                                        {t("spreadsheetWarningEachRow", {
+                                            defaultValue: "Each row must contain the correct Product ID and Variant ID.",
+                                        })}
                                     </List.Item>
                                     <List.Item>
-                                        Incorrect IDs may update the <b>wrong products</b>.
+                                        {t("spreadsheetWarningIncorrectIds", {
+                                            defaultValue: "Incorrect IDs may update the wrong products.",
+                                        })}
                                     </List.Item>
                                 </List>
                             </BlockStack>
@@ -127,7 +139,9 @@ export default function Spreadsheet() {
 
                 {uploading && (
                     <Banner tone="info">
-                        Importing products... Please wait.
+                        {t("spreadsheetUploadingBanner", {
+                            defaultValue: "Importing products... Please wait.",
+                        })}
                     </Banner>
                 )}
 
@@ -164,7 +178,7 @@ export default function Spreadsheet() {
                         disabled={!file || uploading}
                         loading={uploading}
                     >
-                        Import Products
+                        {t("spreadsheetImportButton", { defaultValue: "Import Products" })}
                     </Button>
                 </InlineStack>
 

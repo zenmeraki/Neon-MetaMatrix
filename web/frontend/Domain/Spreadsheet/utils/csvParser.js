@@ -1,6 +1,6 @@
 import Papa from "papaparse";
 
-export const parseCSV = (file, setParsedData, setColumnMappings, setStatus) => {
+export const parseCSV = (file, setParsedData, setColumnMappings, setStatus, t) => {
     Papa.parse(file, {
         header: true,
         skipEmptyLines: true,
@@ -14,7 +14,9 @@ export const parseCSV = (file, setParsedData, setColumnMappings, setStatus) => {
             if (!results.data?.length) {
                 setStatus({
                     type: "error",
-                    message: "CSV file is empty.",
+                    message: t("spreadsheetEmptyCsv", {
+                        defaultValue: "CSV file is empty.",
+                    }),
                 });
                 return;
             }
@@ -94,7 +96,10 @@ export const parseCSV = (file, setParsedData, setColumnMappings, setStatus) => {
         error: (error) =>
             setStatus({
                 type: "error",
-                message: `CSV parsing failed: ${error.message}`,
+                message: t("spreadsheetParsingFailed", {
+                    defaultValue: "CSV parsing failed: {{message}}",
+                    message: error.message,
+                }),
             }),
     });
 };
