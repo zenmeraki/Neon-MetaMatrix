@@ -589,5 +589,6 @@
   "loadingProductsMatch": "필터링된 제품 업데이트 중…",
   "noProductsMatch": "현재 필터와 일치하는 제품이 없습니다.",
   "loadingProductsPreview": "미리보기 로드 중…",
-  "productsReadyToEdit": "제품을 편집할 준비가 되었습니다."
+  "productsReadyToEdit": "제품을 편집할 준비가 되었습니다.",
+  "Overview": "개요"
 }

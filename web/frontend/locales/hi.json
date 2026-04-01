@@ -591,5 +591,6 @@
   "loadingProductsMatch": "फ़िल्टर किए गए उत्पाद अपडेट हो रहे हैं...",
   "noProductsMatch": "कोई भी उत्पाद वर्तमान फ़िल्टर से मेल नहीं खाता",
   "loadingProductsPreview": "पूर्वावलोकन लोड हो रहा है...",
-  "productsReadyToEdit": "उत्पाद संपादित करने के लिए तैयार हैं"
+  "productsReadyToEdit": "उत्पाद संपादित करने के लिए तैयार हैं",
+  "Overview": "अवलोकन"
 }

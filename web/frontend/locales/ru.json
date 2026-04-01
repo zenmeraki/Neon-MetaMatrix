@@ -589,5 +589,6 @@
   "loadingProductsMatch": "Обновление отфильтрованных товаров…",
   "noProductsMatch": "Нет товаров, соответствующих текущим фильтрам",
   "loadingProductsPreview": "Загрузка предварительного просмотра…",
-  "productsReadyToEdit": "продукты готовы к редактированию"
+  "productsReadyToEdit": "продукты готовы к редактированию",
+  "Overview": "Обзор"
 }

@@ -589,5 +589,6 @@
   "loadingProductsMatch": "Gefilterte Produkte werden aktualisiert…",
   "noProductsMatch": "Keine Produkte entsprechen den aktuellen Filtern",
   "loadingProductsPreview": "Vorschau wird geladen…",
-  "productsReadyToEdit": "Produkte können bearbeitet werden"
+  "productsReadyToEdit": "Produkte können bearbeitet werden",
+  "Overview": "Überblick"
 }

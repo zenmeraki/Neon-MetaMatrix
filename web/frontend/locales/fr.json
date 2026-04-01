@@ -588,5 +588,6 @@
   "loadingProductsMatch": "Mise à jour des produits filtrés…",
   "noProductsMatch": "Aucun produit ne correspond aux filtres actuels",
   "loadingProductsPreview": "Chargement de l'aperçu…",
-  "productsReadyToEdit": "les produits sont prêts à être modifiés"
+  "productsReadyToEdit": "les produits sont prêts à être modifiés",
+  "Overview": "Aperçu"
 }

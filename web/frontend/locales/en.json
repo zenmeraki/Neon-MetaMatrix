@@ -605,5 +605,6 @@
   "noProductsMatch": "No products match the current filters",
   "loadingProductsPreview": "Loading preview…",
   "productsReadyToEdit": "products are ready to edit",
-  "Spreadsheet Edit": "Spreadsheet"
+  "Spreadsheet Edit": "Spreadsheet",
+  "Overview": "OverView"
 }

@@ -177,7 +177,7 @@ export default function DashboardPage() {
                   <Box paddingBlock="200">
                     <BlockStack gap="300">
                       <Text as="h2" variant="heading2xl">
-                        {t("overview")}
+                        {t("Overview")}
                       </Text>
 
                       <Text as="p" variant="bodyMd" tone="subdued">

@@ -603,5 +603,6 @@
   "loadingProductsMatch": "جارٍ تحديث المنتجات التي تمت تصفيتها…",
   "noProductsMatch": "لا توجد منتجات تتطابق مع المرشحات الحالية",
   "loadingProductsPreview": "جارٍ تحميل المعاينة…",
-  "productsReadyToEdit": "المنتجات جاهزة للتحرير"
+  "productsReadyToEdit": "المنتجات جاهزة للتحرير",
+  "Overview": "ملخص"
 }

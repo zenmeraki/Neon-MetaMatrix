@@ -589,5 +589,6 @@
   "loadingProductsMatch": "フィルタリングされた商品を更新しています…",
   "noProductsMatch": "現在のフィルターに一致する製品はありません",
   "loadingProductsPreview": "プレビューを読み込み中…",
-  "productsReadyToEdit": "商品を編集する準備ができています"
+  "productsReadyToEdit": "商品を編集する準備ができています",
+  "Overview": "概要"
 }

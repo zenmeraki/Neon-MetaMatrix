@@ -589,5 +589,6 @@
   "loadingProductsMatch": "更新过滤的产品...",
   "noProductsMatch": "没有产品与当前过滤器匹配",
   "loadingProductsPreview": "正在加载预览...",
-  "productsReadyToEdit": "产品已准备好编辑"
+  "productsReadyToEdit": "产品已准备好编辑",
+  "Overview": "概述"
 }

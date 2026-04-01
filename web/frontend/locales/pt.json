@@ -589,5 +589,6 @@
   "loadingProductsMatch": "Atualizando produtos filtrados…",
   "noProductsMatch": "Nenhum produto corresponde aos filtros atuais",
   "loadingProductsPreview": "Carregando visualização…",
-  "productsReadyToEdit": "os produtos estão prontos para edição"
+  "productsReadyToEdit": "os produtos estão prontos para edição",
+  "Overview": "Visão geral"
 }
