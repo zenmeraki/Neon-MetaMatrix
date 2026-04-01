@@ -8,12 +8,12 @@
 
     <script type="module">
       if (!import.meta.env || !import.meta.env.PROD) {
-        // Because the base HTML is rendered in the server side, we need to manually embed the code to enable HMR in our
-        // code, so that the vite server is properly enabled to run HMR
-        const script = document.createElement('script');
-        script.setAttribute('type', "module");
-        script.setAttribute('src', "./dev_embed.js");
-        document.getElementsByTagName('head')[0].append(script);
+        import RefreshRuntime from "/@react-refresh";
+
+        RefreshRuntime.injectIntoGlobalHook(window);
+        window.$RefreshReg$ = () => {};
+        window.$RefreshSig$ = () => (type) => type;
+        window.__vite_plugin_react_preamble_installed__ = true;
       }
     </script>
 

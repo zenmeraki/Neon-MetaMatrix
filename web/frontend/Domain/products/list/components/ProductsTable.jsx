@@ -66,6 +66,21 @@ export default function ProductsTable({
 }) {
   const { t, i18n } = useTranslation(undefined, { i18n: appI18n });
   const deferredProducts = useDeferredValue(products);
+  const numberFormatter = useMemo(
+    () => new Intl.NumberFormat(i18n.resolvedLanguage || i18n.language),
+    [i18n.language, i18n.resolvedLanguage],
+  );
+  const rows = useMemo(
+    () =>
+      deferredProducts.map((product) => [
+        <ProductCell key={product.id} product={product} />,
+        <StatusBadge status={product.status} />,
+        product.totalInventory ?? "-",
+        product.productType || "-",
+        product.vendor || "-",
+      ]),
+    [deferredProducts],
+  );
 
   if (loading) {
     return <LoadingTable />;
@@ -89,23 +104,6 @@ export default function ProductsTable({
       </Box>
     );
   }
-
-  const numberFormatter = useMemo(
-    () => new Intl.NumberFormat(i18n.resolvedLanguage || i18n.language),
-    [i18n.language, i18n.resolvedLanguage],
-  );
-
-  const rows = useMemo(
-    () =>
-      deferredProducts.map((product) => [
-        <ProductCell key={product.id} product={product} />,
-        <StatusBadge status={product.status} />,
-        product.totalInventory ?? "-",
-        product.productType || "-",
-        product.vendor || "-",
-      ]),
-    [deferredProducts],
-  );
 
   return (
     <>
