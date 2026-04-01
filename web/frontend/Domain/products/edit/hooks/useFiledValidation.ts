@@ -1,6 +1,7 @@
 // hooks/useFieldValidation.ts
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { i18n as appI18n } from "../../../../utils/i18nUtils";
 
 
 export interface ValidationRule {
@@ -47,7 +48,7 @@ export const useFieldValidation = (
   value: string | number | null | undefined,
   rules: ValidationRule = {}
 ): string | undefined => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(undefined, { i18n: appI18n });
 
   const stringValue = String(value ?? '');
   const trimmedValue = stringValue.trim();

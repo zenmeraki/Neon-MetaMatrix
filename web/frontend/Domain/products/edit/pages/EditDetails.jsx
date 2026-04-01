@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo } from "react";
+import React, { useState, useCallback, useEffect, useMemo, useDeferredValue } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Page,
@@ -27,6 +27,8 @@ import {
 } from "@shopify/polaris-icons";
 import Papa from "papaparse";
 import { useTranslation } from "react-i18next";
+import { i18n as appI18n } from "../../../../utils/i18nUtils";
+import { useAuthenticatedFetch } from "../../../../hooks/useAuthenticatedFetch";
 
 const FALLBACK_IMAGE = "https://www.otithee.com/img/fallback/fallback-2.png";
 
@@ -124,7 +126,8 @@ function normalizeErrors(value) {
 export default function EditDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t } = useTranslation(undefined, { i18n: appI18n });
+  const fetchWithAuth = useAuthenticatedFetch();
 
   const [historyItem, setHistoryItem] = useState(null);
   const [changes, setChanges] = useState([]);
@@ -140,6 +143,7 @@ export default function EditDetails() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalChanges, setTotalChanges] = useState(0);
+  const deferredChanges = useDeferredValue(changes);
 
   const itemsPerPage = 10;
 
@@ -158,7 +162,10 @@ export default function EditDetails() {
       setIsLoadingHistory(true);
       setError(null);
 
-      const response = await fetch(`/api/history/get-edit-history-details/${id}`);
+      const response = await fetchWithAuth(`/api/history/get-edit-history-details/${id}`);
+      if (!response) {
+        throw new Error("Failed to fetch history");
+      }
       if (!response.ok) {
         throw new Error("Failed to fetch history");
       }
@@ -170,7 +177,7 @@ export default function EditDetails() {
     } finally {
       setIsLoadingHistory(false);
     }
-  }, [id]);
+  }, [fetchWithAuth, id]);
 
   const fetchChanges = useCallback(
     async (page = 1) => {
@@ -180,9 +187,12 @@ export default function EditDetails() {
         setChangesError(null);
         setIsLoadingChanges(true);
 
-        const response = await fetch(
+        const response = await fetchWithAuth(
           `/api/history/get-edit-history/changes/${id}?page=${page}&limit=${itemsPerPage}`,
         );
+        if (!response) {
+          throw new Error("Failed to fetch changes");
+        }
 
         if (!response.ok) {
           throw new Error("Failed to fetch changes");
@@ -234,7 +244,7 @@ export default function EditDetails() {
         setIsLoadingChanges(false);
       }
     },
-    [id],
+    [fetchWithAuth, id],
   );
 
   useEffect(() => {
@@ -255,7 +265,12 @@ export default function EditDetails() {
 
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(`/api/history/get-edit-history-details/${id}`);
+        if (document.hidden) {
+          return;
+        }
+
+        const res = await fetchWithAuth(`/api/history/get-edit-history-details/${id}`);
+        if (!res) return;
         if (!res.ok) return;
 
         const json = await res.json();
@@ -283,12 +298,12 @@ export default function EditDetails() {
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [historyItem, id, currentPage, fetchChanges]);
+  }, [fetchWithAuth, historyItem, id, currentPage, fetchChanges]);
 
   const flattenedRows = useMemo(() => {
-    if (!Array.isArray(changes) || changes.length === 0) return [];
+    if (!Array.isArray(deferredChanges) || deferredChanges.length === 0) return [];
 
-    return changes.flatMap((change) => {
+    return deferredChanges.flatMap((change) => {
       const productTitle = change?.title || "Untitled product";
       const productImage = change?.image || "";
 
@@ -332,7 +347,7 @@ export default function EditDetails() {
 
       return [...productRows, ...variantRows];
     });
-  }, [changes, changeField, t]);
+  }, [deferredChanges, changeField, t]);
 
   const tableRows = useMemo(
     () =>

@@ -1,6 +1,7 @@
 import React, { useMemo, lazy, Suspense } from 'react';
 import { Card, Grid, Box, Text, SkeletonDisplayText, SkeletonBodyText } from '@shopify/polaris';
 import { useTranslation } from 'react-i18next';
+import { i18n as appI18n } from "../../../utils/i18nUtils";
 import './MetamatrixCardGroup.css';
 
 // Lazy load icon components for better code splitting
@@ -124,7 +125,7 @@ MetamatrixCard.displayName = 'MetamatrixCard';
  * - Includes loading skeletons for better UX
  */
 function MetamatrixCardGroup() {
-  const { t } = useTranslation();
+  const { t } = useTranslation(undefined, { i18n: appI18n });
 
   // Memoize translated content with minimal dependencies
   const cards = useMemo(() => 

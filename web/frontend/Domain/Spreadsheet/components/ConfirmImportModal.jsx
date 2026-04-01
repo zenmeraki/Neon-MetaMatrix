@@ -1,5 +1,6 @@
 import { Modal, Banner, Text, Box } from "@shopify/polaris";
 import { useTranslation } from "react-i18next";
+import { i18n as appI18n } from "../../../utils/i18nUtils";
 
 export default function ConfirmImportModal({
     open,
@@ -7,7 +8,7 @@ export default function ConfirmImportModal({
     onConfirm,
     loading,
 }) {
-    const { t } = useTranslation();
+    const { t } = useTranslation(undefined, { i18n: appI18n });
 
     return (
         <Modal

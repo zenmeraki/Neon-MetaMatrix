@@ -1,7 +1,8 @@
 // src/components/products/ProductCell.jsx
+import { memo } from "react";
 import { InlineStack, Box, Thumbnail, Text } from "@shopify/polaris";
 
-export default function ProductCell({ product }) {
+function ProductCell({ product }) {
     const imageUrl =
         product.featuredImageUrl ||
         product.featuredMedia?.preview?.image?.url ||
@@ -26,3 +27,5 @@ export default function ProductCell({ product }) {
         </InlineStack>
     );
 }
+
+export default memo(ProductCell);

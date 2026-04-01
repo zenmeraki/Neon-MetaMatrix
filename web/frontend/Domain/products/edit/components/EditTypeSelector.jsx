@@ -2,9 +2,10 @@ import React, { useEffect, useState } from "react";
 import { Select } from "@shopify/polaris";
 import { getFieldActions } from "../constants";
 import { useTranslation } from "react-i18next";
+import { i18n as appI18n } from "../../../../utils/i18nUtils";
 
 const EditTypeSelector = ({ selectedField, editType, onEditTypeChange }) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(undefined, { i18n: appI18n });
   const [localValue, setLocalValue] = useState(editType?.value || "");
 
   const editOptions = getFieldActions(selectedField?.value);

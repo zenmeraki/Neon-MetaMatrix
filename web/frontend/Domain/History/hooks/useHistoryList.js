@@ -12,6 +12,7 @@ import {
   selectLoadMoreStatus,
 } from "../../../store/slices/historySlice";
 import { useTranslation } from "react-i18next";
+import { i18n as appI18n } from "../../../utils/i18nUtils";
 // Maps backend value to i18n keys
 export const TYPE_TO_KEY = {
   "Manual edit": "ManualEdit",
@@ -30,7 +31,7 @@ export const KEY_TO_TYPE = {
 
 export const useHistoryList = () => {
   const dispatch = useDispatch();
-const { t,i18n } = useTranslation();
+const { t,i18n } = useTranslation(undefined, { i18n: appI18n });
   // Redux selectors
   const histories = useSelector(selectHistories);
   const pagination = useSelector(selectHistoryPagination);

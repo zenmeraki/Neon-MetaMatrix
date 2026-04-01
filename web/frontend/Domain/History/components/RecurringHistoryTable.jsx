@@ -1,18 +1,20 @@
 // web/frontend/domains/history/components/RecurringHistoryTable.jsx
 import React, { memo, useCallback, useEffect, useState } from "react";
-import { Eye, Play, Pause, Settings, Trash2 } from "lucide-react";
+import { Eye } from "lucide-react";
 import {
   DataTable,
   Badge,
   Button,
-  ButtonGroup,
   Spinner,
   Box,
   Text,
+  BlockStack,
+  InlineStack,
   Modal,
   TextContainer,
 } from "@shopify/polaris";
 import { useTranslation } from "react-i18next";
+import { i18n as appI18n } from "../../../utils/i18nUtils";
 import RecurringEditViewModal from "./RecurringEditView";
 
 /**
@@ -35,13 +37,7 @@ const RecurringHistoryTable = memo(
     const [deleteLoading, setDeleteLoading] = useState(false);
     const [deleteRecurringItem, setDeleteRecurringItem] = useState(null);
     const [localHistories, setLocalHistories] = useState(histories);
-    const { t, i18n } = useTranslation();
-
-    const handleCloseDetails = useCallback(() => {
-      setOpen(false);
-      setHistoryItem(null);
-      setDetailsError(null);
-    }, []);
+    const { t, i18n } = useTranslation(undefined, { i18n: appI18n });
 
     // Status badge colors for recurring edits
     const renderStatusBadge = (status) => {
@@ -99,40 +95,6 @@ const RecurringHistoryTable = memo(
       } finally {
         setIsLoadingDetails(false);
       }
-    };
-
-    const handleToggleStatus = async (id, currentStatus) => {
-      const normalizedCurrentStatus = currentStatus?.toLowerCase();
-      const newStatus =
-        normalizedCurrentStatus === "active" ? "Inactive" : "Active";
-
-      try {
-        const response = await fetch(`/api/products/update-recurring-edit/${id}/toggle`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: newStatus }),
-        });
-
-        if (response.ok) {
-          setLocalHistories((prev) =>
-            prev.map((h) => (h.id === id ? { ...h, status: newStatus } : h))
-          );
-        } else {
-          console.error("Failed to toggle recurring edit status");
-        }
-      } catch (error) {
-        console.error("Error toggling recurring edit:", error);
-      }
-    };
-
-    const handleEdit = (id) => {
-      // Navigate to edit recurring schedule
-      // You can implement navigation to edit form here
-    };
-
-    const handleDelete = (item) => {
-      setDeleteRecurringItem(item);
-      setShowDeleteModal(true);
     };
 
     const handleDeleteClose = useCallback(() => {
@@ -212,19 +174,23 @@ const RecurringHistoryTable = memo(
 
     if (isLoading) {
       return (
-        <div style={{ padding: "20px", textAlign: "center" }}>
-          <Spinner accessibilityLabel="Loading recurring edits" size="large" />
-        </div>
+        <Box padding="500">
+          <BlockStack gap="300" inlineAlign="center">
+            <Spinner accessibilityLabel="Loading recurring edits" size="large" />
+          </BlockStack>
+        </Box>
       );
     }
 
     if (!localHistories || localHistories.length === 0) {
       return (
-        <div style={{ padding: "20px", textAlign: "center" }}>
-          <Text as="span" tone="subdued">
-            {emptyStateMessage}
-          </Text>
-        </div>
+        <Box padding="500">
+          <BlockStack gap="300" inlineAlign="center">
+            <Text as="span" tone="subdued">
+              {emptyStateMessage}
+            </Text>
+          </BlockStack>
+        </Box>
       );
     }
 
@@ -236,11 +202,8 @@ const RecurringHistoryTable = memo(
         frequency,
         totalRuns = 0,
         successfulRuns = 0,
-        shop,
         createdAt,
       } = item;
-
-      const normalizedStatus = status?.toLowerCase();
 
       return [
         title || "Untitled",
@@ -250,12 +213,8 @@ const RecurringHistoryTable = memo(
         // formatNextRun(item),
         // user,
         formatCreatedTime(createdAt),
-        <ButtonGroup key={_id} spacing="tight">
-          <Button
-            size="slim"
-            icon={<Eye size={14} />}
-            onClick={() => onViewDetails(_id)}
-          >
+        <InlineStack key={_id} gap="200">
+          <Button size="slim" icon={<Eye size={14} />} onClick={() => onViewDetails(_id)}>
             {t("view")}
           </Button>
           {/* <Button
@@ -283,7 +242,7 @@ const RecurringHistoryTable = memo(
           >
             {t("delete")}
           </Button> */}
-        </ButtonGroup>,
+        </InlineStack>,
       ];
     });
 
@@ -313,11 +272,13 @@ const RecurringHistoryTable = memo(
           rows={rows}
           footerContent={
             hasMore ? (
-              <div style={{ textAlign: "center", marginTop: "16px" }}>
-                <Button loading={isLoadingMore} onClick={onLoadMore}>
-                  {t("loadMore")}
-                </Button>
-              </div>
+              <Box paddingBlockStart="400">
+                <BlockStack inlineAlign="center">
+                  <Button loading={isLoadingMore} onClick={onLoadMore}>
+                    {t("loadMore")}
+                  </Button>
+                </BlockStack>
+              </Box>
             ) : null
           }
         />

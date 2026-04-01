@@ -12,9 +12,11 @@ import {
   InlineStack,
 } from "@shopify/polaris";
 import { useTranslation } from "react-i18next";
+import { i18n as appI18n } from "../../../utils/i18nUtils";
+import { openTopLevelUrl } from "../../../utils/embeddedNavigation";
 
 const PrivacyPage = () => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(undefined, { i18n: appI18n });
 
   const sections = [
     {
@@ -100,8 +102,7 @@ const PrivacyPage = () => {
                   <InlineStack align="start" gap="200">
                     <Button
                       variant="primary"
-                      url="https://zenmeraki.com/contact"
-                      external
+                      onClick={() => openTopLevelUrl("https://zenmeraki.com/contact")}
                     >
                       {t("contactPrivacy")}
                     </Button>

@@ -15,6 +15,7 @@ import {
   Banner,
   Layout,
   Modal,
+  Toast,
 } from "@shopify/polaris";
 import { CheckIcon } from "@shopify/polaris-icons";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -33,6 +34,11 @@ export default function PricingPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [subscribing, setSubscribing] = useState(null);
+  const [toastState, setToastState] = useState({
+    active: false,
+    content: "",
+    error: false,
+  });
 
   const fetchPlans = useCallback(async () => {
     try {
@@ -140,7 +146,11 @@ export default function PricingPage() {
         openTopLevelUrl(data.confirmationUrl);
       } catch (err) {
         console.error("Subscription error:", err);
-        alert("Failed to start subscription. Please try again.");
+        setToastState({
+          active: true,
+          content: "Failed to start subscription. Please try again.",
+          error: true,
+        });
         setSubscribing(null);
       }
     },
@@ -334,11 +344,11 @@ export default function PricingPage() {
           <Box paddingBlockStart="800" paddingBlockEnd="400">
             <BlockStack gap="600" inlineAlign="center">
               <BlockStack gap="300" inlineAlign="center">
-                <Text variant="heading2xl" as="h2" alignment="center">
+                <Text variant="heading2xl" as="h2">
                   Frequently Asked Questions
                 </Text>
                 <Box maxWidth="600px">
-                  <Text variant="bodyLg" as="p" tone="subdued" alignment="center">
+                  <Text variant="bodyLg" as="p" tone="subdued">
                     Everything you need to know about our plans and billing
                   </Text>
                 </Box>
@@ -389,12 +399,14 @@ export default function PricingPage() {
               <Box padding="600">
                 <BlockStack gap="400" inlineAlign="center">
                   <BlockStack gap="200" inlineAlign="center">
-                    <Text variant="headingLg" as="h3" alignment="center">
+                    <Text variant="headingLg" as="h3">
                       Still have questions?
                     </Text>
-                    <Text variant="bodyMd" as="p" tone="subdued" alignment="center">
-                      Our support team is here to help you choose the right plan
-                    </Text>
+                    <Box maxWidth="28rem">
+                      <Text variant="bodyMd" as="p" tone="subdued">
+                        Our support team is here to help you choose the right plan
+                      </Text>
+                    </Box>
                   </BlockStack>
                   <InlineStack gap="300" align="center">
                     <Button
@@ -444,6 +456,17 @@ export default function PricingPage() {
           </Text>
         </Modal.Section>
       </Modal>
+
+      {toastState.active && (
+        <Toast
+          content={toastState.content}
+          tone={toastState.error ? "critical" : "success"}
+          onDismiss={() =>
+            setToastState((current) => ({ ...current, active: false }))
+          }
+          duration={4000}
+        />
+      )}
     </Page>
   );
 }

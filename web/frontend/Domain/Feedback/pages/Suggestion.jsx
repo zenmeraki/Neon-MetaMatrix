@@ -70,7 +70,12 @@ const Suggestion = () => {
 
                 {/* Success Banner */}
                 {success && (
-                  <Banner status="success" title="Thank you for your feedback!">
+                  <Banner
+                    tone="success"
+                    title={t("suggestionSuccessBanner", {
+                      defaultValue: "Thank you for your feedback!",
+                    })}
+                  >
                     <Text as="p">
                       {t("suggestionSuccessBanner", {
                         defaultValue: "Thank you for your feedback! We appreciate your input.",
@@ -91,7 +96,7 @@ const Suggestion = () => {
                             {t("suggestionPageTitle")}
                           </Text>
                         </Stack> */}
-                        <Text as="p" variant="bodyMd" color="subdued">
+                        <Text as="p" variant="bodyMd" tone="subdued">
                           {t("suggestionIntroText", {
                             defaultValue:
                               "Your feedback is invaluable to us! Share your suggestions, ideas, or any issues you've encountered, and we'll do our best to improve the app experience.",
@@ -134,7 +139,7 @@ const Suggestion = () => {
                         />
 
                         <Box paddingBlockStart="400">
-                          <Stack distribution="trailing" gap="300">
+                          <Stack align="end" gap="300">
                             <ButtonGroup>
                               {success && (
                                 <Button

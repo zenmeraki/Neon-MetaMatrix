@@ -7,11 +7,12 @@ import {
 } from "../../../store/slices/historySlice";
 import { historyService } from "../services/historyService";
 import { useTranslation } from "react-i18next";
+import { i18n as appI18n } from "../../../utils/i18nUtils";
 
 export const useExportHistoryList = () => {
   const dispatch = useDispatch();
   const { histories, error, loading } = useSelector(selectExportData);
-  const { i18n } = useTranslation();
+  const { i18n } = useTranslation(undefined, { i18n: appI18n });
 
   // Refetch function to trigger fresh data fetch
   const refetch = useCallback(() => {

@@ -9,7 +9,9 @@ import {
   SkeletonDisplayText,
   BlockStack,
 } from "@shopify/polaris";
+import { useDeferredValue, useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { i18n as appI18n } from "../../../../utils/i18nUtils";
 
 import ProductCell from "./ProductCell";
 import StatusBadge from "./StatusBadge";
@@ -17,7 +19,7 @@ import StatusBadge from "./StatusBadge";
 const SKELETON_ROWS = 6;
 
 function LoadingTable() {
-  const { t } = useTranslation();
+  const { t } = useTranslation(undefined, { i18n: appI18n });
 
   return (
     <>
@@ -62,13 +64,14 @@ export default function ProductsTable({
   onNext,
   onPrev,
 }) {
-  const { t, i18n } = useTranslation();
+  const { t, i18n } = useTranslation(undefined, { i18n: appI18n });
+  const deferredProducts = useDeferredValue(products);
 
   if (loading) {
     return <LoadingTable />;
   }
 
-  if (!products.length) {
+  if (!deferredProducts.length) {
     return (
       <Box padding="1200">
         <EmptyState
@@ -87,15 +90,22 @@ export default function ProductsTable({
     );
   }
 
-  const numberFormatter = new Intl.NumberFormat(i18n.resolvedLanguage || i18n.language);
+  const numberFormatter = useMemo(
+    () => new Intl.NumberFormat(i18n.resolvedLanguage || i18n.language),
+    [i18n.language, i18n.resolvedLanguage],
+  );
 
-  const rows = products.map((product) => [
-    <ProductCell key={product.id} product={product} />,
-    <StatusBadge status={product.status} />,
-    product.totalInventory ?? "-",
-    product.productType || "-",
-    product.vendor || "-",
-  ]);
+  const rows = useMemo(
+    () =>
+      deferredProducts.map((product) => [
+        <ProductCell key={product.id} product={product} />,
+        <StatusBadge status={product.status} />,
+        product.totalInventory ?? "-",
+        product.productType || "-",
+        product.vendor || "-",
+      ]),
+    [deferredProducts],
+  );
 
   return (
     <>
@@ -113,7 +123,7 @@ export default function ProductsTable({
                   "Page {{page}} of {{totalPages}} - {{total}} products",
                 page: pagination?.page ?? 1,
                 totalPages: pagination?.totalPages ?? 1,
-                total: numberFormatter.format(pagination?.total ?? products.length),
+                total: numberFormatter.format(pagination?.total ?? deferredProducts.length),
               })}
             </Text>
           </BlockStack>

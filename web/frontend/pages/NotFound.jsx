@@ -1,13 +1,14 @@
-import { Card, EmptyState, Page } from "@shopify/polaris";
+import { Card, EmptyState, Page, Box } from "@shopify/polaris";
 import { useTranslation } from "react-i18next";
+import { i18n as appI18n } from "../utils/i18nUtils";
 import { notFoundImage } from "../assets";
 
 export default function NotFound() {
-  const { t } = useTranslation();
+  const { t } = useTranslation(undefined, { i18n: appI18n });
   return (
     <Page>
       <Card>
-        <Card.Section>
+        <Box padding="400">
           <EmptyState
             heading={t("NotFound.heading", {
               defaultValue: "Page not found",
@@ -21,7 +22,7 @@ export default function NotFound() {
               })}
             </p>
           </EmptyState>
-        </Card.Section>
+        </Box>
       </Card>
     </Page>
   );

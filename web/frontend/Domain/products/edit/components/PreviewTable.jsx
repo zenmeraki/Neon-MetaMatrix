@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useDeferredValue, useMemo } from "react";
 import {
   Card,
   DataTable,
@@ -14,6 +14,7 @@ import {
   Banner,
 } from "@shopify/polaris";
 import { useTranslation } from "react-i18next";
+import { i18n as appI18n } from "../../../../utils/i18nUtils";
 
 /**
  * ✅ Safely format values for rendering
@@ -44,7 +45,8 @@ const PreviewTable = ({
   isVariant,
   field,
 }) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(undefined, { i18n: appI18n });
+  const deferredProducts = useDeferredValue(products);
 
   const { page, totalPages, total, limit } = pagination;
   const itemsPerPage = limit;
@@ -65,7 +67,7 @@ const PreviewTable = ({
   // ===============================
   // Empty state
   // ===============================
-  if (!products || products.length === 0) {
+  if (!deferredProducts || deferredProducts.length === 0) {
     return (
       <Card>
         <EmptyState
@@ -94,49 +96,75 @@ const PreviewTable = ({
   // ===============================
   // Build rows
   // ===============================
-  const rows = products.map((product) => {
-    const productCell = (
-      <Box width={COLUMN_WIDTHS.product} maxWidth={COLUMN_WIDTHS.product}>
-        <InlineStack gap="300" wrap={false} blockAlign="center">
-          <Thumbnail
-            source={
-              product.img ||
-              "https://www.otithee.com/img/fallback/fallback-2.png"
-            }
-            alt={product.title}
-            size="small"
-          />
-          <Text truncate variant="bodyMd" fontWeight="medium">
-            {formatValue(product.title)}
-          </Text>
-        </InlineStack>
-      </Box>
-    );
+  const rows = useMemo(
+    () =>
+      deferredProducts.map((product) => {
+        const productCell = (
+          <Box width={COLUMN_WIDTHS.product} maxWidth={COLUMN_WIDTHS.product}>
+            <InlineStack gap="300" wrap={false} blockAlign="center">
+              <Thumbnail
+                source={
+                  product.img ||
+                  "https://www.otithee.com/img/fallback/fallback-2.png"
+                }
+                alt={product.title}
+                size="small"
+              />
+              <Text truncate variant="bodyMd" fontWeight="medium">
+                {formatValue(product.title)}
+              </Text>
+            </InlineStack>
+          </Box>
+        );
 
-    const variantCell = (
-      <Box width={COLUMN_WIDTHS.variant} maxWidth={COLUMN_WIDTHS.variant}>
-        <InlineStack gap="200" wrap={true}>
-          {product.variants?.map((variant) => (
-            <Badge key={variant.id} tone="info">
-              <Text truncate>{formatValue(variant.title)}</Text>
-            </Badge>
-          ))}
-        </InlineStack>
-      </Box>
-    );
+        const variantCell = (
+          <Box width={COLUMN_WIDTHS.variant} maxWidth={COLUMN_WIDTHS.variant}>
+            <InlineStack gap="200" wrap={true}>
+              {product.variants?.map((variant) => (
+                <Badge key={variant.id} tone="info">
+                  <Text truncate>{formatValue(variant.title)}</Text>
+                </Badge>
+              ))}
+            </InlineStack>
+          </Box>
+        );
 
-    const changeCell = isVariant ? (
-      <Box width={COLUMN_WIDTHS.change} maxWidth={COLUMN_WIDTHS.change}>
-        <BlockStack gap="200">
-          {product.variants?.map((variant) => (
-            <InlineStack key={variant.id} gap="200" align="start">
+        const changeCell = isVariant ? (
+          <Box width={COLUMN_WIDTHS.change} maxWidth={COLUMN_WIDTHS.change}>
+            <BlockStack gap="200">
+              {product.variants?.map((variant) => (
+                <InlineStack key={variant.id} gap="200" align="start">
+                  <Text
+                    as="span"
+                    tone="subdued"
+                    textDecorationLine="line-through"
+                    style={{ wordBreak: "break-word", whiteSpace: "normal" }}
+                  >
+                    {formatValue(variant.oldValue)}
+                  </Text>
+                  <Text
+                    as="span"
+                    variant="bodyMd"
+                    fontWeight="semibold"
+                    tone="success"
+                    style={{ wordBreak: "break-word", whiteSpace: "normal" }}
+                  >
+                    {formatValue(variant.newValue)}
+                  </Text>
+                </InlineStack>
+              ))}
+            </BlockStack>
+          </Box>
+        ) : (
+          <Box width={COLUMN_WIDTHS.change} maxWidth={COLUMN_WIDTHS.change}>
+            <InlineStack gap="200" align="start">
               <Text
                 as="span"
                 tone="subdued"
                 textDecorationLine="line-through"
                 style={{ wordBreak: "break-word", whiteSpace: "normal" }}
               >
-                {formatValue(variant.oldValue)}
+                {formatValue(product.oldValue)}
               </Text>
               <Text
                 as="span"
@@ -145,40 +173,18 @@ const PreviewTable = ({
                 tone="success"
                 style={{ wordBreak: "break-word", whiteSpace: "normal" }}
               >
-                {formatValue(variant.newValue)}
+                {formatValue(product.newValue)}
               </Text>
             </InlineStack>
-          ))}
-        </BlockStack>
-      </Box>
-    ) : (
-      <Box width={COLUMN_WIDTHS.change} maxWidth={COLUMN_WIDTHS.change}>
-        <InlineStack gap="200" align="start">
-          <Text
-            as="span"
-            tone="subdued"
-            textDecorationLine="line-through"
-            style={{ wordBreak: "break-word", whiteSpace: "normal" }}
-          >
-            {formatValue(product.oldValue)}
-          </Text>
-          <Text
-            as="span"
-            variant="bodyMd"
-            fontWeight="semibold"
-            tone="success"
-            style={{ wordBreak: "break-word", whiteSpace: "normal" }}
-          >
-            {formatValue(product.newValue)}
-          </Text>
-        </InlineStack>
-      </Box>
-    );
+          </Box>
+        );
 
-    return isVariant
-      ? [productCell, variantCell, changeCell]
-      : [productCell, changeCell];
-  });
+        return isVariant
+          ? [productCell, variantCell, changeCell]
+          : [productCell, changeCell];
+      }),
+    [deferredProducts, isVariant]
+  );
 
   // ===============================
   // Render table (horizontal scroll)
@@ -209,11 +215,11 @@ const PreviewTable = ({
               </Text>{" "}
               {t("to")}{" "}
               <Text as="span" fontWeight="medium">
-                {Math.min(page * itemsPerPage, total ?? products.length)}
+                {Math.min(page * itemsPerPage, total ?? deferredProducts.length)}
               </Text>{" "}
               {t("of")}{" "}
               <Text as="span" fontWeight="medium">
-                {total ?? products.length}
+                {total ?? deferredProducts.length}
               </Text>{" "}
               {t("products")}
             </Text>

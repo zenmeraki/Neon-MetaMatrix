@@ -13,6 +13,7 @@ import {
 import { PlayIcon } from "@shopify/polaris-icons";
 import { useTranslation } from "react-i18next";
 import { i18n as appI18n } from "../../../utils/i18nUtils";
+import { openTopLevelUrl } from "../../../utils/embeddedNavigation";
 
 /**
  * Demo video component (Polaris 13 design + simplified logic)
@@ -136,8 +137,9 @@ const DemoVideo = () => {
                   <Button variant="plain">{t("share", "Share")}</Button>
                   <Button
                     variant="plain"
-                    url="https://www.youtube.com/watch?v=014uZYpNdMY"
-                    external
+                    onClick={() =>
+                      openTopLevelUrl("https://www.youtube.com/watch?v=014uZYpNdMY")
+                    }
                   >
                     {t("watchOnYoutube")}
                   </Button>

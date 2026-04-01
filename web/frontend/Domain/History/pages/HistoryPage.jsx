@@ -2,13 +2,14 @@ import { useCallback, useEffect, useState } from "react";
 import { Page, Card, Tabs, BlockStack, Box, Text } from "@shopify/polaris";
 import { useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { i18n as appI18n } from "../../../utils/i18nUtils";
 
 import HistoryComponent from "../components/HistoryComponent";
 import ExportComponent from "../components/ExportComponent";
 
 export default function HistoryPage() {
   const location = useLocation();
-  const { t } = useTranslation();
+  const { t } = useTranslation(undefined, { i18n: appI18n });
 
   const parentTabs = [
     { id: "edit", content: t("edit"), accessibilityLabel: t("editHistoryTab") },

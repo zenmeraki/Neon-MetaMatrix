@@ -11,6 +11,7 @@ import {
   Text,
 } from "@shopify/polaris";
 import { useTranslation } from "react-i18next";
+import { i18n as appI18n } from "../../../../utils/i18nUtils";
 
 import { getAllFilters } from "../constants";
 
@@ -72,7 +73,7 @@ function FilterValueInput({
   loading,
 }) {
   const [inputValue, setInputValue] = useState("");
-  const { t } = useTranslation();
+  const { t } = useTranslation(undefined, { i18n: appI18n });
 
   if (filter.isSearchable) {
     return (
@@ -141,7 +142,7 @@ const ProductsFilters = memo(function ProductsFilters({
   onQueryClear,
   onClearAll,
 }) {
-  const { t } = useTranslation();
+  const { t } = useTranslation(undefined, { i18n: appI18n });
   const allFilters = getAllFilters();
   const [draftFilters, setDraftFilters] = useState({});
   const [filtersKey, setFiltersKey] = useState(0);
@@ -290,7 +291,7 @@ const ProductsFilters = memo(function ProductsFilters({
 });
 
 function InlineHeader() {
-  const { t } = useTranslation();
+  const { t } = useTranslation(undefined, { i18n: appI18n });
 
   return (
     <BlockStack gap="100">

@@ -1,9 +1,10 @@
 import { DropZone, Icon, Text, Box, InlineStack, Button } from "@shopify/polaris";
 import { UploadIcon, FileIcon } from "@shopify/polaris-icons";
 import { useTranslation } from "react-i18next";
+import { i18n as appI18n } from "../../../utils/i18nUtils";
 
 export default function CsvUploader({ file, onDrop, onRemove }) {
-    const { t } = useTranslation();
+    const { t } = useTranslation(undefined, { i18n: appI18n });
 
     return (
         <DropZone allowMultiple={false} onDrop={onDrop} accept=".csv" type="file">

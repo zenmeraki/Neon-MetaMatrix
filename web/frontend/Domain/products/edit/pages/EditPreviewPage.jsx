@@ -16,6 +16,7 @@ import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
+import { i18n as appI18n } from "../../../../utils/i18nUtils";
 
 import { getFieldDefinition, InputType } from "../constants";
 import { useFieldValidation } from "../hooks/useFiledValidation";
@@ -33,7 +34,7 @@ export default function EditPreviewPage() {
   const filters = useSelector(selectFilters);
   const count = useSelector(selectProductCount);
   const navigate = useNavigate();
-  const { i18n, t } = useTranslation();
+  const { i18n, t } = useTranslation(undefined, { i18n: appI18n });
 
   const [selectedField, setSelectedField] = useState(getFieldDefinition("price"));
   const [editType, setEditType] = useState(null);

@@ -17,9 +17,10 @@ import ConfirmImportModal from "../components/ConfirmImportModal";
 import { parseCSV } from "../utils/csvParser";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { i18n as appI18n } from "../../../utils/i18nUtils";
 
 export default function Spreadsheet() {
-    const { t } = useTranslation();
+    const { t } = useTranslation(undefined, { i18n: appI18n });
     const [file, setFile] = useState(null);
     const [parsedData, setParsedData] = useState([]);
     const [columnMappings, setColumnMappings] = useState({});

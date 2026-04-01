@@ -10,6 +10,7 @@ import {
 } from "@shopify/polaris";
 import { CheckCircleIcon } from "@shopify/polaris-icons";
 import { useTranslation } from "react-i18next";
+import { i18n as appI18n } from "../../../utils/i18nUtils";
 
 const PlanCard = memo(
   ({
@@ -23,7 +24,7 @@ const PlanCard = memo(
     selectedPlan = null,
     isPlansDisabled = true,
   }) => {
-    const { t } = useTranslation();
+    const { t } = useTranslation(undefined, { i18n: appI18n });
     const { name, price, Features } = plan;
 
     const isThisPlanBeingProcessed =
@@ -58,7 +59,7 @@ const PlanCard = memo(
           pointerEvents={isPlansDisabled ? "none" : "auto"}
         >
           <Box padding="400">
-            <BlockStack gap="400" align="center">
+            <BlockStack gap="400" inlineAlign="center">
               <Box
                 background={getPlanBackgroundColor(plan)}
                 paddingInline="16px"
@@ -66,16 +67,11 @@ const PlanCard = memo(
                 borderRadius="20px"
                 width="fit-content"
               >
-                <Text
-                  variant="headingMd"
-                  as="h3"
-                  alignment="center"
-                  color={getPlanColor(plan)}
-                >
+                <Text variant="headingMd" as="h3" color={getPlanColor(plan)}>
                   {name}
                 </Text>
               </Box>
-              <Text variant="headingXl" as="p" alignment="center">
+              <Text variant="headingXl" as="p">
                 <span style={{ fontSize: "1rem", verticalAlign: "top" }}>$</span>
                 {price === 0 ? "0" : price}
               </Text>
@@ -83,13 +79,13 @@ const PlanCard = memo(
           </Box>
 
           <Box padding="400" paddingBlockStart="0" flex="1">
-            <BlockStack gap="400" align="start">
+            <BlockStack gap="400">
               {Features?.map((feature, index) => (
                 <InlineStack
                   key={index}
                   gap="200"
                   align="start"
-                  blockAlignment="start"
+                  blockAlign="start"
                   paddingBlockEnd="10px"
                 >
                   <Box flexShrink={0}>

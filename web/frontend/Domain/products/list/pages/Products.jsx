@@ -11,10 +11,11 @@ import {
   SkeletonBodyText,
   Badge,
 } from "@shopify/polaris";
-import { useMemo, useEffect, useState, useCallback } from "react";
+import { startTransition, useMemo, useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { useTranslation } from "react-i18next";
+import { i18n as appI18n } from "../../../../utils/i18nUtils";
 import useSyncRealtime from "../../../../hooks/useSyncRealtime";
 import { useAuthenticatedFetch } from "../../../../hooks/useAuthenticatedFetch";
 
@@ -38,7 +39,7 @@ import {
 export default function ProductsPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t } = useTranslation(undefined, { i18n: appI18n });
   const fetchWithAuth = useAuthenticatedFetch();
 
   const products = useSelector(selectProducts);
@@ -73,21 +74,39 @@ export default function ProductsPage() {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (!search) {
-        dispatch(setFilters(filterState.filter((f) => f.field !== "search")));
+      const nextSearchValue = search?.trim() || "";
+      const currentSearchFilter = filterState.find((f) => f.field === "search");
+
+      if (!nextSearchValue) {
+        if (!currentSearchFilter) {
+          return;
+        }
+
+        startTransition(() => {
+          dispatch(setFilters(filterState.filter((f) => f.field !== "search")));
+        });
         return;
       }
 
-      dispatch(
-        setFilters([
-          ...filterState.filter((f) => f.field !== "search"),
-          {
-            field: "search",
-            operator: "contains",
-            value: search,
-          },
-        ]),
-      );
+      if (
+        currentSearchFilter?.operator === "contains" &&
+        currentSearchFilter?.value === nextSearchValue
+      ) {
+        return;
+      }
+
+      startTransition(() => {
+        dispatch(
+          setFilters([
+            ...filterState.filter((f) => f.field !== "search"),
+            {
+              field: "search",
+              operator: "contains",
+              value: nextSearchValue,
+            },
+          ]),
+        );
+      });
     }, 500);
 
     return () => clearTimeout(timer);
@@ -140,8 +159,9 @@ export default function ProductsPage() {
   };
 
   const onClearAll = () => {
-    dispatch(clearFilters());
-    fetchProducts(1, []);
+    startTransition(() => {
+      dispatch(clearFilters());
+    });
   };
 
   const appliedFilters = useMemo(

@@ -18,6 +18,7 @@ import {
 } from "@shopify/polaris";
 import { SearchIcon } from "@shopify/polaris-icons";
 import { useTranslation } from "react-i18next";
+import { i18n as appI18n } from "../../../../utils/i18nUtils";
 import { getFieldDefinition, InputType, FieldType } from "../constants";
 import { useFieldValidation } from "../hooks/useFiledValidation";
 import { getValueValidationRules } from "../../../../utils/valueValidation";
@@ -33,7 +34,7 @@ const ValueInput = ({
   onLocationChange,
   setSupportValue,
 }) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(undefined, { i18n: appI18n });
   const [helperText, setHelperText] = useState("");
 
   // State for autocomplete

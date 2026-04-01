@@ -1,7 +1,5 @@
-import React, { lazy, Suspense } from "react";
+import React from "react";
 import {
-  Card,
-  Spinner,
   Text,
   BlockStack,
   InlineStack,
@@ -42,27 +40,6 @@ const PromotionalContent = () => {
           </InlineStack>
         </Box>
       </BlockStack>
-
-      <Divider />
-
-
-      {/* More Apps Section */}
-      {/* <BlockStack gap="500">
-        <Text variant="headingMd" as="h3">
-          {t("moreApps")}
-        </Text>
-
-        <Box paddingBlock="500">
-          <InlineStack align="center">
-            <TarankerIframe />
-          </InlineStack>
-        </Box>
-
-        <Box>
-          <PlanBanner />
-        </Box>
-      </BlockStack> */}
-
     </BlockStack>
   );
 };

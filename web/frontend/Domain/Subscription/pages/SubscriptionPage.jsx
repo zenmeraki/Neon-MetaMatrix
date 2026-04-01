@@ -5,7 +5,6 @@ import {
   Layout,
   BlockStack,
   Frame,
-  Banner,
   Toast,
   Card,
   Text,
@@ -29,15 +28,15 @@ import { useSubscription } from "../hooks/useSubscription";
 
 // Components
 import PlanGrid from "../components/PlanGrid";
-import PromotionBanner from "../components/PromotionBanner";
 import SubscriptionConfirmModal from "../components/SubscriptionConfirmModal";
 import SubscriptionDetails from "../components/SubscriptionDetails";
 
 import { useTranslation } from "react-i18next";
+import { i18n as appI18n } from "../../../utils/i18nUtils";
 
 const SubscriptionPage = () => {
   const [openItems, setOpenItems] = useState({});
-  const { t } = useTranslation();
+  const { t } = useTranslation(undefined, { i18n: appI18n });
 
   const {
     plans,
@@ -62,7 +61,6 @@ const SubscriptionPage = () => {
     handleSelectPlan,
     handleCancelSelection,
     handleConfirmSubscription,
-    setShowConfirmModal,
   } = useSubscription();
 
   const [toastState, setToastState] = useState({
@@ -130,13 +128,15 @@ const SubscriptionPage = () => {
           <Layout>
             {/* Header */}
             <Layout.Section>
-              <BlockStack gap="400" align="center">
-                <Text variant="headingLg" as="h3" alignment="center">
+              <BlockStack gap="400" inlineAlign="center">
+                <Text variant="headingLg" as="h3">
                   {t("choosePlan")}
                 </Text>
-                <Text variant="bodyMd" as="p" tone="subdued" alignment="center">
-                  {t("subscription_cta_description")}
-                </Text>
+                <Box maxWidth="32rem">
+                  <Text variant="bodyMd" as="p" tone="subdued">
+                    {t("subscription_cta_description")}
+                  </Text>
+                </Box>
               </BlockStack>
             </Layout.Section>
 
@@ -171,9 +171,9 @@ const SubscriptionPage = () => {
             <Layout.Section>
               <Box maxWidth="900px" marginInline="auto">
                 <Card padding="400">
-                  <BlockStack gap="400" align="center">
+                  <BlockStack gap="400" inlineAlign="center">
                     {/* FAQ Header */}
-                    <BlockStack align="center" gap="200">
+                    <BlockStack inlineAlign="center" gap="200">
                       <InlineStack align="center" blockAlign="center">
                         <Box
                           background="bg-subdued"
@@ -188,42 +188,48 @@ const SubscriptionPage = () => {
                           <Icon source={QuestionCircleIcon} />
                         </Box>
                       </InlineStack>
-                      <Text variant="headingLg" as="h2" alignment="center">
+                      <Text variant="headingLg" as="h2">
                         {t("faqTitle")}
                       </Text>
-                      <Text variant="bodyMd" as="p" tone="subdued" alignment="center">
-                        {t("faqSubtitle")}
-                      </Text>
+                      <Box maxWidth="32rem">
+                        <Text variant="bodyMd" as="p" tone="subdued">
+                          {t("faqSubtitle")}
+                        </Text>
+                      </Box>
                     </BlockStack>
 
                     <Divider />
 
                     {/* FAQ Items */}
                     <BlockStack gap="200" width="100%">
-                      {faqs.map((faq, index) => (
-                        <Card key={faq.id} sectioned>
-                          <Button
-                            variant="plain"
-                            size="large"
-                            textAlign="left"
-                            onClick={() => toggleItem(faq.id)}
-                            width="100%"
-                          >
-                            <InlineStack align="center" justify="space-between" blockAlign="center" width="100%">
-                              <Text variant="headingMd" as="h3">
-                                {faq.question}
-                              </Text>
-                              <Icon source={openItems[faq.id] ? ChevronUpIcon : ChevronDownIcon} />
-                            </InlineStack>
-                          </Button>
+                      {faqs.map((faq) => (
+                        <Card key={faq.id}>
+                          <Box padding="400">
+                            <BlockStack gap="200">
+                              <Button
+                                variant="plain"
+                                size="large"
+                                textAlign="left"
+                                onClick={() => toggleItem(faq.id)}
+                                fullWidth
+                              >
+                                <InlineStack align="space-between" blockAlign="center">
+                                  <Text variant="headingMd" as="h3">
+                                    {faq.question}
+                                  </Text>
+                                  <Icon source={openItems[faq.id] ? ChevronUpIcon : ChevronDownIcon} />
+                                </InlineStack>
+                              </Button>
 
-                          <Collapsible open={openItems[faq.id]} id={`faq-${faq.id}`}>
-                            <Box paddingBlock="400" paddingInline="200" borderBlockStart="divider">
-                              <Text variant="bodyMd" as="p" tone="subdued">
-                                {faq.answer}
-                              </Text>
-                            </Box>
-                          </Collapsible>
+                              <Collapsible open={openItems[faq.id]} id={`faq-${faq.id}`}>
+                                <Box paddingBlockStart="200" borderBlockStartWidth="025" borderColor="border">
+                                  <Text variant="bodyMd" as="p" tone="subdued">
+                                    {faq.answer}
+                                  </Text>
+                                </Box>
+                              </Collapsible>
+                            </BlockStack>
+                          </Box>
                         </Card>
                       ))}
                     </BlockStack>
@@ -231,13 +237,15 @@ const SubscriptionPage = () => {
                     <Divider />
 
                     {/* Contact Support */}
-                    <BlockStack align="center" gap="200" paddingBlock="400">
-                      <Text variant="bodyMd" as="p" alignment="center">
+                    <BlockStack inlineAlign="center" gap="200" paddingBlock="400">
+                      <Text variant="bodyMd" as="p">
                         {t("Still_have_questions")}
                       </Text>
-                      <Text variant="bodyMd" as="p" tone="subdued" alignment="center">
-                        {t("Contact_Support")}
-                      </Text>
+                      <Box maxWidth="32rem">
+                        <Text variant="bodyMd" as="p" tone="subdued">
+                          {t("Contact_Support")}
+                        </Text>
+                      </Box>
                     </BlockStack>
                   </BlockStack>
                 </Card>

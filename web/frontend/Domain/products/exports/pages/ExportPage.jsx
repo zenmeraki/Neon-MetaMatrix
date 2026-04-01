@@ -6,6 +6,7 @@ import {
   selectFilters,
   selectProductCount,
 } from "../../../../store/slices/productSlice";
+import { useAuthenticatedFetch } from "../../../../hooks/useAuthenticatedFetch";
 import { allFields } from "../constants";
 
 import ExportSettingsCard from "../components/ExportSettingsCard";
@@ -17,6 +18,7 @@ export default function CsvExportPage() {
   const navigate = useNavigate();
   const count = useSelector(selectProductCount);
   const filters = useSelector(selectFilters);
+  const fetchWithAuth = useAuthenticatedFetch();
 
   const [selectedFields, setSelectedFields] = useState([]);
   const [fileName, setFileName] = useState("");
@@ -55,7 +57,6 @@ export default function CsvExportPage() {
     setBanner(null);
 
     const payload = {
-      shop: "demo-zen-store.myshopify.com",
       fields: selectedFields,
       fileName: fileName.endsWith(".csv")
         ? fileName
@@ -64,7 +65,7 @@ export default function CsvExportPage() {
     };
 
     try {
-      const res = await fetch("/api/products/export", {
+      const res = await fetchWithAuth("/api/products/export", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

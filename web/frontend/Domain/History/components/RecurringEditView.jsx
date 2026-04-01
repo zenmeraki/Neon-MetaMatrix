@@ -1,14 +1,12 @@
 import React, { useState, useCallback, useEffect } from "react";
 import {
   Modal,
-  LegacyCard,
+  Card,
   FormLayout,
   TextField,
   Select,
-  Button,
   Banner,
   Text,
-  Link,
   Checkbox,
   Tag,
   Box,
@@ -18,11 +16,8 @@ import {
   ProgressBar,
   Divider,
 } from "@shopify/polaris";
-import { useTranslation } from "react-i18next";
 
 const RecurringEditModal = ({ open, onClose, data, isLoading, error }) => {
-  const { t } = useTranslation();
-
   // Generate time slots every 15 minutes
   const generateTimeSlots = () => {
     const slots = [];
@@ -478,10 +473,8 @@ const RecurringEditModal = ({ open, onClose, data, isLoading, error }) => {
     shop,
     queryFilter,
     totalItems,
-    processedCount,
     totalRuns,
     totalRunsSucceed,
-    totalRunsSkipped,
     totalFails,
     lastRunAt,
     lastRunStatus,
@@ -525,95 +518,96 @@ const RecurringEditModal = ({ open, onClose, data, isLoading, error }) => {
           )}
 
           {/* Edit Form */}
-          <LegacyCard sectioned>
-            <FormLayout>
-              {/* Title Field */}
-              <TextField
-                label="Title"
-                value={formData.title}
-                onChange={(value) => handleFieldChange("title", value)}
-                placeholder="Enter a descriptive title for this recurring edit"
-                disabled={isSubmitting}
-                error={validationErrors.title}
-                requiredIndicator
-              />
-
-              {/* Frequency and Status Row */}
-              <FormLayout.Group>
-                <Select
-                  label="Frequency"
-                  options={frequencyOptions}
-                  value={formData.frequency}
-                  onChange={(value) => handleFieldChange("frequency", value)}
+          <Card>
+            <Box padding="400">
+              <FormLayout>
+                <TextField
+                  label="Title"
+                  value={formData.title}
+                  onChange={(value) => handleFieldChange("title", value)}
+                  placeholder="Enter a descriptive title for this recurring edit"
                   disabled={isSubmitting}
-                  helpText="How often should this edit run?"
+                  error={validationErrors.title}
+                  requiredIndicator
                 />
+
+                <FormLayout.Group>
+                  <Select
+                    label="Frequency"
+                    options={frequencyOptions}
+                    value={formData.frequency}
+                    onChange={(value) => handleFieldChange("frequency", value)}
+                    disabled={isSubmitting}
+                    helpText="How often should this edit run?"
+                  />
+                  <Select
+                    label="Status"
+                    options={statusOptions}
+                    value={formData.status}
+                    onChange={(value) => handleFieldChange("status", value)}
+                    disabled={isSubmitting}
+                    helpText="Set to Inactive to pause scheduling"
+                  />
+                </FormLayout.Group>
+
                 <Select
-                  label="Status"
-                  options={statusOptions}
-                  value={formData.status}
-                  onChange={(value) => handleFieldChange("status", value)}
+                  label="Timezone"
+                  options={timezoneOptions}
+                  value={formData.timezone}
+                  onChange={(value) => handleFieldChange("timezone", value)}
                   disabled={isSubmitting}
-                  helpText="Set to Inactive to pause scheduling"
+                  helpText="All times will be interpreted in this timezone"
                 />
-              </FormLayout.Group>
 
-              {/* Timezone */}
-              <Select
-                label="Timezone"
-                options={timezoneOptions}
-                value={formData.timezone}
-                onChange={(value) => handleFieldChange("timezone", value)}
-                disabled={isSubmitting}
-                helpText="All times will be interpreted in this timezone"
-              />
-
-              {/* Frequency-specific fields */}
-              {renderFrequencySpecificFields()}
-            </FormLayout>
-          </LegacyCard>
+                {renderFrequencySpecificFields()}
+              </FormLayout>
+            </Box>
+          </Card>
 
           {/* Current Steps Section */}
-          <LegacyCard sectioned>
-            <BlockStack gap="300">
-              <Text variant="headingMd" as="h3">
-                Current Edit Steps
-              </Text>
-              <Text variant="bodyMd" as="p" tone="subdued">
-                This recurring edit performs the following actions:
-              </Text>
-              <BlockStack gap="200">
-                {steps?.map((step, index) => (
-                  <Box
-                    key={index}
-                    padding="300"
-                    background="bg-surface-secondary"
-                    borderRadius="200"
-                    borderColor="border-secondary"
-                    borderWidth="025"
-                  >
-                    <Text variant="bodyMd" as="p">
-                      <Text as="span" fontWeight="semibold">
-                        Step {index + 1}:
-                      </Text>{" "}
-                      Edit <Tag>{step.field}</Tag> using "{step.editType}" to
-                      value "
-                      <Text as="span" fontWeight="semibold">
-                        {step.value}
+          <Card>
+            <Box padding="400">
+              <BlockStack gap="300">
+                <Text variant="headingMd" as="h3">
+                  Current Edit Steps
+                </Text>
+                <Text variant="bodyMd" as="p" tone="subdued">
+                  This recurring edit performs the following actions:
+                </Text>
+                <BlockStack gap="200">
+                  {steps?.map((step, index) => (
+                    <Box
+                      key={index}
+                      padding="300"
+                      background="bg-surface-secondary"
+                      borderRadius="200"
+                      borderColor="border-secondary"
+                      borderWidth="025"
+                    >
+                      <Text variant="bodyMd" as="p">
+                        <Text as="span" fontWeight="semibold">
+                          Step {index + 1}:
+                        </Text>{" "}
+                        Edit <Tag>{step.field}</Tag> using "{step.editType}" to
+                        value "
+                        <Text as="span" fontWeight="semibold">
+                          {step.value}
+                        </Text>
+                        "
                       </Text>
-                      "
-                    </Text>
-                  </Box>
-                ))}
+                    </Box>
+                  ))}
+                </BlockStack>
               </BlockStack>
-            </BlockStack>
-          </LegacyCard>
+            </Box>
+          </Card>
 
           <Divider />
 
           {/* Execution Details Section */}
-          <LegacyCard sectioned>
-            <BlockStack gap="400">
+          <Card>
+            <Box padding="400">
+              <BlockStack gap="400">
               <InlineStack align="space-between" blockAlign="start">
                 <Text variant="headingMd" as="h3">
                   Execution Details
@@ -792,8 +786,9 @@ const RecurringEditModal = ({ open, onClose, data, isLoading, error }) => {
                   </InlineStack>
                 </BlockStack>
               </BlockStack>
-            </BlockStack>
-          </LegacyCard>
+              </BlockStack>
+            </Box>
+          </Card>
         </BlockStack>
       </Modal.Section>
     </Modal>

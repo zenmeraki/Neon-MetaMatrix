@@ -10,9 +10,10 @@ import {
   BlockStack,
 } from "@shopify/polaris";
 import { useTranslation } from "react-i18next";
+import { i18n as appI18n } from "../../../utils/i18nUtils";
 
 const SubscriptionDetails = memo(({ activePlan, isLoading, error }) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(undefined, { i18n: appI18n });
 
   if (isLoading) {
     return (

@@ -16,6 +16,7 @@ import {
 import { RefreshIcon, ArrowLeftIcon } from "@shopify/polaris-icons";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { i18n as appI18n } from "../../../../utils/i18nUtils";
 import useSyncRealtime from "../../../../hooks/useSyncRealtime";
 import { useAuthenticatedFetch } from "../../../../hooks/useAuthenticatedFetch";
 
@@ -23,7 +24,7 @@ const rows = [{ name: "Products", api: "/api/sync/products" }];
 
 export default function DataSyncPage() {
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t } = useTranslation(undefined, { i18n: appI18n });
   const fetchWithAuth = useAuthenticatedFetch();
 
   const [dataSources, setDataSources] = useState(null);

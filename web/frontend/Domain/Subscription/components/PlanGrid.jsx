@@ -1,6 +1,7 @@
 import React, { memo } from "react";
 import { Spinner, Text, Banner, Box, InlineStack, BlockStack } from "@shopify/polaris";
 import { useTranslation } from "react-i18next";
+import { i18n as appI18n } from "../../../utils/i18nUtils";
 import PlanCard from "./PlanCard";
 
 const PlanGrid = memo(
@@ -16,11 +17,11 @@ const PlanGrid = memo(
     isSubscribing,
     selectedPlan,
   }) => {
-    const { t } = useTranslation();
+    const { t } = useTranslation(undefined, { i18n: appI18n });
 
     if (isLoading) {
       return (
-        <BlockStack alignment="center" blockAlignment="center" spacing="500">
+        <BlockStack gap="500" inlineAlign="center">
           <Spinner size="large" />
           <Text variant="bodyMd">
             {t("loadingSubscriptionPlans", {

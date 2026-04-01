@@ -8,10 +8,11 @@ import RecurringHistoryTable from "../components/RecurringHistoryTable";
 import HistoryFilters from "../components/HistoryFilters";
 import SaveViewModal from "../components/SaveViewModal";
 import { useTranslation } from "react-i18next";
+import { i18n as appI18n } from "../../../utils/i18nUtils";
 import { KEY_TO_TYPE } from "../hooks/useHistoryList";
 
 const HistoryComponent = () => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(undefined, { i18n: appI18n });
   const [toastState, setToastState] = useState({
     active: false,
     message: "",

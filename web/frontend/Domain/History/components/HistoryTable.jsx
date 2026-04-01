@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useEffect, useState } from "react";
+import React, { memo, useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import {
   DataTable,
   Badge,
@@ -69,6 +69,7 @@ const HistoryTable = memo(
     const [undoLoading, setUndoLoading] = useState(false);
     const [undoHistoryItem, setUndoHistoryItem] = useState(null);
     const [localHistories, setLocalHistories] = useState(histories);
+    const deferredHistories = useDeferredValue(localHistories);
     const navigate = useNavigate();
 
     const handleCloseUndo = useCallback(() => {
@@ -148,18 +149,30 @@ const HistoryTable = memo(
       setLocalHistories(histories);
     }, [histories]);
 
-    useEffect(() => {
-      const activeHistoryIds = localHistories
-        .filter((history) => {
-          const primaryStatus = getPrimaryStatusSummary(history);
-          const undoStatus = getUndoStatusSummary(history);
-          return isActiveStatus(primaryStatus) || isActiveStatus(undoStatus);
-        })
-        .map((history) => history.id);
+    const activeHistoryIds = useMemo(
+      () =>
+        deferredHistories
+          .filter((history) => {
+            const primaryStatus = getPrimaryStatusSummary(history);
+            const undoStatus = getUndoStatusSummary(history);
+            return isActiveStatus(primaryStatus) || isActiveStatus(undoStatus);
+          })
+          .map((history) => history.id)
+          .filter(Boolean),
+      [deferredHistories],
+    );
 
+    useEffect(() => {
       if (activeHistoryIds.length === 0) return undefined;
 
+      let isFetching = false;
+
       const interval = setInterval(async () => {
+        if (document.hidden || isFetching) {
+          return;
+        }
+
+        isFetching = true;
         try {
           const updates = await Promise.all(
             activeHistoryIds.map((id) =>
@@ -177,11 +190,13 @@ const HistoryTable = memo(
           );
         } catch {
           // Keep polling silent to avoid disrupting the page.
+        } finally {
+          isFetching = false;
         }
       }, 3000);
 
       return () => clearInterval(interval);
-    }, [localHistories]);
+    }, [activeHistoryIds]);
 
     if (isLoading) {
       return (
@@ -199,7 +214,7 @@ const HistoryTable = memo(
       );
     }
 
-    if (!localHistories || localHistories.length === 0) {
+    if (!deferredHistories || deferredHistories.length === 0) {
       return (
         <Box padding="1200">
           <EmptyState heading="No activity yet">
@@ -209,7 +224,7 @@ const HistoryTable = memo(
       );
     }
 
-    const rows = localHistories.map((item) => {
+    const rows = deferredHistories.map((item) => {
       const { id, title, shop } = item;
       const user = shop?.split(".")[0];
       const isUndoable = canUndo(item);
@@ -278,7 +293,7 @@ const HistoryTable = memo(
               </Text>
             </BlockStack>
             <Text tone="subdued" variant="bodySm">
-              {localHistories.length} items
+              {deferredHistories.length} items
             </Text>
           </InlineStack>
         </Box>

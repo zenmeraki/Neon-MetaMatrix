@@ -117,7 +117,14 @@ const ExportTable = ({ selectedType = "Manual export", onExportSuccess, onExport
 
     if (!hasActiveHistory) return undefined;
 
+    let isFetching = false;
+
     const interval = setInterval(async () => {
+      if (document.hidden || isFetching) {
+        return;
+      }
+
+      isFetching = true;
       try {
         const res = await fetch("/api/history/get-shop-exporthistory?");
         const data = await res.json();
@@ -126,6 +133,8 @@ const ExportTable = ({ selectedType = "Manual export", onExportSuccess, onExport
         }
       } catch {
         // Keep polling silent while a run is active.
+      } finally {
+        isFetching = false;
       }
     }, 4000);
 

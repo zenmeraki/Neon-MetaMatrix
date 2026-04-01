@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
+import { i18n as appI18n } from "../../../utils/i18nUtils";
 import {
   fetchSubscriptionPlans,
   selectPlansStatus,
@@ -45,7 +46,7 @@ function normalizePlanType(planType) {
 
 export const useSubscriptionPlans = () => {
   const dispatch = useDispatch();
-  const { t } = useTranslation();
+  const { t } = useTranslation(undefined, { i18n: appI18n });
 
   const plans = useMemo(
     () => [

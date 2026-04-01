@@ -1,4 +1,4 @@
-import React, { memo, Suspense, useMemo } from "react";
+import React, { memo, Suspense, useEffect, useMemo, useState } from "react";
 import {
   Page,
   Layout,
@@ -118,6 +118,35 @@ export default function DashboardPage() {
   const { t } = useTranslation(undefined, { i18n: appI18n });
   const { storeAccess, loadingStoreData } = useStoreAccess();
   const navigate = useNavigate();
+  const [showPromotionalContent, setShowPromotionalContent] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const scheduleDisplay = () => {
+      if (!cancelled) {
+        setShowPromotionalContent(true);
+      }
+    };
+
+    if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+      const idleId = window.requestIdleCallback(scheduleDisplay, {
+        timeout: 1200,
+      });
+
+      return () => {
+        cancelled = true;
+        window.cancelIdleCallback(idleId);
+      };
+    }
+
+    const timeoutId = window.setTimeout(scheduleDisplay, 250);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, []);
 
   const handleLanguageChange = async (value) => {
     await changeAppLanguage(value);
@@ -178,13 +207,13 @@ export default function DashboardPage() {
                         <InlineStack gap="500" wrap blockAlign="center">
                           <Box>
                             <Button onClick={() => navigate("/history")}>
-                              {t("History")}
+                              {t("history", { defaultValue: "History" })}
                             </Button>
                           </Box>
 
                           <Box>
                             <Button onClick={() => navigate("/refresh")}>
-                              {t("SyncData")}
+                              {t("syncData", { defaultValue: "Sync Data" })}
                             </Button>
                           </Box>
 
@@ -335,7 +364,7 @@ export default function DashboardPage() {
                 <Grid>
                   <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3, xl: 3 }}>
                     <QuickActionCard
-                      title={t("Products", { defaultValue: "Products" })}
+                      title={t("products", { defaultValue: "Products" })}
                       description={t("dashboardQuickProductsDescription", {
                         defaultValue:
                           "Browse your catalog and start working on product data.",
@@ -418,15 +447,21 @@ export default function DashboardPage() {
                   </Text>
                 </BlockStack>
 
-                <Suspense
-                  fallback={
-                    <Box minHeight="320px">
-                      <SkeletonBodyText lines={8} />
-                    </Box>
-                  }
-                >
-                  <PromotionalContent />
-                </Suspense>
+                {showPromotionalContent ? (
+                  <Suspense
+                    fallback={
+                      <Box minHeight="320px">
+                        <SkeletonBodyText lines={8} />
+                      </Box>
+                    }
+                  >
+                    <PromotionalContent />
+                  </Suspense>
+                ) : (
+                  <Box minHeight="320px">
+                    <SkeletonBodyText lines={8} />
+                  </Box>
+                )}
               </BlockStack>
             </Box>
           </Card>

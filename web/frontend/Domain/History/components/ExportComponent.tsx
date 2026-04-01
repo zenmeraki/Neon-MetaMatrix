@@ -4,9 +4,10 @@ import { BlockStack, Card, Tabs, Text } from "@shopify/polaris";
 import ExportTable from "./ExportTable";
 import { useToast } from "./useToast";
 import { useTranslation } from "react-i18next";
+import { i18n as appI18n } from "../../../utils/i18nUtils";
 
 const ExportComponent: React.FC = () => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(undefined, { i18n: appI18n });
   const [selectedTab, setSelectedTab] = React.useState(0);
 
   const tabs = React.useMemo(

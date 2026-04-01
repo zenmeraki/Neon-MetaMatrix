@@ -1,10 +1,11 @@
 import React, { memo } from "react";
 import { Modal, Text, Box } from "@shopify/polaris";
 import { useTranslation } from "react-i18next";
+import { i18n as appI18n } from "../../../utils/i18nUtils";
 
 const SubscriptionConfirmModal = memo(
   ({ open, plan, onConfirm, onCancel, isLoading }) => {
-    const { t } = useTranslation();
+    const { t } = useTranslation(undefined, { i18n: appI18n });
 
     if (!plan) return null;
 
