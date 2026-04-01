@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useEffect, useState } from "react";
+import React, { memo, useCallback, useEffect, useMemo, useState } from "react";
 import {
   DataTable,
   Badge,
@@ -10,6 +10,8 @@ import {
   EmptyState,
   SkeletonBodyText,
   SkeletonDisplayText,
+  Card,
+  Divider,
 } from "@shopify/polaris";
 import AlertUndo from "../../products/edit/components/AlertUndo";
 import { useNavigate } from "react-router-dom";
@@ -21,16 +23,36 @@ function getPrimaryStatusSummary(item) {
 
   const status = String(item?.status || "pending").toLowerCase();
   if (status === "completed") {
-    return { key: "completed", label: "Completed", tone: "success", isTerminal: true };
+    return {
+      key: "completed",
+      label: "Completed",
+      tone: "success",
+      isTerminal: true,
+    };
   }
   if (status === "failed") {
-    return { key: "failed", label: "Failed", tone: "critical", isTerminal: true };
+    return {
+      key: "failed",
+      label: "Failed",
+      tone: "critical",
+      isTerminal: true,
+    };
   }
   if (status === "processing") {
-    return { key: "processing", label: "Processing", tone: "info", isTerminal: false };
+    return {
+      key: "processing",
+      label: "Processing",
+      tone: "info",
+      isTerminal: false,
+    };
   }
 
-  return { key: "pending", label: "Pending", tone: "attention", isTerminal: false };
+  return {
+    key: "pending",
+    label: "Pending",
+    tone: "attention",
+    isTerminal: false,
+  };
 }
 
 function getUndoStatusSummary(item) {
@@ -42,14 +64,29 @@ function getUndoStatusSummary(item) {
   if (!undoStatus || undoStatus === "idle") return null;
 
   if (undoStatus === "completed") {
-    return { key: "undo_completed", label: "Undo completed", tone: "success", isTerminal: true };
+    return {
+      key: "undo_completed",
+      label: "Undo completed",
+      tone: "success",
+      isTerminal: true,
+    };
   }
 
   if (undoStatus === "failed") {
-    return { key: "undo_failed", label: "Undo failed", tone: "critical", isTerminal: true };
+    return {
+      key: "undo_failed",
+      label: "Undo failed",
+      tone: "critical",
+      isTerminal: true,
+    };
   }
 
-  return { key: "undo_processing", label: "Undo processing", tone: "attention", isTerminal: false };
+  return {
+    key: "undo_processing",
+    label: "Undo processing",
+    tone: "attention",
+    isTerminal: false,
+  };
 }
 
 function isActiveStatus(summary) {
@@ -81,10 +118,10 @@ const HistoryTable = memo(
       const undoStatus = getUndoStatusSummary(item);
 
       return (
-        <BlockStack gap="100">
+        <InlineStack gap="150" wrap>
           <Badge tone={primaryStatus.tone}>{primaryStatus.label}</Badge>
           {undoStatus ? <Badge tone={undoStatus.tone}>{undoStatus.label}</Badge> : null}
-        </BlockStack>
+        </InlineStack>
       );
     }, []);
 
@@ -108,6 +145,7 @@ const HistoryTable = memo(
     const handleUndoEditHistory = useCallback(async () => {
       if (!undoHistoryItem?.id) return;
       setUndoLoading(true);
+
       try {
         const response = await fetch(`/api/products/undo-edit/${undoHistoryItem.id}`, {
           method: "PUT",
@@ -183,29 +221,55 @@ const HistoryTable = memo(
       return () => clearInterval(interval);
     }, [localHistories]);
 
+    const summary = useMemo(() => {
+      const total = localHistories?.length || 0;
+      const processing = (localHistories || []).filter((item) => {
+        const primaryStatus = getPrimaryStatusSummary(item);
+        const undoStatus = getUndoStatusSummary(item);
+        return isActiveStatus(primaryStatus) || isActiveStatus(undoStatus);
+      }).length;
+
+      const completed = (localHistories || []).filter(
+        (item) => getPrimaryStatusSummary(item).key === "completed",
+      ).length;
+
+      const failed = (localHistories || []).filter(
+        (item) => getPrimaryStatusSummary(item).key === "failed",
+      ).length;
+
+      return { total, processing, completed, failed };
+    }, [localHistories]);
+
     if (isLoading) {
       return (
-        <BlockStack gap="0">
-          <Box padding="400" borderBlockEndWidth="1" borderColor="border">
-            <BlockStack gap="200">
-              <SkeletonDisplayText size="small" />
-              <SkeletonBodyText lines={1} />
+        <Card padding="0">
+          <Box padding="500">
+            <BlockStack gap="400">
+              <BlockStack gap="200">
+                <SkeletonDisplayText size="small" />
+                <SkeletonBodyText lines={2} />
+              </BlockStack>
+
+              <Divider />
+
+              <BlockStack gap="300">
+                <SkeletonBodyText lines={6} />
+              </BlockStack>
             </BlockStack>
           </Box>
-          <Box padding="500">
-            <SkeletonBodyText lines={8} />
-          </Box>
-        </BlockStack>
+        </Card>
       );
     }
 
     if (!localHistories || localHistories.length === 0) {
       return (
-        <Box padding="1200">
-          <EmptyState heading="No activity yet">
-            <p>{emptyStateMessage}</p>
-          </EmptyState>
-        </Box>
+        <Card>
+          <Box padding="1200">
+            <EmptyState heading="No activity yet">
+              <p>{emptyStateMessage}</p>
+            </EmptyState>
+          </Box>
+        </Card>
       );
     }
 
@@ -216,9 +280,11 @@ const HistoryTable = memo(
       const primaryStatus = getPrimaryStatusSummary(item);
       const undoStatus = getUndoStatusSummary(item);
       const isProcessing = isActiveStatus(primaryStatus) || isActiveStatus(undoStatus);
+
       const progressLabel =
         item?.progressSummary?.label ||
         `${item.processedCount} / ${item.totalItems || item.processedCount}`;
+
       const timeValue =
         isActiveStatus(undoStatus) && item.undo?.startedAt
           ? item.undo.startedAt
@@ -227,18 +293,18 @@ const HistoryTable = memo(
             : item.completedAt || item.updatedAt || item.editTime;
 
       return [
-        <Box key={`title-${id}`} maxWidth="280px">
-          <BlockStack gap="100">
-            <Text variant="bodyMd" fontWeight="medium" truncate>
+        <Box key={`title-${id}`} maxWidth="320px">
+          <BlockStack gap="050">
+            <Text variant="bodyMd" fontWeight="medium" truncate as="span">
               {title}
             </Text>
-            <Text variant="bodySm" tone="subdued">
+            <Text variant="bodySm" tone="subdued" as="span">
               {user || "-"}
             </Text>
           </BlockStack>
         </Box>,
         renderStatusBadge(item),
-        <BlockStack key={`processed-${id}`} gap="100">
+        <BlockStack key={`processed-${id}`} gap="050">
           <Text variant="bodyMd" as="span">
             {progressLabel}
           </Text>
@@ -248,8 +314,10 @@ const HistoryTable = memo(
             </Text>
           ) : null}
         </BlockStack>,
-        timeValue ? new Date(timeValue).toLocaleString() : "-",
-        <InlineStack key={`actions-${id}`} gap="200">
+        <Text as="span" variant="bodySm">
+          {timeValue ? new Date(timeValue).toLocaleString() : "-"}
+        </Text>,
+        <InlineStack key={`actions-${id}`} gap="200" wrap={false}>
           <Button size="slim" onClick={() => navigate(`/editDetails/${id}`)}>
             View
           </Button>
@@ -266,22 +334,41 @@ const HistoryTable = memo(
     });
 
     return (
-      <BlockStack gap="0">
-        <Box padding="400" borderBlockEndWidth="1" borderColor="border">
-          <InlineStack align="space-between" blockAlign="center">
-            <BlockStack gap="100">
-              <Text as="h3" variant="headingSm">
-                Edit activity
+      <Card padding="0">
+        <Box padding="500">
+          <BlockStack gap="500">
+            <InlineStack align="space-between" blockAlign="start" wrap gap="300">
+              <BlockStack gap="100">
+                <Text as="h3" variant="headingMd">
+                  Edit activity
+                </Text>
+                <Text tone="subdued" variant="bodySm">
+                  Review edit runs, inspect details, and undo completed changes from
+                  a cleaner workspace.
+                </Text>
+              </BlockStack>
+
+              <InlineStack gap="200" wrap>
+                <Badge>{summary.total} total</Badge>
+                <Badge tone="info">{summary.processing} active</Badge>
+                <Badge tone="success">{summary.completed} completed</Badge>
+                <Badge tone="critical">{summary.failed} failed</Badge>
+              </InlineStack>
+            </InlineStack>
+
+            <Box
+              background="bg-surface-secondary"
+              borderRadius="300"
+              padding="300"
+            >
+              <Text tone="subdued" variant="bodySm" as="p">
+                Live statuses refresh automatically for active jobs.
               </Text>
-              <Text tone="subdued" variant="bodySm">
-                Review edit runs, undo completed changes, and inspect history details.
-              </Text>
-            </BlockStack>
-            <Text tone="subdued" variant="bodySm">
-              {localHistories.length} items
-            </Text>
-          </InlineStack>
+            </Box>
+          </BlockStack>
         </Box>
+
+        <Divider />
 
         <Box overflowX="auto">
           <DataTable
@@ -292,16 +379,19 @@ const HistoryTable = memo(
         </Box>
 
         {hasMore && (
-          <Box padding="400" borderBlockStartWidth="1" borderColor="border">
-            <InlineStack align="space-between" blockAlign="center">
-              <Text tone="subdued" variant="bodySm">
-                Load additional history without leaving the current view.
-              </Text>
-              <Button loading={isLoadingMore} onClick={onLoadMore}>
-                Load more
-              </Button>
-            </InlineStack>
-          </Box>
+          <>
+            <Divider />
+            <Box padding="400">
+              <InlineStack align="space-between" blockAlign="center" wrap gap="300">
+                <Text tone="subdued" variant="bodySm">
+                  Load additional history without leaving the current view.
+                </Text>
+                <Button loading={isLoadingMore} onClick={onLoadMore}>
+                  Load more
+                </Button>
+              </InlineStack>
+            </Box>
+          </>
         )}
 
         <AlertUndo
@@ -310,7 +400,7 @@ const HistoryTable = memo(
           undoEditHistory={handleUndoEditHistory}
           loading={undoLoading}
         />
-      </BlockStack>
+      </Card>
     );
   },
 );

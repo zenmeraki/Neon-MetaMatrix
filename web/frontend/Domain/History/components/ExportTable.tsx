@@ -117,6 +117,7 @@ const ExportTable = ({ selectedType = "Manual export", onExportSuccess, onExport
 
     if (!hasActiveHistory) return undefined;
 
+    
     const interval = setInterval(async () => {
       try {
         const res = await fetch("/api/history/get-shop-exporthistory?");
