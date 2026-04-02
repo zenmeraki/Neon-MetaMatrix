@@ -158,20 +158,20 @@ const HistoryTable = memo(
             prev.map((history) =>
               history.id === undoHistoryItem.id
                 ? {
-                    ...history,
-                    undo: {
-                      ...history.undo,
-                      status: "processing",
-                      state: "queued",
-                      startedAt: new Date().toISOString(),
-                    },
-                    undoStatusSummary: {
-                      key: "undo_queued",
-                      label: "Undo queued",
-                      tone: "attention",
-                      isTerminal: false,
-                    },
-                  }
+                  ...history,
+                  undo: {
+                    ...history.undo,
+                    status: "processing",
+                    state: "queued",
+                    startedAt: new Date().toISOString(),
+                  },
+                  undoStatusSummary: {
+                    key: "undo_queued",
+                    label: "Undo queued",
+                    tone: "attention",
+                    isTerminal: false,
+                  },
+                }
                 : history,
             ),
           );
@@ -339,6 +339,7 @@ const HistoryTable = memo(
           <BlockStack gap="500">
             <InlineStack align="space-between" blockAlign="start" wrap gap="300">
               <BlockStack gap="100">
+                <Box paddingInlineStart="500">
                 <Text as="h3" variant="headingMd">
                   Edit activity
                 </Text>
@@ -346,6 +347,8 @@ const HistoryTable = memo(
                   Review edit runs, inspect details, and undo completed changes from
                   a cleaner workspace.
                 </Text>
+                </Box>
+
               </BlockStack>
 
               <InlineStack gap="200" wrap>
@@ -360,6 +363,7 @@ const HistoryTable = memo(
               background="bg-surface-secondary"
               borderRadius="300"
               padding="300"
+              paddingInlineStart="800"
             >
               <Text tone="subdued" variant="bodySm" as="p">
                 Live statuses refresh automatically for active jobs.
@@ -370,7 +374,7 @@ const HistoryTable = memo(
 
         <Divider />
 
-        <Box overflowX="auto">
+        <Box overflowX="auto" paddingInlineStart="800">
           <DataTable
             columnContentTypes={["text", "text", "text", "text", "text"]}
             headings={["Title", "Status", "Processed", "Updated", "Actions"]}
