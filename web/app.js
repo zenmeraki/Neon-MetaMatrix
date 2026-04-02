@@ -46,6 +46,7 @@ export const buildApp = (_server, io) => {
   app.use(
     helmet({
       contentSecurityPolicy: false,
+      frameguard: false,
       crossOriginEmbedderPolicy: false,
       crossOriginOpenerPolicy: { policy: "same-origin" },
       crossOriginResourcePolicy: { policy: "cross-origin" },

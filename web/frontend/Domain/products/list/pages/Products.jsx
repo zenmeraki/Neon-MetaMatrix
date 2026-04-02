@@ -15,6 +15,7 @@ import { useMemo, useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { t } from "i18next";
+import { useAuthenticatedFetch } from "../../../../hooks/useAuthenticatedFetch";
 
 import ProductsFilters from "../components/ProductsFilters";
 import ProductsTable from "../components/ProductsTable";
@@ -36,6 +37,7 @@ import {
 export default function ProductsPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const fetchWithAuth = useAuthenticatedFetch();
 
   const products = useSelector(selectProducts);
   const filterState = useSelector(selectFilters);
@@ -51,7 +53,8 @@ export default function ProductsPage() {
 
   const fetchSyncStatus = useCallback(async () => {
     try {
-      const response = await fetch("/api/sync/sync-status");
+      const response = await fetchWithAuth("/api/sync/sync-status");
+      if (!response) return;
       const result = await response.json();
 
       if (response.ok && result?.syncStatus) {
@@ -62,7 +65,7 @@ export default function ProductsPage() {
     } finally {
       setSyncStatusLoading(false);
     }
-  }, []);
+  }, [fetchWithAuth]);
 
   useEffect(() => {
     const timer = setTimeout(() => {

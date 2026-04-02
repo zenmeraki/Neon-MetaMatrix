@@ -1,6 +1,7 @@
 // src/hooks/useProducts.js
 import { useState, useCallback } from "react";
 import { useDispatch } from "react-redux";
+import { useAuthenticatedFetch } from "../../../../hooks/useAuthenticatedFetch";
 import {
     setProducts,
     setCount,
@@ -10,6 +11,7 @@ import {
 
 export default function useProducts() {
     const dispatch = useDispatch();
+    const fetchWithAuth = useAuthenticatedFetch();
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -23,7 +25,7 @@ export default function useProducts() {
                 setLoading(true);
                 setError(null);
 
-                const res = await fetch(
+                const res = await fetchWithAuth(
                     `/api/products/get-all?page=${pageNumber}&limit=${limit}`,
                     {
                         method: "POST",
@@ -33,6 +35,7 @@ export default function useProducts() {
                         body: JSON.stringify({ filterParams }),
                     }
                 );
+                if (!res) return;
 
                 if (!res.ok) throw new Error("Failed to fetch products");
 
@@ -54,7 +57,7 @@ export default function useProducts() {
                 setLoading(false);
             }
         },
-        [dispatch]
+        [dispatch, fetchWithAuth]
     );
 
     return {

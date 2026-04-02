@@ -87,6 +87,7 @@ const app = express();
 app.use(
   helmet({
     contentSecurityPolicy: false,
+    frameguard: false,
     crossOriginEmbedderPolicy: false,
     crossOriginOpenerPolicy: { policy: "same-origin" },
     crossOriginResourcePolicy: { policy: "cross-origin" },
