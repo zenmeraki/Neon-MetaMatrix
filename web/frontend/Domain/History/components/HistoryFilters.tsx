@@ -36,7 +36,12 @@ const HistoryFilters = memo<HistoryFiltersProps>(
       <Card>
         <Box padding="500">
           <BlockStack gap="400">
-            <InlineStack align="space-between" blockAlign="start" wrap gap="300">
+            <InlineStack
+              align="space-between"
+              blockAlign="start"
+              wrap
+              gap="300"
+            >
               <BlockStack gap="100">
                 <InlineStack gap="200" blockAlign="center" wrap>
                   <Text as="h3" variant="headingMd">
@@ -46,8 +51,8 @@ const HistoryFilters = memo<HistoryFiltersProps>(
                 </InlineStack>
 
                 <Text as="p" variant="bodySm" tone="subdued">
-                  Search recent activity, switch between history types, and export
-                  the current view.
+                  Search recent activity, switch between history types, and
+                  export the current view.
                 </Text>
               </BlockStack>
             </InlineStack>
@@ -57,10 +62,19 @@ const HistoryFilters = memo<HistoryFiltersProps>(
               borderRadius="300"
               padding="200"
             >
-              <Tabs tabs={tabs} selected={selectedTabIndex} onSelect={onTabChange} />
+              <Tabs
+                tabs={tabs}
+                selected={selectedTabIndex}
+                onSelect={onTabChange}
+              />
             </Box>
 
-            <InlineStack align="space-between" blockAlign="center" gap="300" wrap>
+            <InlineStack
+              align="space-between"
+              blockAlign="center"
+              gap="300"
+              wrap
+            >
               <div style={{ flex: "1 1 380px", minWidth: "260px" }}>
                 <TextField
                   label="Search"

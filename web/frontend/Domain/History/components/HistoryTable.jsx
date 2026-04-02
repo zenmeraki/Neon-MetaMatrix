@@ -340,13 +340,13 @@ const HistoryTable = memo(
             <InlineStack align="space-between" blockAlign="start" wrap gap="300">
               <BlockStack gap="100">
                 <Box paddingInlineStart="500">
-                <Text as="h3" variant="headingMd">
-                  Edit activity
-                </Text>
-                <Text tone="subdued" variant="bodySm">
-                  Review edit runs, inspect details, and undo completed changes from
-                  a cleaner workspace.
-                </Text>
+                  <Text as="h3" variant="headingMd">
+                    Edit activity
+                  </Text>
+                  <Text tone="subdued" variant="bodySm">
+                    Review edit runs, inspect details, and undo completed changes from
+                    a cleaner workspace.
+                  </Text>
                 </Box>
 
               </BlockStack>
