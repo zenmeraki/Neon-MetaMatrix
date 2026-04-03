@@ -37,6 +37,7 @@ const HistoryComponent = () => {
     error,
     handleTabChange,
     loadMore,
+    refetch,
   } = useHistoryList();
 
   const { searchValue, debouncedSearchChange } = useHistorySearch();
@@ -120,6 +121,7 @@ const HistoryComponent = () => {
             hasMore={pagination.hasNextPage}
             emptyStateMessage={getEmptyStateMessage()}
             onLoadMore={loadMore}
+            onRefresh={refetch}
           />
         ) : (
           <HistoryTable
