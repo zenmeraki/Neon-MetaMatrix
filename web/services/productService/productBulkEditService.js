@@ -90,6 +90,141 @@ function determineMutationMode(fields = []) {
   return PRODUCT_SET_MODE.PRODUCT_ONLY;
 }
 
+function normalizeMirrorProductForPreview(rawProduct) {
+  const options = Array.isArray(rawProduct?.options)
+    ? rawProduct.options
+    : Array.isArray(rawProduct?.optionsJson)
+      ? rawProduct.optionsJson
+      : [];
+
+  const variants = Array.isArray(rawProduct?.variants)
+    ? rawProduct.variants.map((variant) => ({
+        ...variant,
+        selectedOptions: Array.isArray(variant?.selectedOptions)
+          ? variant.selectedOptions
+          : Array.isArray(variant?.selectedOptionsJson)
+            ? variant.selectedOptionsJson
+            : [],
+      }))
+    : [];
+
+  return {
+    ...rawProduct,
+    options,
+    variants,
+    seo: {
+      title: rawProduct?.seo?.title ?? rawProduct?.seoTitle ?? "",
+      description: rawProduct?.seo?.description ?? rawProduct?.seoDescription ?? "",
+    },
+    category: rawProduct?.category ?? (
+      rawProduct?.categoryId || rawProduct?.categoryName
+        ? {
+            id: rawProduct.categoryId ?? null,
+            name: rawProduct.categoryName ?? "",
+          }
+        : null
+    ),
+    collections: Array.isArray(rawProduct?.collections)
+      ? rawProduct.collections
+      : Array.isArray(rawProduct?.collectionsJson)
+        ? rawProduct.collectionsJson
+        : [],
+    featuredMedia: rawProduct?.featuredMedia ?? (
+      rawProduct?.featuredImageUrl
+        ? {
+            preview: {
+              image: {
+                url: rawProduct.featuredImageUrl,
+              },
+            },
+          }
+        : null
+    ),
+  };
+}
+
+function normalizeMirrorVariantForPreview(variant) {
+  return {
+    ...variant,
+    selectedOptions: Array.isArray(variant?.selectedOptions)
+      ? variant.selectedOptions
+      : Array.isArray(variant?.selectedOptionsJson)
+        ? variant.selectedOptionsJson
+        : [],
+  };
+}
+
+function groupFallbackVariantsByProduct(variants) {
+  const grouped = new Map();
+
+  for (const variant of variants) {
+    const productId = variant?.productId;
+    if (!productId) continue;
+
+    const bucket = grouped.get(productId) || new Map();
+    const batchKey = variant?.mirrorBatchId || "legacy";
+    const items = bucket.get(batchKey) || [];
+    items.push(normalizeMirrorVariantForPreview(variant));
+    bucket.set(batchKey, items);
+    grouped.set(productId, bucket);
+  }
+
+  const resolved = new Map();
+  for (const [productId, batches] of grouped.entries()) {
+    if (batches.has("legacy")) {
+      resolved.set(productId, batches.get("legacy"));
+      continue;
+    }
+
+    const [firstBatchVariants] = batches.values();
+    resolved.set(productId, firstBatchVariants || []);
+  }
+
+  return resolved;
+}
+
+async function hydrateMissingVariantsForProducts(products, shop) {
+  const list = Array.isArray(products) ? products : [];
+  const missingProductIds = list
+    .filter((product) => Array.isArray(product?.variants) && product.variants.length === 0)
+    .map((product) => product.id)
+    .filter(Boolean);
+
+  if (!missingProductIds.length) {
+    return list;
+  }
+
+  const fallbackVariants = await prisma.variant.findMany({
+    where: {
+      shop,
+      productId: { in: missingProductIds },
+    },
+    orderBy: [{ productId: "asc" }, { mirrorBatchId: "asc" }, { position: "asc" }],
+  });
+
+  if (!fallbackVariants.length) {
+    return list;
+  }
+
+  const fallbackByProduct = groupFallbackVariantsByProduct(fallbackVariants);
+
+  return list.map((product) => {
+    if (!Array.isArray(product?.variants) || product.variants.length > 0) {
+      return product;
+    }
+
+    const fallback = fallbackByProduct.get(product.id);
+    if (!fallback?.length) {
+      return product;
+    }
+
+    return {
+      ...product,
+      variants: fallback,
+    };
+  });
+}
+
 function normalizeRules(body) {
   const {
     editedType,
@@ -411,7 +546,7 @@ export default class ProductBulkService {
     const include = buildProductInclude(fields);
     const orderedIds = rows.map((row) => row.productId);
 
-    const products = await prisma.product.findMany({
+    let products = await prisma.product.findMany({
       where: {
         shop: history.shop,
         id: {
@@ -425,6 +560,10 @@ export default class ProductBulkService {
       },
       ...(include ? { include } : {}),
     });
+
+    if (include?.variants) {
+      products = await hydrateMissingVariantsForProducts(products, history.shop);
+    }
 
     const productsById = new Map(products.map((product) => [product.id, product]));
     const formattedProducts = [];
@@ -539,7 +678,7 @@ export default class ProductBulkService {
 
       const include = buildProductInclude([field]);
       const productIds = target.sampleProducts.map((product) => product.id);
-      const products = await prisma.product.findMany({
+      let products = await prisma.product.findMany({
         where: {
           shop: this.session.shop,
           id: { in: productIds },
@@ -548,6 +687,10 @@ export default class ProductBulkService {
         ...(include ? { include } : {}),
       });
 
+      if (include?.variants) {
+        products = await hydrateMissingVariantsForProducts(products, this.session.shop);
+      }
+
       const productMap = new Map(products.map((product) => [product.id, product]));
       const formattedProducts = [];
 
@@ -555,15 +698,7 @@ export default class ProductBulkService {
         const rawProduct = productMap.get(targetProduct.id);
         if (!rawProduct) continue;
 
-        const product = {
-          ...rawProduct,
-          variants: Array.isArray(rawProduct.variants) ? rawProduct.variants : [],
-          options: Array.isArray(rawProduct.options)
-            ? rawProduct.options
-            : Array.isArray(rawProduct.optionsJson)
-              ? rawProduct.optionsJson
-              : [],
-        };
+        const product = normalizeMirrorProductForPreview(rawProduct);
 
         const result = getUpdatedProducts({
           product,
