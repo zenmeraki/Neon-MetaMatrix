@@ -343,6 +343,10 @@ export async function toggleScheduledExportStatus({
       ? computeScheduledExportNextRunAt(existing, new Date())
       : null;
 
+  if (requestedStatus === "ACTIVE" && !nextRunAt) {
+    throw new Error("Scheduled export time must be in the future");
+  }
+
   await scheduledExportRepository.updateById(existing.id, {
     status: requestedStatus,
     nextRunAt,

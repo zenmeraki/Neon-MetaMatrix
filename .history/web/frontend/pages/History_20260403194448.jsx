@@ -5,6 +5,7 @@ export default function History() {
   return (
     <Frame>
           <HistoryPage />
+
     </Frame>
   )
 }
