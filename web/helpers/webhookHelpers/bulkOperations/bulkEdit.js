@@ -636,8 +636,9 @@ export async function handleProductEditOperation({ bulkOperationId, shop = null 
     return { success: false, reason: "bulk_operation_failed" };
   }
 
+  await applyBulkMirrorUpdates(history, bulkOperation);
+
   if (claimKind === "edit") {
-    await applyBulkMirrorUpdates(history, bulkOperation);
     const result = await finalizeEditSuccess(history);
     await clearKeyCaches(`${history.shop}:historyDetails:${history.id}`);
     return { success: true, continued: result.continued, kind: "edit" };

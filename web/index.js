@@ -162,8 +162,6 @@ const apiLimiter = rateLimit({
 
 
 app.use("/api", apiLimiter);
-
-
 app.use("/api/products", productRoutes);
 app.use("/api/category", categorytRoutes);
 app.use("/api/collection", collectionRoutes);

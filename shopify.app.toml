@@ -3,7 +3,7 @@
 client_id = "20f31d269398d5f23df95d0450e772e9"
 web_directories = [ "web", "web/frontend" ]
 name = "test-app"
-application_url = "https://distinct-payments-typically-features.trycloudflare.com"
+application_url = "https://meets-packing-payday-swaziland.trycloudflare.com"
 embedded = true
 handle = "test-app-11537"
 
@@ -45,9 +45,9 @@ use_legacy_install_flow = false
 
 [auth]
 redirect_urls = [
-  "https://distinct-payments-typically-features.trycloudflare.com/auth/callback",
-  "https://distinct-payments-typically-features.trycloudflare.com/auth/shopify/callback",
-  "https://distinct-payments-typically-features.trycloudflare.com/api/auth/callback"
+  "https://meets-packing-payday-swaziland.trycloudflare.com/auth/callback",
+  "https://meets-packing-payday-swaziland.trycloudflare.com/auth/shopify/callback",
+  "https://meets-packing-payday-swaziland.trycloudflare.com/api/auth/callback"
 ]
 
 [app_proxy]

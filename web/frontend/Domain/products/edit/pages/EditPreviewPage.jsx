@@ -28,12 +28,14 @@ import ScheduleEdit from "../components/ScheduleEdit";
 import RecurringEditModal from "../components/RecurringEditModal";
 import useDebounce from "../hooks/useDebounce";
 import { selectFilters, selectProductCount } from "../../../../store/slices/productSlice";
+import useProductSyncStatus from "../../../../hooks/useProductSyncStatus";
 
 export default function EditPreviewPage() {
   const filters = useSelector(selectFilters);
   const count = useSelector(selectProductCount);
   const navigate = useNavigate();
   const { i18n, t } = useTranslation();
+  const { isSyncInProgress } = useProductSyncStatus();
 
   const [selectedField, setSelectedField] = useState(getFieldDefinition("price"));
   const [editType, setEditType] = useState(null);
@@ -168,6 +170,10 @@ export default function EditPreviewPage() {
   }, [editType, inputValue, searchReplace?.search, selectedField]);
 
   const handleRunEdit = async () => {
+    if (isSyncInProgress) {
+      return;
+    }
+
     if (submitError) {
       toast.error(submitError);
       return;
@@ -244,20 +250,32 @@ export default function EditPreviewPage() {
         content: submitting ? t("Running") : t("RunEdit"),
         onAction: handleRunEdit,
         loading: submitting,
-        disabled: Boolean(submitError) || !canRunEdit,
+        disabled: isSyncInProgress || Boolean(submitError) || !canRunEdit,
       }}
       secondaryActions={[
         {
           content: t("ScheduleEdit"),
           onAction: () => setModalState((current) => ({ ...current, scheduleEdit: true })),
+          disabled: isSyncInProgress,
         },
         {
           content: "Recurring Edit",
           onAction: () => setModalState((current) => ({ ...current, recurringEdit: true })),
+          disabled: isSyncInProgress,
         },
       ]}
     >
       <Layout>
+        {isSyncInProgress && (
+          <Layout.Section>
+            <Banner tone="info" title="Sync in progress">
+              <p>
+                Product sync is still running. Edit, schedule, and recurring actions are temporarily disabled until the mirror is ready.
+              </p>
+            </Banner>
+          </Layout.Section>
+        )}
+
         <Layout.Section>
           {limitWarning && (
             <Box paddingBlockEnd="300">
