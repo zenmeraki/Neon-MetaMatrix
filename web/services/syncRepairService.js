@@ -48,52 +48,29 @@ export function isStaleSyncExecution(syncHistory) {
 }
 
 export async function getLatestSyncExecutionSummary(shop, operationType = null) {
-  const rows = operationType
-    ? await prisma.$queryRaw`
-    SELECT
-      "id",
-      "shop",
-      "bulkOperationId",
-      "syncBatchId",
-      "status",
-      "stage",
-      "executionState",
-      "executionIdentity",
-      "lastHeartbeatAt",
-      "completedAt",
-      "errorSummary",
-      "operationType",
-      "createdAt",
-      "updatedAt"
-    FROM "SyncHistory"
-    WHERE "shop" = ${shop}
-      AND "operationType" = ${operationType}
-    ORDER BY "createdAt" DESC
-    LIMIT 1
-  `
-    : await prisma.$queryRaw`
-    SELECT
-      "id",
-      "shop",
-      "bulkOperationId",
-      "syncBatchId",
-      "status",
-      "stage",
-      "executionState",
-      "executionIdentity",
-      "lastHeartbeatAt",
-      "completedAt",
-      "errorSummary",
-      "operationType",
-      "createdAt",
-      "updatedAt"
-    FROM "SyncHistory"
-    WHERE "shop" = ${shop}
-    ORDER BY "createdAt" DESC
-    LIMIT 1
-  `;
-
-  return rows?.[0] || null;
+  return prisma.syncHistory.findFirst({
+    where: {
+      shop,
+      ...(operationType ? { operationType } : {}),
+    },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      shop: true,
+      bulkOperationId: true,
+      syncBatchId: true,
+      status: true,
+      stage: true,
+      executionState: true,
+      executionIdentity: true,
+      lastHeartbeatAt: true,
+      completedAt: true,
+      errorSummary: true,
+      operationType: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
 }
 
 async function fetchBulkOperationState(session, bulkOperationId) {

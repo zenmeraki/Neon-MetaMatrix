@@ -171,6 +171,19 @@ const apiLimiter = rateLimit({
   max: 1000,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) =>
+    process.env.NODE_ENV !== "production" ||
+    req.path === "/sync/sync-status" ||
+    req.path === "/sync/product-track" ||
+    req.path === "/products/get-all",
+  keyGenerator: (req, res) =>
+    res.locals.shopify?.session?.shop ||
+    req.get("x-shopify-shop-domain") ||
+    req.ip,
+  handler: (_req, res) =>
+    res.status(429).json({
+      error: "Too many requests, please try again later.",
+    }),
 });
 
 

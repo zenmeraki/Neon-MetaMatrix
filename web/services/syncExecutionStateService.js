@@ -1,4 +1,5 @@
 import { prisma } from "../config/database.js";
+import { clearKeyCaches } from "../utils/cacheUtils.js";
 
 export const SYNC_EXECUTION_STATES = {
   PLANNED: "planned",
@@ -36,6 +37,13 @@ async function getSyncHistoryExecutionRow({
   return rows?.[0] || null;
 }
 
+async function clearStoreSyncCaches(shop) {
+  await Promise.all([
+    clearKeyCaches(`${shop}:sync_details`),
+    clearKeyCaches(`${shop}:storeDetails`),
+  ]).catch(() => {});
+}
+
 function buildStoreProjectionFromExecution(syncHistory) {
   if (!syncHistory) {
     return null;
@@ -64,6 +72,7 @@ function buildStoreProjectionFromExecution(syncHistory) {
     if (executionState === SYNC_EXECUTION_STATES.COMPLETED) {
       return {
         isProductSyncing: false,
+        isProductInitialySyning: false,
         syncProgressStage: "IDLE",
         shopifyBulkJobCompleted: true,
         lastProductSyncAt: syncHistory.completedAt || new Date(),
@@ -127,6 +136,8 @@ export async function projectSyncExecutionToStore({
     data: projection,
   });
 
+  await clearStoreSyncCaches(shop);
+
   return syncHistory;
 }
 
@@ -135,37 +146,40 @@ export async function reconcileStoreSyncProjection({
   operationType = "Product",
   client = prisma,
 }) {
-  const rows = await client.$queryRaw`
-    SELECT
-      "id",
-      "shop",
-      "operationType",
-      "status",
-      "stage",
-      "executionState",
-      "executionIdentity",
-      "lastHeartbeatAt",
-      "completedAt",
-      "errorSummary",
-      "createdAt",
-      "updatedAt"
-    FROM "SyncHistory"
-    WHERE "shop" = ${shop}
-      AND "operationType" = ${operationType}
-    ORDER BY "createdAt" DESC
-    LIMIT 1
-  `;
-
-  const syncHistory = rows?.[0] || null;
+  const syncHistory = await client.syncHistory.findFirst({
+    where: {
+      shop,
+      operationType,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+    select: {
+      id: true,
+      shop: true,
+      operationType: true,
+      status: true,
+      stage: true,
+      executionState: true,
+      executionIdentity: true,
+      lastHeartbeatAt: true,
+      completedAt: true,
+      errorSummary: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
 
   if (!syncHistory && operationType === "Product") {
     await client.store.update({
       where: { shopUrl: shop },
       data: {
         isProductSyncing: false,
+        isProductInitialySyning: false,
         syncProgressStage: "IDLE",
       },
     });
+    await clearStoreSyncCaches(shop);
     return null;
   }
 
@@ -176,6 +190,7 @@ export async function reconcileStoreSyncProjection({
         isCollectionSyncing: false,
       },
     });
+    await clearStoreSyncCaches(shop);
     return null;
   }
 
@@ -185,6 +200,7 @@ export async function reconcileStoreSyncProjection({
       where: { shopUrl: shop },
       data: projection,
     });
+    await clearStoreSyncCaches(shop);
   }
 
   return syncHistory;

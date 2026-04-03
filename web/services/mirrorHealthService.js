@@ -50,12 +50,12 @@ export async function getStoreMirrorState(shop, tx = prisma) {
   });
 }
 
-export async function markFullSyncStarted(shop, tx = prisma) {
+export async function markFullSyncStarted(shop, { isInitialSync = false } = {}, tx = prisma) {
   return tx.store.update({
     where: { shopUrl: shop },
     data: {
       isProductSyncing: true,
-      isProductInitialySyning: true,
+      isProductInitialySyning: isInitialSync,
       mirrorHealthState: "DEGRADED",
       syncProgressStage: "SHOPIFY_BULK_RUNNING",
       shopifyBulkJobCompleted: false,

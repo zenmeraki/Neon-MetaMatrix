@@ -17,6 +17,26 @@ function isSameOriginRequest(uri) {
   }
 }
 
+function shouldRetryWithFreshToken(response) {
+  if (!response) {
+    return false;
+  }
+
+  return response.status === 401 || response.status === 403;
+}
+
+async function buildRequestHeaders(app, uri, options = {}) {
+  const headers = new Headers(options.headers || {});
+
+  if (app && isSameOriginRequest(uri) && typeof app.idToken === "function") {
+    const token = await app.idToken();
+    headers.set("Authorization", `Bearer ${token}`);
+    headers.set("X-Requested-With", "XMLHttpRequest");
+  }
+
+  return headers;
+}
+
 function getCurrentReturnTo() {
   if (typeof window === "undefined") {
     return "/";
@@ -99,18 +119,15 @@ export function redirectToTopLevel(url, options = {}) {
 
 async function appBridgeFetch(shopify, uri, options = {}) {
   const app = resolveAppBridgeInstance(shopify);
-  const headers = new Headers(options.headers || {});
+  const performRequest = async () => {
+    const headers = await buildRequestHeaders(app, uri, options);
+    return fetch(uri, {
+      ...options,
+      headers,
+    });
+  };
 
-  if (app && isSameOriginRequest(uri) && typeof app.idToken === "function") {
-    const token = await app.idToken();
-    headers.set("Authorization", `Bearer ${token}`);
-    headers.set("X-Requested-With", "XMLHttpRequest");
-  }
-
-  const response = await fetch(uri, {
-    ...options,
-    headers,
-  });
+  let response = await performRequest();
 
   if (
     response.headers.get("X-Shopify-API-Request-Failure-Reauthorize") === "1"
@@ -122,6 +139,23 @@ async function appBridgeFetch(shopify, uri, options = {}) {
     if (redirectUrl) {
       redirectToTopLevel(redirectUrl, { preserveReturnTo: true });
       return null;
+    }
+  }
+
+  if (app && isSameOriginRequest(uri) && shouldRetryWithFreshToken(response)) {
+    response = await performRequest();
+
+    if (
+      response.headers.get("X-Shopify-API-Request-Failure-Reauthorize") === "1"
+    ) {
+      const redirectUrl = response.headers.get(
+        "X-Shopify-API-Request-Failure-Reauthorize-Url",
+      );
+
+      if (redirectUrl) {
+        redirectToTopLevel(redirectUrl, { preserveReturnTo: true });
+        return null;
+      }
     }
   }
 

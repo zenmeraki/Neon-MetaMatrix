@@ -46,7 +46,7 @@ export default function ProductsPage() {
   const page = useSelector(selectPage);
   const search = useSelector(selectSearch);
 
-  const { loading, error, hasFetched, fetchProducts } = useProducts();
+  const { loading, error, hasFetched, isStaleData, fetchProducts } = useProducts();
 
   const [syncStatus, setSyncStatus] = useState(null);
   const [syncStatusLoading, setSyncStatusLoading] = useState(true);
@@ -242,9 +242,17 @@ export default function ProductsPage() {
           </Card>
         </Layout.Section>
 
-        {error && (
+        {error && !products.length && (
           <Layout.Section>
             <Banner tone="critical" title="Error loading products">
+              <Text>{error}</Text>
+            </Banner>
+          </Layout.Section>
+        )}
+
+        {error && isStaleData && products.length > 0 && (
+          <Layout.Section>
+            <Banner tone="warning" title="Products refresh delayed">
               <Text>{error}</Text>
             </Banner>
           </Layout.Section>

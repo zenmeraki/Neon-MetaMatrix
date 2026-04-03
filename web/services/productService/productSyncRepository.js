@@ -17,8 +17,8 @@ import {
 } from "../syncExecutionStateService.js";
 import { buildStoreShopWhere } from "../../utils/shopIdentifier.js";
 
-export async function markProductSyncStarted({ shop }) {
-  await markFullSyncStarted(shop);
+export async function markProductSyncStarted({ shop, isInitialSync = false }) {
+  await markFullSyncStarted(shop, { isInitialSync });
 }
 
 export async function createProductSyncHistory({
@@ -51,7 +51,10 @@ export async function createProductSyncHistory({
 }
 
 export async function clearProductSyncCache(shop) {
-  await clearKeyCaches(`${shop}:sync_details`);
+  await Promise.all([
+    clearKeyCaches(`${shop}:sync_details`),
+    clearKeyCaches(`${shop}:storeDetails`),
+  ]);
 }
 
 export async function stageProductMirrorBatch({ shop, syncBatchId }) {
@@ -223,6 +226,8 @@ export async function activateProductMirrorBatch({
       },
     });
   }
+
+  await clearProductSyncCache(shop).catch(() => {});
 }
 
 export async function updateInitialSyncProgress({ shop, totalProductsProcessed }) {

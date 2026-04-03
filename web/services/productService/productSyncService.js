@@ -33,7 +33,7 @@ export async function startBulkOperationToFetchProducts({
 }) {
   const { bulkOperationId, responseBody } = await runProductBulkFetch({ session });
 
-  await markProductSyncStarted({ shop: session.shop });
+  await markProductSyncStarted({ shop: session.shop, isInitialSync });
   await clearProductSyncCache(session.shop);
   const syncHistory = await createProductSyncHistory({
     shop: session.shop,

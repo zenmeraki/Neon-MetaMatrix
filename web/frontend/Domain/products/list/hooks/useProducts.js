@@ -16,14 +16,28 @@ export default function useProducts() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [hasFetched, setHasFetched] = useState(false);
+    const [isStaleData, setIsStaleData] = useState(false);
 
     const limit = 20;
+
+    const buildFetchErrorMessage = (err) => {
+        if (err?.message === "Failed to fetch") {
+            return "Unable to refresh products right now. Showing the last loaded results.";
+        }
+
+        if (err?.message === "Products request was interrupted") {
+            return err.message;
+        }
+
+        return err?.message || "Unable to load products right now.";
+    };
 
     const fetchProducts = useCallback(
         async (pageNumber = 1, filterParams = []) => {
             try {
                 setLoading(true);
                 setError(null);
+                setIsStaleData(false);
 
                 const res = await fetchWithAuth(
                     `/api/products/get-all?page=${pageNumber}&limit=${limit}`,
@@ -35,7 +49,9 @@ export default function useProducts() {
                         body: JSON.stringify({ filterParams }),
                     }
                 );
-                if (!res) return;
+                if (!res) {
+                    throw new Error("Products request was interrupted");
+                }
 
                 if (!res.ok) throw new Error("Failed to fetch products");
 
@@ -51,7 +67,8 @@ export default function useProducts() {
                 dispatch(setPagination(pagination));
                 dispatch(setPage(pageNumber));
             } catch (err) {
-                setError(err.message);
+                setError(buildFetchErrorMessage(err));
+                setIsStaleData(true);
             } finally {
                 setHasFetched(true);
                 setLoading(false);
@@ -64,6 +81,7 @@ export default function useProducts() {
         loading,
         error,
         hasFetched,
+        isStaleData,
         fetchProducts,
     };
 }
