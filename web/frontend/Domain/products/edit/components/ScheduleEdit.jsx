@@ -116,6 +116,13 @@ function ScheduleEdit({
             ).toISOString()
           : null;
 
+      if (
+        scheduledUndoAt &&
+        new Date(scheduledUndoAt).getTime() <= new Date(scheduledAt).getTime()
+      ) {
+        throw new Error("Undo time must be later than the scheduled edit time");
+      }
+
       const payload = {
         editedField,
         editedBy,
@@ -124,7 +131,7 @@ function ScheduleEdit({
         value,
         searchKey,
         replaceText,
-        location,
+        locationId: location,
         filterParams: filters,
         supportValue,
       };
@@ -139,20 +146,21 @@ function ScheduleEdit({
 
       const data = await response.json();
 
+      if (!response.ok) {
+        const errorMessage = data?.message || data?.error || t("schedule_fail");
 
- if (!response.ok) {
-  if (data.code === "PRODUCT_LIMIT_EXCEEDED") {
-    setUpgradeWarning(data.message);
-    return;
-  }
+        if (data.code === "PRODUCT_LIMIT_EXCEEDED") {
+          setUpgradeWarning(errorMessage);
+          return;
+        }
 
-  if (data.code === "UPGRADE_REQUIRED") {
-    setUpgradeWarning(data.message);
-    return;
-  }
+        if (data.code === "UPGRADE_REQUIRED") {
+          setUpgradeWarning(errorMessage);
+          return;
+        }
 
-  throw new Error(data.message || t("schedule_fail"));
-}
+        throw new Error(errorMessage);
+      }
 
 
 
@@ -191,7 +199,11 @@ function ScheduleEdit({
     editedField,
     editedBy,
     value,
+    searchKey,
+    replaceText,
+    location,
     filters,
+    supportValue,
     resetForm,
     onHide,
     navigate,

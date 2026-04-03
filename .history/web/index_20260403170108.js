@@ -160,6 +160,7 @@ const apiLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+
 app.use("/api", apiLimiter);
 app.use("/api/products", productRoutes);
 app.use("/api/category", categorytRoutes);

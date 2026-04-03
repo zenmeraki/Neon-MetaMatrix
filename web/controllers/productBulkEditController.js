@@ -17,6 +17,7 @@ import {
   BULK_EDIT_EXECUTION_STATES,
   buildPlannedUndoState,
 } from "../services/bulkEditExecutionStateService.js";
+import { resolveCanonicalProductTarget } from "../services/productService/productTargetingService.js";
 
 const productService = new Services();
 
@@ -182,6 +183,7 @@ export const trackEditPreview = async (req, res) => {
 
 export const createScheduledEdit = async (req, res) => {
   const session = res.locals.shopify?.session;
+  const bulkService = session ? new ProductBulkService(session) : null;
 
   try {
     if (!session) {
@@ -198,6 +200,7 @@ export const createScheduledEdit = async (req, res) => {
       searchKey,
       replaceText,
       supportValue,
+      locationId,
     } = req.body;
 
     if (!filterParams || !editedField) {
@@ -218,18 +221,29 @@ export const createScheduledEdit = async (req, res) => {
       scheduledUndoAt = d;
     }
 
+    if (scheduledUndoAt && scheduledUndoAt.getTime() <= scheduledAt.getTime()) {
+      return res.status(400).json({
+        error: "Undo time must be later than the scheduled edit time",
+      });
+    }
+
     if (editedField === "deleteProducts" && scheduledUndoAt) {
       return res.status(400).json({
         error: "Undo is not allowed for product deletion",
       });
     }
 
-    const where = productService.getProductPrismaWhere(
+    const resolvedTarget = await resolveCanonicalProductTarget({
+      shop: session.shop,
       filterParams,
-      session.shop,
-    );
+      queryParams: {
+        page: 1,
+        limit: 20,
+      },
+      sampleLimit: 20,
+    });
 
-    const count = await prisma.product.count({ where });
+    const count = resolvedTarget.count;
 
     const planKey = req.subscription?.planKey;
     if (!planKey) {
@@ -283,10 +297,12 @@ export const createScheduledEdit = async (req, res) => {
         executionIdentity: crypto.randomUUID(),
         processedCount: 0,
         totalItems: count,
+        targetSnapshotCount: 0,
+        targetMirrorBatchId: resolvedTarget.mirrorBatchId,
         scheduledAt,
         scheduledUndoAt,
         type: "Scheduled edit",
-        queryFilter: JSON.stringify(where),
+        queryFilter: JSON.stringify(resolvedTarget.where),
         rules: [
           {
             field: editedField,
@@ -295,12 +311,42 @@ export const createScheduledEdit = async (req, res) => {
             searchKey,
             replaceText,
             supportValue,
+            locationId: locationId ?? null,
           },
         ],
         startedAt: new Date(),
+        durationMs: 0,
+        batch: {
+          frozen: true,
+          hasMore: count > 0,
+          lastProductId: null,
+          size: 75,
+          previewCount: count,
+          currentBatchTargetCount: 0,
+          queuedAt: new Date().toISOString(),
+        },
         undo: buildPlannedUndoState({
           allowed: undoAllowed,
         }),
+      },
+    });
+
+    const frozenCount = await bulkService.freezeEditHistoryTargets(history.id);
+
+    await prisma.editHistory.update({
+      where: { id: history.id },
+      data: {
+        totalItems: frozenCount,
+        targetSnapshotCount: frozenCount,
+        batch: {
+          frozen: true,
+          hasMore: frozenCount > 0,
+          lastProductId: null,
+          size: 75,
+          previewCount: count,
+          currentBatchTargetCount: 0,
+          queuedAt: new Date().toISOString(),
+        },
       },
     });
 
@@ -334,6 +380,7 @@ export const createScheduledEdit = async (req, res) => {
     });
 
     return res.status(500).json({
+      message: err.message || "Failed to create scheduled edit",
       error: "Failed to create scheduled edit",
     });
   }
