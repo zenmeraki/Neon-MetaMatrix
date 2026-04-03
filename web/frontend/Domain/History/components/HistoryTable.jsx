@@ -93,6 +93,37 @@ function isActiveStatus(summary) {
   return Boolean(summary) && summary.isTerminal !== true;
 }
 
+function getUndoActionStatusKey(item) {
+  if (item?.undoStatusSummary?.key) {
+    return String(item.undoStatusSummary.key).toLowerCase();
+  }
+
+  if (item?.undo?.state) {
+    return `undo_${String(item.undo.state).toLowerCase()}`;
+  }
+
+  if (item?.undo?.status) {
+    const legacyStatus = String(item.undo.status).toLowerCase();
+    if (!legacyStatus || legacyStatus === "idle") return "idle";
+    if (legacyStatus.startsWith("undo_")) return legacyStatus;
+    return `undo_${legacyStatus}`;
+  }
+
+  return "idle";
+}
+
+function isUndoAllowed(item) {
+  if (typeof item?.supportStatus?.undoAllowed === "boolean") {
+    return item.supportStatus.undoAllowed;
+  }
+
+  if (typeof item?.undo?.allowed === "boolean") {
+    return item.undo.allowed;
+  }
+
+  return item?.undo == null;
+}
+
 const HistoryTable = memo(
   ({
     histories,
@@ -127,13 +158,15 @@ const HistoryTable = memo(
 
     const canUndo = useCallback((item) => {
       const primaryStatus = getPrimaryStatusSummary(item);
-      const undoStatus = item?.undo?.status ?? item?.undoStatusSummary?.key ?? "idle";
-      const isAllowed = item?.undo == null ? true : item.undo.allowed === true;
+      const undoStatus = getUndoActionStatusKey(item);
+      const isAllowed = isUndoAllowed(item);
 
       return (
         primaryStatus.key === "completed" &&
         isAllowed &&
-        ["idle", "failed", "undo_failed"].includes(String(undoStatus))
+        ["idle", "undo_failed", "undo_cancelled", "undo_partial"].includes(
+          undoStatus,
+        )
       );
     }, []);
 
