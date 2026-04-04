@@ -1,57 +1,48 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-
-client_id = "20f31d269398d5f23df95d0450e772e9"
-web_directories = [ "web", "web/frontend" ]
-name = "test-app"
-application_url = "https://glad-tions-intensive-anime.trycloudflare.com"
+client_id = "6c1a39944a4ab6bdd6e4428ccceb028b"
+name = "new"
+application_url = "https://impression-receive-wallace-surprised.trycloudflare.com"
 embedded = true
-handle = "test-app-11537"
-
-[build]
-automatically_update_urls_on_dev = true
+handle = "new-270"
 
 [webhooks]
 api_version = "2025-04"
 
   [[webhooks.subscriptions]]
-  uri = "/api/webhooks"
-  compliance_topics = [ "customers/redact", "customers/data_request", "shop/redact" ]
+  topics = [ "products/create", "bulk_operations/finish" ]
+  uri = "https://a50e-2409-4073-307-d512-1554-bf40-8d5f-a82.ngrok-free.app/api/webhooks"
 
   [[webhooks.subscriptions]]
-  uri = "/api/webhooks"
-  topics = [
-    "app/uninstalled",
-    "shop/update",
-    "bulk_operations/finish",
-    "products/create",
-    "products/update",
-    "products/delete",
-    "collections/create",
-    "collections/update",
-    "collections/delete",
-    "inventory_levels/update",
-    "inventory_levels/connect",
-    "inventory_levels/disconnect",
-    "inventory_items/create",
-    "inventory_items/update",
-    "inventory_items/delete"
-  ]
+  uri = "https://contributing-cole-senate-dried.trycloudflare.com/gdpr/customer_data_erasure"
+  compliance_topics = [ "customers/redact" ]
+
+  [[webhooks.subscriptions]]
+  uri = "https://contributing-cole-senate-dried.trycloudflare.com/gdpr/customer_data_request"
+  compliance_topics = [ "customers/data_request" ]
+
+  [[webhooks.subscriptions]]
+  uri = "https://contributing-cole-senate-dried.trycloudflare.com/gdpr/shop_data_erasure"
+  compliance_topics = [ "shop/redact" ]
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "read_inventory,read_locations,read_products,write_products,read_metaobjects"
-optional_scopes = [ ]
-use_legacy_install_flow = false
+scopes = "read_inventory,read_locations,read_products,write_inventory,write_products"
 
 [auth]
 redirect_urls = [
-  "https://glad-tions-intensive-anime.trycloudflare.com/auth/callback",
-  "https://glad-tions-intensive-anime.trycloudflare.com/auth/shopify/callback",
-  "https://glad-tions-intensive-anime.trycloudflare.com/api/auth/callback"
+  "https://impression-receive-wallace-surprised.trycloudflare.com/auth/callback",
+  "https://impression-receive-wallace-surprised.trycloudflare.com/auth/shopify/callback",
+  "https://impression-receive-wallace-surprised.trycloudflare.com/api/auth/callback"
 ]
 
 [app_proxy]
-url = "https://automatic-learners-excluded-decorative.trycloudflare.com/storefront/subscription"
+url = "https://impression-receive-wallace-surprised.trycloudflare.com/storefront/subscription"
 subpath = "proxy"
 prefix = "apps"
+
+[pos]
+embedded = false
+
+[build]
+automatically_update_urls_on_dev = true

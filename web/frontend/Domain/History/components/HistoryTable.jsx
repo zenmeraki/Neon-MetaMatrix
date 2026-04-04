@@ -122,20 +122,20 @@ const HistoryTable = memo(
             prev.map((history) =>
               history.id === undoHistoryItem.id
                 ? {
-                    ...history,
-                    undo: {
-                      ...history.undo,
-                      status: "processing",
-                      state: "queued",
-                      startedAt: new Date().toISOString(),
-                    },
-                    undoStatusSummary: {
-                      key: "undo_queued",
-                      label: "Undo queued",
-                      tone: "attention",
-                      isTerminal: false,
-                    },
-                  }
+                  ...history,
+                  undo: {
+                    ...history.undo,
+                    status: "processing",
+                    state: "queued",
+                    startedAt: new Date().toISOString(),
+                  },
+                  undoStatusSummary: {
+                    key: "undo_queued",
+                    label: "Undo queued",
+                    tone: "attention",
+                    isTerminal: false,
+                  },
+                }
                 : history,
             ),
           );
@@ -273,12 +273,14 @@ const HistoryTable = memo(
         <Box padding="400" borderBlockEndWidth="1" borderColor="border">
           <InlineStack align="space-between" blockAlign="center">
             <BlockStack gap="100">
-              <Text as="h3" variant="headingSm">
-                Edit activity
-              </Text>
-              <Text tone="subdued" variant="bodySm">
-                Review edit runs, undo completed changes, and inspect history details.
-              </Text>
+              <Box paddingInlineStart="500">
+                <Text as="h3" variant="headingSm">
+                  Edit activity
+                </Text>
+                <Text tone="subdued" variant="bodySm">
+                  Review edit runs, undo completed changes, and inspect history details.
+                </Text>
+              </Box>
               {isSyncInProgress ? (
                 <Text tone="subdued" variant="bodySm">
                   Undo is temporarily unavailable while product sync is in progress.
@@ -291,7 +293,7 @@ const HistoryTable = memo(
           </InlineStack>
         </Box>
 
-        <Box overflowX="auto">
+        <Box overflowX="auto" paddingInlineStart="800">
           <DataTable
             columnContentTypes={["text", "text", "text", "text", "text"]}
             headings={["Title", "Status", "Processed", "Updated", "Actions"]}
