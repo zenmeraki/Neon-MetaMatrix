@@ -13,8 +13,10 @@ import {
   Card,
   Divider,
 } from "@shopify/polaris";
-import AlertUndo from "../../products/edit/components/AlertUndo";
 import { useNavigate } from "react-router-dom";
+
+import AlertUndo from "../../products/edit/components/AlertUndo";
+import useProductSyncStatus from "../../../hooks/useProductSyncStatus";
 
 function getPrimaryStatusSummary(item) {
   if (item?.primaryStatus) {
@@ -22,6 +24,7 @@ function getPrimaryStatusSummary(item) {
   }
 
   const status = String(item?.status || "pending").toLowerCase();
+
   if (status === "completed") {
     return {
       key: "completed",
@@ -30,6 +33,7 @@ function getPrimaryStatusSummary(item) {
       isTerminal: true,
     };
   }
+
   if (status === "failed") {
     return {
       key: "failed",
@@ -38,6 +42,7 @@ function getPrimaryStatusSummary(item) {
       isTerminal: true,
     };
   }
+
   if (status === "processing") {
     return {
       key: "processing",
@@ -61,7 +66,10 @@ function getUndoStatusSummary(item) {
   }
 
   const undoStatus = String(item?.undo?.status || "").toLowerCase();
-  if (!undoStatus || undoStatus === "idle") return null;
+
+  if (!undoStatus || undoStatus === "idle") {
+    return null;
+  }
 
   if (undoStatus === "completed") {
     return {
@@ -93,217 +101,216 @@ function isActiveStatus(summary) {
   return Boolean(summary) && summary.isTerminal !== true;
 }
 
-const HistoryTable = memo(
-  ({
-    histories,
-    isLoading,
-    isLoadingMore,
-    hasMore,
-    onLoadMore,
-    emptyStateMessage = "No history items found.",
-  }) => {
-    const [showUndoModal, setShowUndoModal] = useState(false);
-    const [undoLoading, setUndoLoading] = useState(false);
-    const [undoHistoryItem, setUndoHistoryItem] = useState(null);
-    const [localHistories, setLocalHistories] = useState(histories);
-    const navigate = useNavigate();
+const HistoryTable = memo(function HistoryTable({
+  histories,
+  isLoading,
+  isLoadingMore,
+  hasMore,
+  onLoadMore,
+  emptyStateMessage = "No history items found.",
+}) {
+  const navigate = useNavigate();
+  const { isSyncInProgress } = useProductSyncStatus();
 
-    const handleCloseUndo = useCallback(() => {
+  const [showUndoModal, setShowUndoModal] = useState(false);
+  const [undoLoading, setUndoLoading] = useState(false);
+  const [undoHistoryItem, setUndoHistoryItem] = useState(null);
+  const [localHistories, setLocalHistories] = useState(() => histories || []);
+
+  useEffect(() => {
+    setLocalHistories(histories || []);
+  }, [histories]);
+
+  const handleCloseUndo = useCallback(() => {
+    setShowUndoModal(false);
+    setUndoHistoryItem(null);
+  }, []);
+
+  const renderStatusBadge = useCallback((item) => {
+    const primaryStatus = getPrimaryStatusSummary(item);
+    const undoStatus = getUndoStatusSummary(item);
+
+    return (
+      <InlineStack gap="150" wrap>
+        <Badge tone={primaryStatus.tone}>{primaryStatus.label}</Badge>
+        {undoStatus ? <Badge tone={undoStatus.tone}>{undoStatus.label}</Badge> : null}
+      </InlineStack>
+    );
+  }, []);
+
+  const canUndo = useCallback((item) => {
+    const primaryStatus = getPrimaryStatusSummary(item);
+    const undoStatus = item?.undo?.status ?? item?.undoStatusSummary?.key ?? "idle";
+    const isAllowed = item?.undo == null ? true : item.undo.allowed === true;
+
+    return (
+      primaryStatus.key === "completed" &&
+      isAllowed &&
+      ["idle", "failed", "undo_failed"].includes(String(undoStatus))
+    );
+  }, []);
+
+  const handleUndo = useCallback((history) => {
+    setUndoHistoryItem(history);
+    setShowUndoModal(true);
+  }, []);
+
+  const handleUndoEditHistory = useCallback(async () => {
+    if (!undoHistoryItem?.id) return;
+
+    setUndoLoading(true);
+
+    try {
+      const response = await fetch(`/api/products/undo-edit/${undoHistoryItem.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (!response.ok) {
+        return;
+      }
+
+      setLocalHistories((prev) =>
+        prev.map((history) =>
+          history.id === undoHistoryItem.id
+            ? {
+                ...history,
+                undo: {
+                  ...history.undo,
+                  status: "processing",
+                  state: "queued",
+                  startedAt: new Date().toISOString(),
+                },
+                undoStatusSummary: {
+                  key: "undo_queued",
+                  label: "Undo queued",
+                  tone: "attention",
+                  isTerminal: false,
+                },
+              }
+            : history,
+        ),
+      );
+
       setShowUndoModal(false);
       setUndoHistoryItem(null);
-    }, []);
+    } finally {
+      setUndoLoading(false);
+    }
+  }, [undoHistoryItem]);
 
-    const renderStatusBadge = useCallback((item) => {
+  const activeHistoryIds = useMemo(() => {
+    return (localHistories || [])
+      .filter((history) => {
+        const primaryStatus = getPrimaryStatusSummary(history);
+        const undoStatus = getUndoStatusSummary(history);
+        return isActiveStatus(primaryStatus) || isActiveStatus(undoStatus);
+      })
+      .map((history) => history.id)
+      .filter(Boolean);
+  }, [localHistories]);
+
+  useEffect(() => {
+    if (activeHistoryIds.length === 0) {
+      return undefined;
+    }
+
+    const interval = setInterval(async () => {
+      try {
+        const updates = await Promise.all(
+          activeHistoryIds.map((id) =>
+            fetch(`/api/history/get-edit-history-details/${id}`)
+              .then((response) => (response.ok ? response.json() : null))
+              .then((json) => json?.data || null)
+              .catch(() => null),
+          ),
+        );
+
+        const updateMap = new Map(
+          updates.filter(Boolean).map((entry) => [entry.id, entry]),
+        );
+
+        if (updateMap.size === 0) {
+          return;
+        }
+
+        setLocalHistories((prev) =>
+          prev.map((history) => {
+            const updated = updateMap.get(history.id);
+            return updated ? { ...history, ...updated } : history;
+          }),
+        );
+      } catch {
+        // silent polling failure
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [activeHistoryIds]);
+
+  const summary = useMemo(() => {
+    const items = localHistories || [];
+
+    const total = items.length;
+    const processing = items.filter((item) => {
       const primaryStatus = getPrimaryStatusSummary(item);
       const undoStatus = getUndoStatusSummary(item);
+      return isActiveStatus(primaryStatus) || isActiveStatus(undoStatus);
+    }).length;
 
-      return (
-        <InlineStack gap="150" wrap>
-          <Badge tone={primaryStatus.tone}>{primaryStatus.label}</Badge>
-          {undoStatus ? <Badge tone={undoStatus.tone}>{undoStatus.label}</Badge> : null}
-        </InlineStack>
-      );
-    }, []);
+    const completed = items.filter(
+      (item) => getPrimaryStatusSummary(item).key === "completed",
+    ).length;
 
-    const canUndo = useCallback((item) => {
-      const primaryStatus = getPrimaryStatusSummary(item);
-      const undoStatus = item?.undo?.status ?? item?.undoStatusSummary?.key ?? "idle";
-      const isAllowed = item?.undo == null ? true : item.undo.allowed === true;
+    const failed = items.filter(
+      (item) => getPrimaryStatusSummary(item).key === "failed",
+    ).length;
 
-      return (
-        primaryStatus.key === "completed" &&
-        isAllowed &&
-        ["idle", "failed", "undo_failed"].includes(String(undoStatus))
-      );
-    }, []);
+    return {
+      total,
+      processing,
+      completed,
+      failed,
+    };
+  }, [localHistories]);
 
-    const handleUndo = useCallback((history) => {
-      setUndoHistoryItem(history);
-      setShowUndoModal(true);
-    }, []);
-
-    const handleUndoEditHistory = useCallback(async () => {
-      if (!undoHistoryItem?.id) return;
-      setUndoLoading(true);
-
-      try {
-        const response = await fetch(`/api/products/undo-edit/${undoHistoryItem.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-        });
-
-        if (response.ok) {
-          setShowUndoModal(false);
-          setLocalHistories((prev) =>
-            prev.map((history) =>
-              history.id === undoHistoryItem.id
-                ? {
-                  ...history,
-                  undo: {
-                    ...history.undo,
-                    status: "processing",
-                    state: "queued",
-                    startedAt: new Date().toISOString(),
-                  },
-                  undoStatusSummary: {
-                    key: "undo_queued",
-                    label: "Undo queued",
-                    tone: "attention",
-                    isTerminal: false,
-                  },
-                }
-                : history,
-            ),
-          );
-        }
-      } finally {
-        setUndoLoading(false);
-        setUndoHistoryItem(null);
-      }
-    }, [undoHistoryItem]);
-
-    useEffect(() => {
-      setLocalHistories(histories);
-    }, [histories]);
-
-    useEffect(() => {
-      const activeHistoryIds = localHistories
-        .filter((history) => {
-          const primaryStatus = getPrimaryStatusSummary(history);
-          const undoStatus = getUndoStatusSummary(history);
-          return isActiveStatus(primaryStatus) || isActiveStatus(undoStatus);
-        })
-        .map((history) => history.id);
-
-      if (activeHistoryIds.length === 0) return undefined;
-
-      const interval = setInterval(async () => {
-        try {
-          const updates = await Promise.all(
-            activeHistoryIds.map((id) =>
-              fetch(`/api/history/get-edit-history-details/${id}`)
-                .then((response) => (response.ok ? response.json() : null))
-                .then((json) => json?.data || null),
-            ),
-          );
-
-          setLocalHistories((prev) =>
-            prev.map((history) => {
-              const updated = updates.find((entry) => entry?.id === history.id);
-              return updated ? { ...history, ...updated } : history;
-            }),
-          );
-        } catch {
-          // Keep polling silent to avoid disrupting the page.
-        }
-      }, 3000);
-
-      return () => clearInterval(interval);
-    }, [localHistories]);
-
-    const summary = useMemo(() => {
-      const total = localHistories?.length || 0;
-      const processing = (localHistories || []).filter((item) => {
-        const primaryStatus = getPrimaryStatusSummary(item);
-        const undoStatus = getUndoStatusSummary(item);
-        return isActiveStatus(primaryStatus) || isActiveStatus(undoStatus);
-      }).length;
-
-      const completed = (localHistories || []).filter(
-        (item) => getPrimaryStatusSummary(item).key === "completed",
-      ).length;
-
-      const failed = (localHistories || []).filter(
-        (item) => getPrimaryStatusSummary(item).key === "failed",
-      ).length;
-
-      return { total, processing, completed, failed };
-    }, [localHistories]);
-
-    if (isLoading) {
-      return (
-        <Card padding="0">
-          <Box padding="500">
-            <BlockStack gap="400">
-              <BlockStack gap="200">
-                <SkeletonDisplayText size="small" />
-                <SkeletonBodyText lines={2} />
-              </BlockStack>
-
-              <Divider />
-
-              <BlockStack gap="300">
-                <SkeletonBodyText lines={6} />
-              </BlockStack>
-            </BlockStack>
-          </Box>
-        </Card>
-      );
-    }
-
-    if (!localHistories || localHistories.length === 0) {
-      return (
-        <Card>
-          <Box padding="1200">
-            <EmptyState heading="No activity yet">
-              <p>{emptyStateMessage}</p>
-            </EmptyState>
-          </Box>
-        </Card>
-      );
-    }
-
-    const rows = localHistories.map((item) => {
+  const rows = useMemo(() => {
+    return (localHistories || []).map((item) => {
       const { id, title, shop } = item;
       const user = shop?.split(".")[0];
+
       const isUndoable = canUndo(item);
       const primaryStatus = getPrimaryStatusSummary(item);
       const undoStatus = getUndoStatusSummary(item);
       const isProcessing = isActiveStatus(primaryStatus) || isActiveStatus(undoStatus);
 
+      const undoDisabled = !isUndoable || isProcessing || isSyncInProgress;
+
       const progressLabel =
         item?.progressSummary?.label ||
-        `${item.processedCount} / ${item.totalItems || item.processedCount}`;
+        `${item?.processedCount || 0} / ${item?.totalItems || item?.processedCount || 0}`;
 
       const timeValue =
-        isActiveStatus(undoStatus) && item.undo?.startedAt
+        isActiveStatus(undoStatus) && item?.undo?.startedAt
           ? item.undo.startedAt
-          : undoStatus?.key === "undo_completed" && item.undo?.completedAt
+          : undoStatus?.key === "undo_completed" && item?.undo?.completedAt
             ? item.undo.completedAt
-            : item.completedAt || item.updatedAt || item.editTime;
+            : item?.completedAt || item?.updatedAt || item?.editTime;
 
       return [
         <Box key={`title-${id}`} maxWidth="320px">
           <BlockStack gap="050">
             <Text variant="bodyMd" fontWeight="medium" truncate as="span">
-              {title}
+              {title || "-"}
             </Text>
             <Text variant="bodySm" tone="subdued" as="span">
               {user || "-"}
             </Text>
           </BlockStack>
         </Box>,
+
         renderStatusBadge(item),
+
         <BlockStack key={`processed-${id}`} gap="050">
           <Text variant="bodyMd" as="span">
             {progressLabel}
@@ -314,9 +321,11 @@ const HistoryTable = memo(
             </Text>
           ) : null}
         </BlockStack>,
-        <Text as="span" variant="bodySm">
+
+        <Text key={`updated-${id}`} as="span" variant="bodySm">
           {timeValue ? new Date(timeValue).toLocaleString() : "-"}
         </Text>,
+
         <InlineStack key={`actions-${id}`} gap="200" wrap={false}>
           <Button size="slim" onClick={() => navigate(`/editDetails/${id}`)}>
             View
@@ -324,41 +333,86 @@ const HistoryTable = memo(
           <Button
             size="slim"
             tone={isUndoable ? "critical" : undefined}
-            onClick={() => isUndoable && handleUndo(item)}
-            disabled={!isUndoable || isProcessing}
+            onClick={() => {
+              if (isUndoable) {
+                handleUndo(item);
+              }
+            }}
+            disabled={undoDisabled}
           >
             Undo
           </Button>
         </InlineStack>,
       ];
     });
+  }, [localHistories, canUndo, isSyncInProgress, navigate, renderStatusBadge, handleUndo]);
 
+  if (isLoading) {
     return (
       <Card padding="0">
         <Box padding="500">
-          <BlockStack gap="500">
-            <InlineStack align="space-between" blockAlign="start" wrap gap="300">
-              <BlockStack gap="100">
-                <Box paddingInlineStart="500">
+          <BlockStack gap="400">
+            <BlockStack gap="200">
+              <SkeletonDisplayText size="small" />
+              <SkeletonBodyText lines={2} />
+            </BlockStack>
+
+            <Divider />
+
+            <BlockStack gap="300">
+              <SkeletonBodyText lines={6} />
+            </BlockStack>
+          </BlockStack>
+        </Box>
+      </Card>
+    );
+  }
+
+  if (!localHistories || localHistories.length === 0) {
+    return (
+      <Card>
+        <Box padding="1200">
+          <EmptyState heading="No activity yet">
+            <p>{emptyStateMessage}</p>
+          </EmptyState>
+        </Box>
+      </Card>
+    );
+  }
+
+  return (
+    <Card padding="0">
+      <Box padding="500">
+        <BlockStack gap="500">
+          <InlineStack align="space-between" blockAlign="start" wrap gap="300">
+            <BlockStack gap="100">
+              <Box paddingInlineStart="500">
+                <BlockStack gap="100">
                   <Text as="h3" variant="headingMd">
                     Edit activity
                   </Text>
                   <Text tone="subdued" variant="bodySm">
-                    Review edit runs, inspect details, and undo completed changes from
-                    a cleaner workspace.
+                    Review edit runs, inspect details, and undo completed changes from a
+                    cleaner workspace.
                   </Text>
-                </Box>
+                  {isSyncInProgress ? (
+                    <Text tone="subdued" variant="bodySm">
+                      Undo is temporarily unavailable while product sync is in progress.
+                    </Text>
+                  ) : null}
+                </BlockStack>
+              </Box>
+            </BlockStack>
 
-              </BlockStack>
-
-              <InlineStack gap="200" wrap>
-                <Badge>{summary.total} total</Badge>
-                <Badge tone="info">{summary.processing} active</Badge>
-                <Badge tone="success">{summary.completed} completed</Badge>
-                <Badge tone="critical">{summary.failed} failed</Badge>
-              </InlineStack>
+            <InlineStack gap="200" wrap>
+              <Badge>{summary.total} total</Badge>
+              <Badge tone="info">{summary.processing} active</Badge>
+              <Badge tone="success">{summary.completed} completed</Badge>
+              <Badge tone="critical">{summary.failed} failed</Badge>
             </InlineStack>
+          </InlineStack>
 
+          <InlineStack align="space-between" blockAlign="center" wrap gap="300">
             <Box
               background="bg-surface-secondary"
               borderRadius="300"
@@ -369,45 +423,49 @@ const HistoryTable = memo(
                 Live statuses refresh automatically for active jobs.
               </Text>
             </Box>
-          </BlockStack>
-        </Box>
 
-        <Divider />
+            <Text tone="subdued" variant="bodySm">
+              {localHistories.length} items
+            </Text>
+          </InlineStack>
+        </BlockStack>
+      </Box>
 
-        <Box overflowX="auto" paddingInlineStart="800">
-          <DataTable
-            columnContentTypes={["text", "text", "text", "text", "text"]}
-            headings={["Title", "Status", "Processed", "Updated", "Actions"]}
-            rows={rows}
-          />
-        </Box>
+      <Divider />
 
-        {hasMore && (
-          <>
-            <Divider />
-            <Box padding="400">
-              <InlineStack align="space-between" blockAlign="center" wrap gap="300">
-                <Text tone="subdued" variant="bodySm">
-                  Load additional history without leaving the current view.
-                </Text>
-                <Button loading={isLoadingMore} onClick={onLoadMore}>
-                  Load more
-                </Button>
-              </InlineStack>
-            </Box>
-          </>
-        )}
-
-        <AlertUndo
-          show={showUndoModal}
-          handleClose={handleCloseUndo}
-          undoEditHistory={handleUndoEditHistory}
-          loading={undoLoading}
+      <Box overflowX="auto" paddingInlineStart="800">
+        <DataTable
+          columnContentTypes={["text", "text", "text", "text", "text"]}
+          headings={["Title", "Status", "Processed", "Updated", "Actions"]}
+          rows={rows}
         />
-      </Card>
-    );
-  },
-);
+      </Box>
+
+      {hasMore ? (
+        <>
+          <Divider />
+          <Box padding="400">
+            <InlineStack align="space-between" blockAlign="center" wrap gap="300">
+              <Text tone="subdued" variant="bodySm">
+                Load additional history without leaving the current view.
+              </Text>
+              <Button loading={isLoadingMore} onClick={onLoadMore}>
+                Load more
+              </Button>
+            </InlineStack>
+          </Box>
+        </>
+      ) : null}
+
+      <AlertUndo
+        show={showUndoModal}
+        handleClose={handleCloseUndo}
+        undoEditHistory={handleUndoEditHistory}
+        loading={undoLoading}
+      />
+    </Card>
+  );
+});
 
 HistoryTable.displayName = "HistoryTable";
 

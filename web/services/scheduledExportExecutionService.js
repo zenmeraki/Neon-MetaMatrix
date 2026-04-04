@@ -97,12 +97,18 @@ async function markRunSkipped(run, scheduledExport, reason) {
   return reason;
 }
 
-export async function enqueueScheduledExportExecutionJob({ runId, shop }) {
+export async function enqueueScheduledExportExecutionJob({
+  runId,
+  shop,
+  delay = 0,
+  jobId = runId,
+}) {
   return scheduledExportExecutionQueue.add(
     "scheduled-export-execution",
     { runId, shop },
     {
-      jobId: runId,
+      jobId,
+      delay,
       removeOnComplete: 100,
       removeOnFail: 100,
       attempts: 6,
@@ -112,6 +118,22 @@ export async function enqueueScheduledExportExecutionJob({ runId, shop }) {
       },
     },
   );
+}
+
+async function deferScheduledExportRun(runId, shop, reason, delay = 60_000) {
+  await enqueueScheduledExportExecutionJob({
+    runId,
+    shop,
+    delay,
+    jobId: `${runId}:retry:${Date.now()}`,
+  });
+
+  return {
+    success: true,
+    deferred: true,
+    reason,
+    runId,
+  };
 }
 
 export async function scheduleDueScheduledExportRuns({ limit = 100 } = {}) {
@@ -260,7 +282,11 @@ export async function executeScheduledExportRun(runId, shopFromJob = null) {
   const executionLockKey = `scheduled-export-shop:${scheduledExport.shop}`;
   const hasShopLock = await tryAdvisoryLock(prisma, executionLockKey, false);
   if (!hasShopLock) {
-    throw new Error("Scheduled export execution already running for this shop");
+    return deferScheduledExportRun(
+      run.id,
+      scheduledExport.shop,
+      "shop_execution_locked",
+    );
   }
 
   let exclusiveShopLockKey = null;
@@ -283,7 +309,11 @@ export async function executeScheduledExportRun(runId, shopFromJob = null) {
     });
 
     if (!exclusiveLock.acquired) {
-      throw new Error("Another heavy job is already running for this shop");
+      return deferScheduledExportRun(
+        run.id,
+        scheduledExport.shop,
+        "shop_work_conflict",
+      );
     }
 
     exclusiveShopLockKey = exclusiveLock.lockKey;

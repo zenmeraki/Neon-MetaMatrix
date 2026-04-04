@@ -1,5 +1,6 @@
 import Joi from "joi";
 
+
 const editHistoryQuerySchema = Joi.object({
   type: Joi.string()
     .valid("Manual edit", "Scheduled edit", "Reccuring edit", "Favorites")

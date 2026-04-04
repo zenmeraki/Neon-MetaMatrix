@@ -56,6 +56,16 @@ function isRunnableRecurringEdit(recurringEdit) {
   return recurringEdit && !recurringEdit.isDeleted && recurringEdit.status === "ACTIVE";
 }
 
+function buildDeferredResult(reason, runId, recurringEditId = null) {
+  return {
+    success: true,
+    deferred: true,
+    reason,
+    runId,
+    recurringEditId,
+  };
+}
+
 function buildRecurringEditHistoryBody(recurringEdit) {
   const [rule] = Array.isArray(recurringEdit.rules) ? recurringEdit.rules : [];
   if (!rule) {
@@ -270,7 +280,7 @@ export async function executeRecurringEditRun(runId, shopFromJob = null) {
   const executionLockKey = `recurring-edit-shop:${recurringEdit.shop}`;
   const hasShopLock = await tryAdvisoryLock(prisma, executionLockKey, false);
   if (!hasShopLock) {
-    throw new Error("Recurring edit execution already running for this shop");
+    return buildDeferredResult("shop_execution_locked", run.id, recurringEdit.id);
   }
 
   let exclusiveShopLockKey = null;
@@ -299,7 +309,7 @@ export async function executeRecurringEditRun(runId, shopFromJob = null) {
     });
 
     if (!exclusiveLock.acquired) {
-      throw new Error("Another heavy job is already running for this shop");
+      return buildDeferredResult("shop_work_conflict", run.id, currentRecurringEdit.id);
     }
 
     exclusiveShopLockKey = exclusiveLock.lockKey;
@@ -319,9 +329,13 @@ export async function executeRecurringEditRun(runId, shopFromJob = null) {
     }
 
     const session = await getSession(currentRecurringEdit.shop);
+    if (!session?.shop || session.shop !== currentRecurringEdit.shop) {
+      throw new Error("Shop session not available for recurring edit execution");
+    }
+
     const { status } = await getCurrentBulkOperationStatus(session);
     if (status === "RUNNING") {
-      throw new Error("Another Shopify bulk operation is already running for this shop");
+      return buildDeferredResult("shopify_bulk_busy", run.id, currentRecurringEdit.id);
     }
 
     const service = new ProductBulkService(session);

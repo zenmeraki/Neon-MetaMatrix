@@ -25,6 +25,7 @@ const RecurringHistoryTable = memo(
     isLoadingMore,
     hasMore,
     onLoadMore,
+    onRefresh,
     emptyStateMessage = "No recurring edits found.",
   }) => {
     const [open, setOpen] = useState(false);
@@ -335,6 +336,7 @@ const RecurringHistoryTable = memo(
           isLoading={isLoadingDetails}
           open={open}
           onClose={() => setOpen(false)}
+          onUpdated={onRefresh}
         />
 
         <Modal

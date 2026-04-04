@@ -20,7 +20,7 @@ import {
 } from "@shopify/polaris";
 import { useTranslation } from "react-i18next";
 
-const RecurringEditModal = ({ open, onClose, data, isLoading, error }) => {
+const RecurringEditModal = ({ open, onClose, data, isLoading, error, onUpdated }) => {
   const { t } = useTranslation();
 
   // Generate time slots every 15 minutes
@@ -331,6 +331,10 @@ const RecurringEditModal = ({ open, onClose, data, isLoading, error }) => {
       }
 
       // Success - close modal
+      if (typeof onUpdated === "function") {
+        await onUpdated();
+      }
+
       handleClose();
 
       // You might want to call a success callback here

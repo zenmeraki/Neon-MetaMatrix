@@ -3,6 +3,7 @@
 client_id = "6c1a39944a4ab6bdd6e4428ccceb028b"
 name = "new"
 application_url = "https://impression-receive-wallace-surprised.trycloudflare.com"
+
 embedded = true
 handle = "new-270"
 
@@ -34,6 +35,7 @@ redirect_urls = [
   "https://impression-receive-wallace-surprised.trycloudflare.com/auth/callback",
   "https://impression-receive-wallace-surprised.trycloudflare.com/auth/shopify/callback",
   "https://impression-receive-wallace-surprised.trycloudflare.com/api/auth/callback"
+
 ]
 
 [app_proxy]

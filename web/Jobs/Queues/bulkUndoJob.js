@@ -5,7 +5,7 @@ import {
   mergeJobOptions,
 } from "../../utils/jobQueueUtils.js";
 
-const QUEUE_NAME = process.env.UNDO_QUEUE;
+const QUEUE_NAME = process.env.UNDO_QUEUE || "bulk-undo";
 
 const defaultJobOptions = buildDefaultJobOptions({
   attempts: 6,
