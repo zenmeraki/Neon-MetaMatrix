@@ -6,8 +6,6 @@
 
 // ✅ Prisma
 import { prisma } from "../config/database.js";
-import { isStaleSyncExecution } from "./syncRepairService.js";
-import { enrichEditHistoriesWithTargetingMetadata } from "./historyTargetingMetadataService.js";
 
 
 class AdminService {
@@ -225,10 +223,8 @@ class AdminService {
       prisma.editHistory.count({ where }),
     ]);
 
-    const enrichedEditHistories = await enrichEditHistoriesWithTargetingMetadata(editHistories);
-
     return {
-      editHistories: enrichedEditHistories,
+      editHistories,
       pagination: {
         currentPage: pageNum,
         totalPages: Math.ceil(total / limitNum),
@@ -314,7 +310,7 @@ class AdminService {
   async getSyncHistoryStats(shopUrl = null) {
     const where = shopUrl ? { shop: shopUrl } : {};
 
-    const [statusGroups, operationGroups, totalRecords, avgAgg, activeSyncRows] =
+    const [statusGroups, operationGroups, totalRecords, avgAgg] =
       await Promise.all([
         prisma.syncHistory.groupBy({
           by: ["status"],
@@ -330,19 +326,6 @@ class AdminService {
         prisma.syncHistory.aggregate({
           _avg: { duration: true },
           where: { ...where, status: "completed" },
-        }),
-        prisma.syncHistory.findMany({
-          where: {
-            ...where,
-            status: "processing",
-          },
-          select: {
-            id: true,
-            executionState: true,
-            lastHeartbeatAt: true,
-            updatedAt: true,
-          },
-          take: 200,
         }),
       ]);
 
@@ -383,7 +366,6 @@ class AdminService {
       byStatus: statusMap,
       byOperationType: operationMap,
       averageDuration,
-      stuckProcessingCount: activeSyncRows.filter((row) => isStaleSyncExecution(row)).length,
       successRate:
         totalRecords > 0
           ? ((statusMap.completed / totalRecords) * 100).toFixed(2)
@@ -422,37 +404,8 @@ class AdminService {
       prisma.syncHistory.count({ where }),
     ]);
 
-    const enrichedSyncHistories = await Promise.all(
-      syncHistories.map(async (history) => {
-        const rows = await prisma.$queryRaw`
-          SELECT
-            "executionState",
-            "executionIdentity",
-            "lastHeartbeatAt",
-            "completedAt"
-          FROM "SyncHistory"
-          WHERE "id" = ${history.id}
-          LIMIT 1
-        `;
-        const execution = rows?.[0] || null;
-
-        return {
-          ...history,
-          executionState: execution?.executionState || null,
-          executionIdentity: execution?.executionIdentity || null,
-          lastHeartbeatAt: execution?.lastHeartbeatAt || null,
-          completedAt: execution?.completedAt || history.completedAt || null,
-          stuckDetected: isStaleSyncExecution({
-            executionState: execution?.executionState || null,
-            lastHeartbeatAt: execution?.lastHeartbeatAt || null,
-            updatedAt: history.updatedAt,
-          }),
-        };
-      }),
-    );
-
     return {
-      syncHistories: enrichedSyncHistories,
+      syncHistories,
       pagination: {
         currentPage: pageNum,
         totalPages: Math.ceil(total / limitNum),

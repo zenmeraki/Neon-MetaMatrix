@@ -22,14 +22,9 @@ import {
   buildExecutionError,
   normalizeUndoState,
 } from "../../services/bulkEditExecutionStateService.js";
-import {
-  assertShopActiveForWorker,
-  isSkippableWorkerError,
-} from "../../services/workerSafetyService.js";
 
 const QUEUE_NAME = process.env.UNDO_QUEUE || "bulk-undo";
 const WORKER_NAME = "bulkUndoWorker";
-const STALE_DISPATCH_MS = 20 * 60 * 1000;
 
 class RetryableBulkUndoError extends Error {
   constructor(message, code = "retryable_bulk_undo") {
@@ -42,20 +37,6 @@ class RetryableBulkUndoError extends Error {
 
 function isRetryableError(error) {
   return Boolean(error?.retryable);
-}
-
-function isStaleDispatch(undo) {
-  const startedAt = undo?.dispatchStartedAt;
-  if (!startedAt) {
-    return false;
-  }
-
-  const startedTs = new Date(startedAt).getTime();
-  if (Number.isNaN(startedTs)) {
-    return false;
-  }
-
-  return Date.now() - startedTs > STALE_DISPATCH_MS;
 }
 
 async function claimUndo(historyId, shop, executionId, jobId, attempt) {
@@ -84,50 +65,12 @@ async function claimUndo(historyId, shop, executionId, jobId, attempt) {
 
   if (
     [
-      BULK_UNDO_STATES.DISPATCHING,
       BULK_UNDO_STATES.AWAITING_SHOPIFY,
       BULK_UNDO_STATES.FINALIZING,
       BULK_UNDO_STATES.COMPLETED,
       BULK_UNDO_STATES.PARTIAL,
     ].includes(undo.state)
   ) {
-    if (undo.state === BULK_UNDO_STATES.DISPATCHING && !undo.bulkOperationId) {
-      if (isStaleDispatch(undo)) {
-        await prisma.editHistory.updateMany({
-          where: {
-            id: historyId,
-            shop,
-          },
-          data: {
-            undo: {
-              ...undo,
-              status: "failed",
-              state: BULK_UNDO_STATES.FAILED,
-              completedAt: new Date(),
-              error: buildExecutionError({
-                code: "undo_dispatch_stalled",
-                stage: "dispatch",
-                message: "Undo dispatch stalled before Shopify confirmed the mutation",
-                retryable: false,
-                details: {
-                  dispatchStartedAt: undo.dispatchStartedAt || null,
-                  dispatchJobId: undo.dispatchJobId || null,
-                  dispatchAttempt: undo.dispatchAttempt || null,
-                },
-              }),
-            },
-          },
-        });
-
-        return null;
-      }
-
-      throw new RetryableBulkUndoError(
-        "Undo dispatch is already in progress",
-        "dispatch_in_progress",
-      );
-    }
-
     return null;
   }
 
@@ -169,8 +112,6 @@ const bulkUndoWorker = new Worker(
     let shopLockKey = null;
 
     try {
-      await assertShopActiveForWorker(shop);
-
       const lock = await acquireExclusiveShopWork({
         shop,
         activity: "bulk_undo_execution",
@@ -312,8 +253,6 @@ const bulkUndoWorker = new Worker(
 
       if (existing) {
         const undo = normalizeUndoState(existing.undo);
-        const shouldKeepDispatchState =
-          isRetryableError(error) && error.code === "dispatch_in_progress";
         await prisma.editHistory.updateMany({
           where: {
             id: historyId,
@@ -322,12 +261,7 @@ const bulkUndoWorker = new Worker(
           data: {
             undo: {
               ...undo,
-              ...(shouldKeepDispatchState
-                ? {
-                    status: "processing",
-                    state: BULK_UNDO_STATES.DISPATCHING,
-                  }
-                : isRetryableError(error)
+              ...(isRetryableError(error)
                 ? {
                     status: "pending",
                     state: BULK_UNDO_STATES.QUEUED,
@@ -389,15 +323,6 @@ const bulkUndoWorker = new Worker(
           retryable: isRetryableError(error),
         },
       });
-
-      if (isSkippableWorkerError(error)) {
-        return {
-          skipped: true,
-          reason: error.code,
-          shop,
-          historyId,
-        };
-      }
 
       throw error;
     } finally {

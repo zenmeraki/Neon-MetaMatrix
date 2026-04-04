@@ -21,8 +21,8 @@ export const bulkImportEditQueue = new Queue(QUEUE_NAME, {
 });
 
 export async function addbulkImportEditJob(data, options = {}) {
-  if (!data?.historyId || !data?.shop || !data?.filePath || !data?.executionId) {
-    throw new Error("bulk import edit job requires historyId, shop, filePath, and executionId");
+  if (!data?.historyId || !data?.shop || !data?.filePath) {
+    throw new Error("bulk import edit job requires historyId, shop, and filePath");
   }
 
   const jobId = options.jobId || `import-edit:${data?.historyId}`;

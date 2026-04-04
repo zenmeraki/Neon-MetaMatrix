@@ -12,20 +12,6 @@ import {
   computeRecurringEditNextRunAt,
 } from "./recurringEditScheduleService.js";
 import logger from "../utils/loggerUtils.js";
-import {
-  createIdempotencyFingerprint,
-  stableStringify,
-  withAdvisoryLock,
-} from "../utils/idempotencyUtils.js";
-import { normalizeCanonicalFilterParams } from "./productService/productFilterContract.js";
-import {
-  buildCanonicalFilterMetadata,
-  persistFilterDefinitionMetadata,
-} from "./filterDefinitionStorageService.js";
-import {
-  mapDefinitionStatusForClient,
-  normalizeDefinitionSteps,
-} from "./definitionPresentationService.js";
 
 const productQueryService = new Services();
 const WEEKDAY_NAMES = [
@@ -106,6 +92,23 @@ function buildDefaultTitle(rule) {
   });
 }
 
+function mapStatusForClient(status) {
+  switch (status) {
+    case "ACTIVE":
+      return "Active";
+    case "PAUSED":
+      return "Inactive";
+    case "COMPLETED":
+      return "Completed";
+    case "FAILED":
+      return "Failed";
+    case "CANCELLED":
+      return "Cancelled";
+    default:
+      return status;
+  }
+}
+
 function mapFrequencyForClient(edit) {
   if (edit.scheduleType === "EVERY_X_MINUTES") {
     if (edit.intervalMinutes === 60) return "Hourly";
@@ -148,7 +151,6 @@ function indexLatestRuns(runs = []) {
 }
 
 function serializeRecurringEdit(edit, countsById = {}, latestRunsById = {}) {
-  const normalizedRules = normalizeDefinitionSteps(edit.rules);
   const counts = countsById[edit.id] || {
     total: edit.runCount || 0,
     success: 0,
@@ -162,7 +164,7 @@ function serializeRecurringEdit(edit, countsById = {}, latestRunsById = {}) {
     id: edit.id,
     shop: edit.shop,
     title: edit.title,
-    status: mapDefinitionStatusForClient(edit.status, { pausedLabel: "Inactive" }),
+    status: mapStatusForClient(edit.status),
     statusKey: edit.status,
     frequency: mapFrequencyForClient(edit),
     scheduleType: edit.scheduleType,
@@ -191,10 +193,8 @@ function serializeRecurringEdit(edit, countsById = {}, latestRunsById = {}) {
     lastFailureReason: edit.lastFailureReason,
     lastRunStatus: latestRun?.status ?? null,
     lastRunMessage: latestRun?.errorMessage ?? edit.lastFailureReason ?? null,
-    rules: normalizedRules,
-    steps: normalizedRules,
-    filterVersion: edit.filterVersion ?? null,
-    canonicalFilterKey: edit.canonicalFilterKey ?? null,
+    rules: edit.rules,
+    steps: edit.rules,
     filterParams: edit.filterParams,
     queryFilter: JSON.stringify(edit.filterParams),
     startAt: edit.startAt,
@@ -219,8 +219,7 @@ async function getRecurringEditHydrated(id, shop) {
   const latestRunsById = indexLatestRuns(latestRuns);
   const serialized = serializeRecurringEdit(edit, countsById, latestRunsById);
 
-  const normalizedFilterParams = normalizeCanonicalFilterParams(edit.filterParams);
-  const where = productQueryService.getProductPrismaWhere(normalizedFilterParams, shop);
+  const where = productQueryService.getProductPrismaWhere(edit.filterParams, shop);
   const latestHistory = latestRunsById[edit.id]?.editHistoryId
     ? await prisma.editHistory.findUnique({
         where: { id: latestRunsById[edit.id].editHistoryId },
@@ -243,8 +242,7 @@ async function getRecurringEditHydrated(id, shop) {
 export async function createRecurringEdit({ shop, body, subscription }) {
   await assertProRecurringEditAccess(subscription);
 
-  const filterParams = normalizeCanonicalFilterParams(body.filterParams);
-  const filterMetadata = buildCanonicalFilterMetadata(filterParams);
+  const filterParams = Array.isArray(body.filterParams) ? body.filterParams : [];
   const rules = buildRulesFromBody(body);
   const rule = validateRules(rules);
   const status = normalizeStatus(body.status, "ACTIVE");
@@ -259,7 +257,7 @@ export async function createRecurringEdit({ shop, body, subscription }) {
     ? computeRecurringEditNextRunAt({ ...scheduleInput, status }, scheduleInput.startAt || new Date())
     : null;
 
-  const fingerprint = createIdempotencyFingerprint("recurring_edit_definition", {
+  const created = await recurringEditRepository.create({
     shop,
     title,
     status,
@@ -272,57 +270,8 @@ export async function createRecurringEdit({ shop, body, subscription }) {
     endAt: scheduleInput.endAt,
     filterParams,
     rules,
+    nextRunAt,
   });
-
-  const { result: created } = await withAdvisoryLock(
-    `recurring-edit-definition:${shop}:${fingerprint}`,
-    async () => {
-      const existingItems = await recurringEditRepository.listByShop(shop);
-      const existing = existingItems.find((item) => (
-        item.title === title &&
-        item.status === status &&
-        item.scheduleType === scheduleInput.scheduleType &&
-        item.timezone === scheduleInput.timezone &&
-        stableStringify(item.scheduleConfig) === stableStringify(scheduleInput.scheduleConfig) &&
-        (
-          item.canonicalFilterKey === filterMetadata.canonicalFilterKey ||
-          (
-            !item.canonicalFilterKey &&
-            stableStringify(item.filterParams) === stableStringify(filterParams)
-          )
-        ) &&
-        stableStringify(item.rules) === stableStringify(rules)
-      ));
-
-      if (existing) {
-        return existing;
-      }
-
-      const created = await recurringEditRepository.create({
-        shop,
-        title,
-        status,
-        scheduleType: scheduleInput.scheduleType,
-        timezone: scheduleInput.timezone,
-        scheduleConfig: scheduleInput.scheduleConfig,
-        cronExpression: scheduleInput.cronExpression,
-        intervalMinutes: scheduleInput.intervalMinutes,
-        startAt: scheduleInput.startAt,
-        endAt: scheduleInput.endAt,
-        filterParams,
-        rules,
-        nextRunAt,
-      });
-
-      await persistFilterDefinitionMetadata({
-        tableName: "RecurringEdit",
-        id: created.id,
-        filterParams,
-      });
-
-      return created;
-    },
-  );
 
   logger.info("Recurring edit created", {
     shop,
@@ -388,9 +337,7 @@ export async function updateRecurringEdit({
   const scheduleInput = buildRecurringScheduleInput(mergedBody, existing);
   const rules = body.rules ? buildRulesFromBody(body) : existing.rules;
   const rule = validateRules(rules);
-  const filterParams = body.filterParams !== undefined
-    ? normalizeCanonicalFilterParams(body.filterParams)
-    : normalizeCanonicalFilterParams(existing.filterParams);
+  const filterParams = Array.isArray(body.filterParams) ? body.filterParams : existing.filterParams;
   const title = body.title !== undefined
     ? String(body.title || "").trim() || buildDefaultTitle(rule)
     : existing.title;
@@ -412,12 +359,6 @@ export async function updateRecurringEdit({
     rules,
     nextRunAt,
     isDeleted: false,
-  });
-
-  await persistFilterDefinitionMetadata({
-    tableName: "RecurringEdit",
-    id: existing.id,
-    filterParams,
   });
 
   return getRecurringEditHydrated(existing.id, shop);

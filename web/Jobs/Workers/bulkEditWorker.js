@@ -25,10 +25,6 @@ import {
   buildExecutionError,
   isTerminalExecutionState,
 } from "../../services/bulkEditExecutionStateService.js";
-import {
-  assertShopActiveForWorker,
-  isSkippableWorkerError,
-} from "../../services/workerSafetyService.js";
 
 const QUEUE_NAME = process.env.EDIT_QUEUE || "bulk-edit";
 const WORKER_NAME = "bulkEditWorker";
@@ -277,8 +273,6 @@ async function processBulkEdit(job) {
   let shopLockKey = null;
 
   try {
-    await assertShopActiveForWorker(shop);
-
     const session = await getSession(shop);
     if (!session?.shop || session.shop !== shop) {
       throw new Error("Shop session not available for bulk edit execution");
@@ -337,7 +331,7 @@ async function processBulkEdit(job) {
       lastProductId,
       batchId,
       batchTargetCount,
-    } = await service._preparingBulkOperation({ historyId, shop });
+    } = await service._preparingBulkOperation({ historyId });
 
     if (!formattedProducts) {
       await prisma.editHistory.updateMany({
@@ -514,15 +508,6 @@ async function processBulkEdit(job) {
         retryable: isRetryableError(err),
       },
     });
-
-    if (isSkippableWorkerError(err)) {
-      return {
-        skipped: true,
-        reason: err.code,
-        shop,
-        historyId,
-      };
-    }
 
     throw err;
   } finally {

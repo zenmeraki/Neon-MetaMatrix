@@ -1,6 +1,5 @@
 import React, { useMemo, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { authenticatedFetch } from "../../../../hooks/useAuthenticatedFetch";
 import {
   Modal,
   FormLayout,
@@ -224,7 +223,7 @@ function RecurringEditModal({
         payload.endAt = buildIsoFromDateAndTime(endDate, endTime);
       }
 
-      const response = await authenticatedFetch("/api/products/create-recurring-edit", {
+      const response = await fetch("/api/products/create-recurring-edit", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

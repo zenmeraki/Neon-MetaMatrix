@@ -11,7 +11,6 @@ import { logWorkerError } from "../../utils/errorLogUtils.js";
 import { prisma } from "../../config/database.js";
 import logger from "../../utils/loggerUtils.js";
 import { adminGraphqlWithRetry } from "../../utils/shopifyAdminApi.js";
-import { isSkippableWorkerError } from "../../services/workerSafetyService.js";
 
 const QUEUE_NAME = process.env.APP_INSTALLATION_QUEUE;
 const productService = new Services();
@@ -50,10 +49,10 @@ const appInstallationWorker = new Worker(
 
     try {
       const claimed = await claimInstallation(shop);
-      if (!claimed) {
+      if (!claimed && job.attemptsMade > 0) {
         return {
           skipped: true,
-          reason: "already_installed",
+          reason: "already_processed",
           shop,
         };
       }
@@ -152,14 +151,6 @@ const appInstallationWorker = new Worker(
         startedInitialSync: shouldStartInitialSync,
       };
     } catch (error) {
-      if (isSkippableWorkerError(error)) {
-        return {
-          skipped: true,
-          reason: error.code,
-          shop,
-        };
-      }
-
       await logWorkerError({
         shop,
         err: error,

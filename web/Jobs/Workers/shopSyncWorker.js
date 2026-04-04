@@ -19,11 +19,6 @@ import {
   releaseExclusiveShopWork,
 } from "../../services/shopWorkLeaseService.js";
 import { getJobAttempt, isRetryExhausted, recordRetryExhausted } from "../../utils/workerTelemetry.js";
-import {
-  RetryableWorkerError,
-  assertShopActiveForWorker,
-  isSkippableWorkerError,
-} from "../../services/workerSafetyService.js";
 
 const QUEUE_NAME = process.env.SHOP_SYNC_QUEUE || "shop-sync-trigger";
 
@@ -58,23 +53,15 @@ const shopSyncWorker = new Worker(
       throw new Error("shop-sync job requires shop and syncType");
     }
 
-    const store = await assertShopActiveForWorker(shop);
+    const store = await prisma.store.findUnique({
+      where: { shopUrl: shop },
+      select: { isUnInstalled: true },
+    });
 
-    if (
-      syncType === "product" &&
-      (store?.isProductSyncing ||
-        (await prisma.syncHistory.findFirst({
-          where: {
-            shop,
-            operationType: "Product",
-            status: "processing",
-          },
-          select: { id: true },
-        })))
-    ) {
+    if (!store || store.isUnInstalled) {
       return {
         skipped: true,
-        reason: "local_product_sync_in_progress",
+        reason: "shop_unavailable",
       };
     }
 
@@ -116,10 +103,7 @@ const shopSyncWorker = new Worker(
       const { status } = await getCurrentBulkOperationStatus(session, "QUERY");
 
       if (status === "RUNNING") {
-        throw new RetryableWorkerError(
-          "A Shopify query bulk operation is already running for this shop",
-          "shopify_bulk_busy",
-        );
+        throw new Error("A Shopify query bulk operation is already running for this shop");
       }
 
       if (syncType === "product") {
@@ -144,15 +128,6 @@ const shopSyncWorker = new Worker(
         syncType,
       };
     } catch (error) {
-      if (isSkippableWorkerError(error)) {
-        return {
-          skipped: true,
-          reason: error.code,
-          shop,
-          syncType,
-        };
-      }
-
       await recordMirrorAnomaly({
         shop,
         severity: "medium",

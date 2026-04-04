@@ -1,5 +1,5 @@
 // dashboardFetcher.js — ULTRA FINAL OPTIMIZED
-import { createAuthenticatedFetch } from "../../../hooks/useAuthenticatedFetch";
+import { authenticatedFetch } from "@shopify/app-bridge-utils";
 
 /* ------------------------------------------------------------
    Combine multiple AbortSignals → returns a new controller
@@ -95,7 +95,7 @@ async function retryWithBackoff(fn, opts) {
    Authenticated fetch wrapper (App Bridge safe)
 ------------------------------------------------------------- */
 export function createDashboardFetcher(app) {
-  const authFetch = createAuthenticatedFetch(app);
+  const authFetch = authenticatedFetch(app);
 
   return async function dashboardFetch(url, options = {}) {
     const method = options.method || "GET";

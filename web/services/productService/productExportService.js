@@ -7,10 +7,6 @@ import { EXPORT_TYPES } from "../../Config/constants.js";
 import logger from "../../utils/loggerUtils.js";
 import { getCache, setCache } from "../../utils/cacheUtils.js";
 import { prisma } from "../../config/database.js";
-import {
-  enrichExportJobsWithTargetingMetadata,
-  getExportJobTargetingMetadata,
-} from "../historyTargetingMetadataService.js";
 
 export class ProductExportService {
   constructor(session) {
@@ -72,17 +68,11 @@ export class ProductExportService {
         hasNextPage = response.body.data.products.pageInfo.hasNextPage;
         endCursor = response.body.data.products.pageInfo.endCursor;
         // Safety check - if we've fetched all products or reached the count, stop
-        if (count > 0 && allProducts.length >= count) {
+        if (allProducts.length >= count) {
           break;
         }
       } catch (error) {
-        logger.error("Failed to fetch products for export", {
-          shop: this.session.shop,
-          queryFilter,
-          fetchedCount: allProducts.length,
-          message: error.message,
-        });
-        throw new Error("Failed to fetch products for export");
+        break;
       }
     }
     await setCache(
@@ -103,7 +93,7 @@ export class ProductExportService {
     } else if (activePlan === "Advanced (Monthly)") {
       if (count > 150) {
         throw new Error(
-          "You are an advanced plan user, you can only export 150 products at a time"
+          "You are a pro plan user, you can only export 100 products at a time"
         );
       }
     }
@@ -195,8 +185,7 @@ export class ProductExportService {
       take: 10,
     });
 
-    const enrichedHistories = await enrichExportJobsWithTargetingMetadata(histories);
-    const formatedHistory = enrichedHistories.map((history) => ({
+    const formatedHistory = histories.map((history) => ({
       ...history,
       rawType: history.type || "",
       type: EXPORT_TYPES[history.type]?.[lang] || history.type || "",
@@ -222,11 +211,6 @@ export class ProductExportService {
     throw new Error("export history not found");
   }
 
-  const targetingMetadata = await getExportJobTargetingMetadata(history.id);
-
-  return {
-    ...history,
-    ...targetingMetadata,
-  };
+  return history;
 }
 }

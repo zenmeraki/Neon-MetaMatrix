@@ -3,10 +3,6 @@ import { EDIT_TYPES, FIELD_TRANSLATIONS } from "../../Config/constants.js";
 import { getCache, setCache } from "../../utils/cacheUtils.js";
 import { prisma } from "../../config/database.js";
 import { projectEditHistoryStatus } from "../historyStatusProjectionService.js";
-import {
-  enrichEditHistoriesWithTargetingMetadata,
-  getEditHistoryTargetingMetadata,
-} from "../historyTargetingMetadataService.js";
 
 const validTypes = ["Manual edit", "Scheduled edit", "Recurring edit", "Automatic rule"];
 
@@ -114,8 +110,7 @@ export class EditHistoryService {
       const hasNextPage = records.length > limitNumber;
       const edges = hasNextPage ? records.slice(0, -1) : records;
 
-      const enrichedEdges = await enrichEditHistoriesWithTargetingMetadata(edges);
-      const formattedData = enrichedEdges.map((record) =>
+      const formattedData = edges.map((record) =>
         projectEditHistoryStatus({
           ...record,
           title: getLocalizedJsonText(record.title, lang),
@@ -193,10 +188,8 @@ export class EditHistoryService {
       const rules = Array.isArray(history.rules) ? history.rules : [];
       const rule = rules[0] ?? { field: "csv" };
 
-      const targetingMetadata = await getEditHistoryTargetingMetadata(history.id);
       const returnData = projectEditHistoryStatus({
         ...history,
-        ...targetingMetadata,
         title: getLocalizedJsonText(history.title, lang),
         field:
           FIELD_TRANSLATIONS?.[rule?.field]?.[lang] ??

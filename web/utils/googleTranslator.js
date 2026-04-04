@@ -1,7 +1,5 @@
-import crypto from "crypto";
 import { Translate } from "@google-cloud/translate/build/src/v2/index.js";
 import dotenv from "dotenv";
-import { getCache, setCache } from "./cacheUtils.js";
 dotenv.config();
 
 const LANGUAGES = [
@@ -34,22 +32,8 @@ const translate = new Translate({
   credentials,
 });
 
-function buildTranslationCacheKey(originalTitle) {
-  const fingerprint = crypto
-    .createHash("sha1")
-    .update(String(originalTitle || ""))
-    .digest("hex");
-
-  return `translation:title:${fingerprint}`;
-}
 
 export const createMultiLanguage = async (originalTitle) => {
-  const cacheKey = buildTranslationCacheKey(originalTitle);
-  const cached = await getCache(cacheKey);
-  if (cached && typeof cached === "object") {
-    return cached;
-  }
-
   const translated = { en: originalTitle };
 
   for (const lang of LANGUAGES) {
@@ -62,20 +46,22 @@ export const createMultiLanguage = async (originalTitle) => {
       // throw new Error(`Translation failed for ${lang}: ${err.message}`);
     }
   }
-
-  await setCache(cacheKey, translated, 24 * 3600).catch(() => {});
   return translated;
 };
 
 export const createMultiLanguageForFileEdit =  (originalTitle) => {
+  console.log("OGTitle:",originalTitle)
   const translated = { en: originalTitle };
   for (const lang of LANGUAGES) {
     if (lang === "en") continue;
     try {
       translated[lang] = originalTitle;
     } catch (err) {
+      console.error("Failed to translate",err.message)
       // throw new Error(`Translation failed for ${lang}: ${err.message}`);
     }
   }
+ console.log(translated)
+
   return translated;
 };

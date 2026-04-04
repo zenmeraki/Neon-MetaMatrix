@@ -59,27 +59,6 @@ export const setCache = async (key, data, ttl = 3600) => {
   }
 };
 
-const SCAN_BATCH_SIZE = 200;
-
-async function collectKeysByPattern(pattern) {
-  const keys = [];
-  let cursor = "0";
-
-  do {
-    const result = await redis.scan(cursor, {
-      MATCH: pattern,
-      COUNT: SCAN_BATCH_SIZE,
-    });
-
-    cursor = result.cursor;
-    if (Array.isArray(result.keys) && result.keys.length) {
-      keys.push(...result.keys);
-    }
-  } while (cursor !== "0");
-
-  return keys;
-}
-
 // Get cached data
 export const getCache = async (key) => {
   try {
@@ -94,7 +73,7 @@ export const getCache = async (key) => {
 // Clear all product caches
 export const clearAllCachesForShop = async (shop) => {
   try {
-    const keys = await collectKeysByPattern(`${shop}*`);
+    const keys = await redis.keys(`${shop}*`);
     if (keys.length > 0) {
       await redis.del(keys);
       // logger.info(`Cleared ${keys.length} cache keys`);
@@ -109,7 +88,8 @@ export const clearAllCachesForShop = async (shop) => {
 // Clear all product caches
 export const clearKeyCaches = async (key) => {
   try {
-    const keys = await collectKeysByPattern(`${key}*`);
+    // Get all keys starting with 
+    const keys = await redis.keys(`${key}*`);
 
     if (keys.length > 0) {
       await redis.del(keys);

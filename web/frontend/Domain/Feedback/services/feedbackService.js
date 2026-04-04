@@ -1,10 +1,8 @@
-import { authenticatedFetch } from "../../../hooks/useAuthenticatedFetch";
-
 export const feedbackService = {
 
     async submitSuggestion(data) {
       try {
-        const response = await authenticatedFetch('/api/suggestion/submit', {
+        const response = await fetch('/api/suggestion/submit', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

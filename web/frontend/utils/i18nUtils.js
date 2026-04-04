@@ -1,6 +1,7 @@
 import i18next from "i18next";
 import { initReactI18next } from "react-i18next";
 import ShopifyFormat from "@shopify/i18next-shopify";
+import resourcesToBackend from "i18next-resources-to-backend";
 import { match } from "@formatjs/intl-localematcher";
 import { shouldPolyfill as shouldPolyfillLocale } from "@formatjs/intl-locale/should-polyfill";
 import { shouldPolyfill as shouldPolyfillPluralRules } from "@formatjs/intl-pluralrules/should-polyfill";
@@ -41,17 +42,6 @@ const SUPPORTED_APP_LOCALES = [
 ];
 
 let _userLocale, _polarisTranslations;
-
-const APP_LOCALE_MODULES = import.meta.glob("../locales/*.json", {
-  eager: true,
-});
-
-const APP_LOCALE_RESOURCES = Object.fromEntries(
-  Object.entries(APP_LOCALE_MODULES).map(([modulePath, moduleValue]) => {
-    const locale = modulePath.match(/\/([^/]+)\.json$/)?.[1];
-    return [locale, { translation: moduleValue.default }];
-  }).filter(([locale]) => Boolean(locale))
-);
 
 /**
  * Retrieves the user's locale from the `locale` request parameter and matches it to supported app locales.
@@ -162,16 +152,12 @@ async function initI18next() {
   return await i18next
     .use(initReactI18next)
     .use(ShopifyFormat)
+    .use(localResourcesToBackend())
     .init({
       debug: process.env.NODE_ENV === "development",
       lng: getUserLocale(),
       fallbackLng: DEFAULT_APP_LOCALE,
       supportedLngs: SUPPORTED_APP_LOCALES,
-      ns: ["translation"],
-      defaultNS: "translation",
-      resources: APP_LOCALE_RESOURCES,
-      partialBundledLanguages: true,
-      keySeparator: false,
       interpolation: {
         // React escapes values by default
         escapeValue: false,
@@ -182,6 +168,12 @@ async function initI18next() {
         useSuspense: false,
       },
     });
+}
+
+function localResourcesToBackend() {
+  return resourcesToBackend(async (locale, _namespace) => {
+    return (await import(`../locales/${locale}.json`)).default;
+  });
 }
 
 /**
@@ -247,4 +239,3 @@ async function loadPolarisTranslations(locale) {
 }
 
 export {  i18next as i18n };
-

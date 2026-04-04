@@ -1,249 +1,49 @@
 import { translatedEditHistoryStatuses } from "../Config/constants.js";
 import UndoEditService from "../services/productService/productBulkUndoService.js";
 import ProductBulkService from "../services/productService/productBulkEditService.js";
-import { FIELD_CONFIGS } from "../helpers/productBulkOperationHelpers/constants.js";
+import { Services } from "../services/productService/productFilterService.js";
 import { errorResponse } from "../utils/responseUtils.js";
 import { getCurrentBulkOperationStatus } from "../utils/bulkOperationHelper.js";
+import { getUpdatedProducts } from "../helpers/productBulkOperationHelpers/productUpdateHandler.js";
+import {
+  createMultiLanguage,
+} from "../utils/googleTranslator.js";
+import { scheduledEditQueue } from "../Jobs/Queues/scheduledEditQueue.js";
 import { clearAllCachesForShop } from "../utils/cacheUtils.js";
 import { logApiError } from "../utils/errorLogUtils.js";
-import { createScheduledBulkEdit } from "../services/scheduledBulkEditService.js";
-import { trackBulkEditPreview } from "../services/bulkEditPreviewTrackingService.js";
-import { normalizeCanonicalFilterParams } from "../services/productService/productFilterContract.js";
+import { prisma } from "../config/database.js";
+import crypto from "crypto";
+import {
+  BULK_EDIT_EXECUTION_STATES,
+  buildPlannedUndoState,
+} from "../services/bulkEditExecutionStateService.js";
+import { resolveCanonicalProductTarget } from "../services/productService/productTargetingService.js";
 
-const DEFAULT_LANGUAGE = "en";
-const MAX_PAGE = 10000;
-const MAX_LIMIT = 100;
-const MAX_STRING_LENGTH = 500;
-
-function createHttpError(statusCode, message, extra = {}) {
-  const error = new Error(message);
-  error.statusCode = statusCode;
-  error.userMessage = message;
-  Object.assign(error, extra);
-  return error;
-}
-
-function getSessionOrThrow(res) {
-  const session = res.locals.shopify?.session;
-
-  if (!session?.shop) {
-    throw createHttpError(403, "Session expired");
-  }
-
-  return session;
-}
-
-function normalizeLanguage(rawLanguage) {
-  if (typeof rawLanguage !== "string") {
-    return DEFAULT_LANGUAGE;
-  }
-
-  const normalized = rawLanguage.trim().toLowerCase();
-  if (!normalized || normalized.length > 10) {
-    return DEFAULT_LANGUAGE;
-  }
-
-  return normalized;
-}
-
-function normalizeString(value, fallback = null, maxLength = MAX_STRING_LENGTH) {
-  if (value === undefined || value === null) {
-    return fallback;
-  }
-
-  const normalized = String(value).trim();
-  if (!normalized) {
-    return fallback;
-  }
-
-  return normalized.slice(0, maxLength);
-}
-
-function normalizePositiveInteger(value, fallback, { min = 1, max = MAX_LIMIT } = {}) {
-  const parsed = Number.parseInt(value, 10);
-
-  if (!Number.isFinite(parsed)) {
-    return fallback;
-  }
-
-  return Math.min(Math.max(parsed, min), max);
-}
-
-function ensureActiveOperationAllowed(session) {
-  return getCurrentBulkOperationStatus(session).then(({ status }) => {
-    if (status === "RUNNING") {
-      throw createHttpError(409, "Another operation is running in background");
-    }
-  });
-}
-
-function ensureHistoryId(id) {
-  const historyId = normalizeString(id);
-  if (!historyId) {
-    throw createHttpError(400, "Edit history id is required");
-  }
-
-  return historyId;
-}
-
-function ensureObjectArray(value, fieldName) {
-  if (!Array.isArray(value)) {
-    throw createHttpError(400, `${fieldName} must be an array`);
-  }
-
-  return value;
-}
-
-function normalizeFilterParams(filterParams) {
-  try {
-    return normalizeCanonicalFilterParams(filterParams);
-  } catch (error) {
-    throw createHttpError(400, error.message || "Invalid filterParams");
-  }
-}
-
-function normalizeLocationId(body = {}) {
-  const locationId = body.locationId ?? body.location ?? null;
-  return locationId ? String(locationId).trim() : null;
-}
-
-function normalizeBulkEditRequest(req) {
-  const body = req.body || {};
-  const editedField = normalizeString(body.editedField, null, 120);
-
-  if (!editedField || !FIELD_CONFIGS[editedField]) {
-    throw createHttpError(400, "Invalid editedField");
-  }
-
-  if (Array.isArray(body.rules) && body.rules.length > 0) {
-    return {
-      ...body,
-      editedField,
-      locationId: normalizeLocationId(body),
-      filterParams: normalizeFilterParams(body.filterParams),
-    };
-  }
-
-  const editedType = normalizeString(body.editedType ?? body.editType, null, 150);
-  if (!editedType) {
-    throw createHttpError(400, "Invalid editedType");
-  }
-
-  if (body.filterParams !== undefined) {
-    ensureObjectArray(body.filterParams, "filterParams");
-  }
-
-  return {
-    ...body,
-    editedField,
-    editedType,
-    locationId: normalizeLocationId(body),
-    filterParams: normalizeFilterParams(body.filterParams),
-  };
-}
-
-function mapBulkEditResponse(result, lang, shop) {
-  const primaryRule = Array.isArray(result.rules) ? result.rules[0] : null;
-
-  return {
-    id: result.id,
-    title: result.title,
-    status: translatedEditHistoryStatuses[result.status]?.[lang] || result.status,
-    processedCount: result.processedCount,
-    totalItems: result.totalItems,
-    duration: result.durationMs,
-    field: primaryRule?.field ?? null,
-    shop,
-  };
-}
-
-function classifyUndoError(error) {
-  if (error?.statusCode) {
-    return error.statusCode;
-  }
-
-  if (error?.message === "Edit history not found") {
-    return 404;
-  }
-
-  if (
-    error?.message === "Undo can only be performed on completed edits" ||
-    error?.message === "Undo is already queued or completed" ||
-    error?.message === "Undo could not be queued"
-  ) {
-    return 400;
-  }
-
-  return 500;
-}
-
-function classifyBulkEditError(error) {
-  if (error?.statusCode) {
-    return error.statusCode;
-  }
-
-  if (
-    typeof error?.message === "string" &&
-    (
-      error.message.includes("plan") ||
-      error.message.includes("Location ID is required") ||
-      error.message.includes("Edit rules not found")
-    )
-  ) {
-    return 400;
-  }
-
-  return 500;
-}
-
-function normalizePreviewPayload(req) {
-  const body = req.body || {};
-  const field = normalizeString(body.field, null, 120);
-  const editType = normalizeString(body.editType, null, 150);
-
-  if (!field || !FIELD_CONFIGS[field]) {
-    throw createHttpError(400, "Invalid field");
-  }
-
-  if (!editType) {
-    throw createHttpError(400, "Invalid editType");
-  }
-
-  if (body.filterParams !== undefined) {
-    ensureObjectArray(body.filterParams, "filterParams");
-  }
-
-  return {
-    field,
-    editType,
-    editValue: body.editValue ?? body.value ?? null,
-    filterParams: normalizeFilterParams(body.filterParams),
-    searchKey: normalizeString(body.searchKey),
-    replaceText: normalizeString(body.replaceText),
-    supportValue: body.supportValue ?? null,
-    lang: normalizeLanguage(req.query?.lang),
-    page: normalizePositiveInteger(body.page, 1, { min: 1, max: MAX_PAGE }),
-    limit: normalizePositiveInteger(body.limit, 20, { min: 1, max: MAX_LIMIT }),
-    locationId: normalizeLocationId(body),
-  };
-}
+const productService = new Services();
 
 export const undoEdit = async (req, res) => {
-  let session;
+  const session = res.locals.shopify?.session;
+  const { id } = req.params;
 
   try {
-    session = getSessionOrThrow(res);
-    const historyId = ensureHistoryId(req.params?.id);
+    if (!session) {
+      return res.status(403).json(errorResponse("Session expired"));
+    }
 
-    await ensureActiveOperationAllowed(session);
+    const { status } = await getCurrentBulkOperationStatus(session);
+
+    if (status === "RUNNING") {
+      return res
+        .status(400)
+        .json({ message: "Another operation is running in background" });
+    }
 
     const service = new UndoEditService(session);
-    const result = await service.undoEdit(historyId);
+    const result = await service.undoEdit(id);
 
     return res.status(200).json(result.data);
   } catch (err) {
-    const statusCode = classifyUndoError(err);
-
+    console.error(err.message);
     await logApiError({
       shop: session?.shop,
       err,
@@ -251,52 +51,53 @@ export const undoEdit = async (req, res) => {
       source: "POST /api/undo-edit/:id",
     });
 
-    const message =
-      statusCode >= 500
-        ? "Failed to undo edit"
-        : err.userMessage || err.message || "Failed to undo edit";
-
-    return res.status(statusCode).json(
-      statusCode >= 500
-        ? errorResponse(message)
-        : { message },
-    );
+    return res.status(500).json(errorResponse("Failed to undo edit"));
   }
 };
 
 export const handleBulkEditProduct = async (req, res) => {
-  let session;
+  const session = res.locals.shopify?.session;
 
   try {
-    session = getSessionOrThrow(res);
-    const lang = normalizeLanguage(req.query?.lang);
-    const normalizedBody = normalizeBulkEditRequest(req);
+    if (!session) {
+      return res.status(403).json(errorResponse("Session expired"));
+    }
 
-    await ensureActiveOperationAllowed(session);
+    const { status } = await getCurrentBulkOperationStatus(session);
 
+    if (status === "RUNNING") {
+      return res
+        .status(400)
+        .json({ message: "Another operation is running in background" });
+    }
+
+    const lang = req.query.lang || "en";
     const service = new ProductBulkService(session);
     const result = await service.bulkEditProducts({
       ...req,
-      body: normalizedBody,
-      query: {
-        ...req.query,
-        lang,
-      },
       subscription: req.subscription,
     });
 
     if (!result) {
-      throw createHttpError(500, "Bulk edit failed");
+      return res.status(500).json({
+        message: "Bulk edit failed â€” no result returned.",
+      });
     }
 
     await clearAllCachesForShop(session.shop);
 
-    return res.status(200).json(
-      mapBulkEditResponse(result, lang, session.shop),
-    );
+    return res.status(200).json({
+      id: result.id,
+      title: result.title,
+      status:
+        translatedEditHistoryStatuses[result.status]?.[lang] || result.status,
+      processedCount: result.processedCount,
+      totalItems: result.totalItems,
+      duration: result.durationMs,
+      field: result.field,
+      shop: session.shop,
+    });
   } catch (err) {
-    const statusCode = classifyBulkEditError(err);
-
     await logApiError({
       shop: session?.shop,
       err,
@@ -304,55 +105,71 @@ export const handleBulkEditProduct = async (req, res) => {
       source: "POST /api/bulk-edit",
     });
 
-    return res.status(statusCode).json({
+    return res.status(400).json({
       success: false,
       message:
-        statusCode >= 500
-          ? "An unexpected error occurred. Please try again later."
-          : err.userMessage || err.message || "An unexpected error occurred. Please try again later.",
+        err.message || "An unexpected error occurred. Please try again later.",
     });
   }
 };
 
 export const trackEditPreview = async (req, res) => {
-  let session;
+  const session = res.locals.shopify?.session;
 
   try {
-    session = getSessionOrThrow(res);
-    const payload = normalizePreviewPayload(req);
+    if (!session) {
+      return res.status(403).json(errorResponse("Session expired"));
+    }
 
-    trackBulkEditPreview({
-      shop: session.shop,
-      field: payload.field,
-      editType: payload.editType,
-      value: payload.editValue,
-      lang: payload.lang,
-      searchKey: payload.searchKey,
-      replaceText: payload.replaceText,
-      supportValue: payload.supportValue,
-      filterParams: payload.filterParams,
-    });
+    const {
+      field,
+      editType,
+      editValue,
+      searchKey,
+      replaceText,
+      filterParams,
+      supportValue,
+      page,
+      limit,
+    } = req.body;
+
+    const lang = req.query.lang || "en";
+
+    if (process.env.NODE_ENV === "production") {
+      await prisma.filterTrack.create({
+        data: {
+          shop: session.shop,
+          previewFilterParams: filterParams,
+          type: "preview",
+          field,
+          editOption: editType,
+          value: editValue,
+          en: lang,
+          searchKey,
+          replaceText,
+          supportValue,
+        },
+      });
+    }
 
     const service = new ProductBulkService(session);
+
     const result = await service.trackEditProducts({
-      field: payload.field,
-      editType: payload.editType,
-      editValue: payload.editValue,
-      filterParams: payload.filterParams,
-      searchKey: payload.searchKey,
-      replaceText: payload.replaceText,
-      supportValue: payload.supportValue,
-      lang: payload.lang,
-      page: payload.page,
-      limit: payload.limit,
-      locationId: payload.locationId,
+      field,
+      editType,
+      editValue,
+      filterParams,
+      searchKey,
+      replaceText,
+      supportValue,
+      lang,
+      page,
+      limit,
       subscription: req.subscription,
     });
 
     return res.status(200).json(result);
   } catch (err) {
-    const statusCode = err?.statusCode || 500;
-
     await logApiError({
       shop: session?.shop,
       err,
@@ -360,35 +177,201 @@ export const trackEditPreview = async (req, res) => {
       source: "POST /api/edit-preview",
     });
 
-    return res.status(statusCode).json(
-      errorResponse(
-        statusCode >= 500
-          ? "Failed to track edit preview"
-          : err.userMessage || err.message || "Failed to track edit preview",
-      ),
-    );
+    return res.status(500).json(errorResponse("Failed to track edit preview"));
   }
 };
 
 export const createScheduledEdit = async (req, res) => {
-  let session;
+  const session = res.locals.shopify?.session;
+  const bulkService = session ? new ProductBulkService(session) : null;
 
   try {
-    session = getSessionOrThrow(res);
+    if (!session) {
+      return res.status(403).json({ error: "Session expired" });
+    }
 
-    const history = await createScheduledBulkEdit({
-      session,
-      subscription: req.subscription,
-      payload: req.body,
+    const {
+      editedField,
+      editedBy,
+      filterParams,
+      value,
+      scheduledAt: rawScheduledAt,
+      scheduledUndoAt: rawScheduledUndoAt,
+      searchKey,
+      replaceText,
+      supportValue,
+      locationId,
+    } = req.body;
+
+    if (!filterParams || !editedField) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    const scheduledAt = new Date(rawScheduledAt);
+    if (isNaN(scheduledAt.getTime())) {
+      return res.status(400).json({ error: "Invalid scheduledAt" });
+    }
+
+    let scheduledUndoAt = null;
+    if (rawScheduledUndoAt) {
+      const d = new Date(rawScheduledUndoAt);
+      if (isNaN(d.getTime())) {
+        return res.status(400).json({ error: "Invalid scheduledUndoAt" });
+      }
+      scheduledUndoAt = d;
+    }
+
+    if (scheduledUndoAt && scheduledUndoAt.getTime() <= scheduledAt.getTime()) {
+      return res.status(400).json({
+        error: "Undo time must be later than the scheduled edit time",
+      });
+    }
+
+    if (editedField === "deleteProducts" && scheduledUndoAt) {
+      return res.status(400).json({
+        error: "Undo is not allowed for product deletion",
+      });
+    }
+
+    const resolvedTarget = await resolveCanonicalProductTarget({
+      shop: session.shop,
+      filterParams,
+      queryParams: {
+        page: 1,
+        limit: 20,
+      },
+      sampleLimit: 20,
     });
+
+    const count = resolvedTarget.count;
+
+    const planKey = req.subscription?.planKey;
+    if (!planKey) {
+      return res.status(403).json({
+        error: "Subscription not found",
+      });
+    }
+
+    let scheduledLimit = 0;
+    if (planKey === "ADVANCED_MONTHLY") {
+      scheduledLimit = 1000;
+    } else if (planKey === "PRO_MONTHLY") {
+      scheduledLimit = Infinity;
+    }
+
+    if (scheduledLimit !== Infinity && count > scheduledLimit) {
+      return res.status(403).json({
+        success: false,
+        message: `Your plan allows scheduling edits for only ${scheduledLimit} products at a time. You selected ${count}. Please refine your filters or upgrade to Pro.`,
+        code: "PRODUCT_LIMIT_EXCEEDED",
+      });
+    }
+
+    const updatedTitle = getUpdatedProducts({
+      field: editedField,
+      editType: editedBy,
+      value,
+      returnTitleOnly: true,
+      supportValue,
+      searchKey,
+      replaceText,
+    });
+
+    const multiLanguageTitle = await createMultiLanguage(updatedTitle);
+
+    const undoAllowed = editedField !== "deleteProducts";
+
+    const delay = scheduledAt.getTime() - Date.now();
+    if (delay <= 0) {
+      return res.status(400).json({
+        error: "Scheduled time must be in the future",
+      });
+    }
+
+    const history = await prisma.editHistory.create({
+      data: {
+        shop: session.shop,
+        title: multiLanguageTitle,
+        status: "pending",
+        executionState: BULK_EDIT_EXECUTION_STATES.PLANNED,
+        executionIdentity: crypto.randomUUID(),
+        processedCount: 0,
+        totalItems: count,
+        targetSnapshotCount: 0,
+        targetMirrorBatchId: resolvedTarget.mirrorBatchId,
+        scheduledAt,
+        scheduledUndoAt,
+        type: "Scheduled edit",
+        queryFilter: JSON.stringify(resolvedTarget.where),
+        rules: [
+          {
+            field: editedField,
+            value,
+            editOption: editedBy,
+            searchKey,
+            replaceText,
+            supportValue,
+            locationId: locationId ?? null,
+          },
+        ],
+        startedAt: new Date(),
+        durationMs: 0,
+        batch: {
+          frozen: true,
+          hasMore: count > 0,
+          lastProductId: null,
+          size: 75,
+          previewCount: count,
+          currentBatchTargetCount: 0,
+          queuedAt: new Date().toISOString(),
+        },
+        undo: buildPlannedUndoState({
+          allowed: undoAllowed,
+        }),
+      },
+    });
+
+    const frozenCount = await bulkService.freezeEditHistoryTargets(history.id);
+
+    await prisma.editHistory.update({
+      where: { id: history.id },
+      data: {
+        totalItems: frozenCount,
+        targetSnapshotCount: frozenCount,
+        batch: {
+          frozen: true,
+          hasMore: frozenCount > 0,
+          lastProductId: null,
+          size: 75,
+          previewCount: count,
+          currentBatchTargetCount: 0,
+          queuedAt: new Date().toISOString(),
+        },
+      },
+    });
+
+    await scheduledEditQueue.add(
+      "scheduled-task",
+      { historyId: history.id, shop: session.shop },
+      { delay, jobId: `scheduled-edit:${session.shop}:${history.id}` },
+    );
+
+    if (scheduledUndoAt && scheduledUndoAt.getTime() > Date.now() && undoAllowed) {
+      const undoDelay = scheduledUndoAt.getTime() - Date.now();
+      if (undoDelay > 0) {
+        await scheduledEditQueue.add(
+          "undo-task",
+          { historyId: history.id, shop: session.shop },
+          { delay: undoDelay, jobId: `scheduled-undo:${session.shop}:${history.id}` },
+        );
+      }
+    }
 
     return res.status(201).json({
       message: "Scheduled successfully",
       history,
     });
   } catch (err) {
-    const statusCode = err?.statusCode || 500;
-
     await logApiError({
       shop: session?.shop,
       err,
@@ -396,22 +379,9 @@ export const createScheduledEdit = async (req, res) => {
       source: "POST /api/scheduled-edit",
     });
 
-    if (statusCode >= 500) {
-      return res.status(500).json({
-        error: "Failed to create scheduled edit",
-      });
-    }
-
-    if (err?.code) {
-      return res.status(statusCode).json({
-        success: false,
-        message: err.userMessage || err.message,
-        code: err.code,
-      });
-    }
-
-    return res.status(statusCode).json({
-      error: err.userMessage || err.message,
+    return res.status(500).json({
+      message: err.message || "Failed to create scheduled edit",
+      error: "Failed to create scheduled edit",
     });
   }
 };

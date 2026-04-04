@@ -5,44 +5,8 @@ import { getCache, setCache } from "../utils/cacheUtils.js";
 import { logApiError } from "../utils/errorLogUtils.js";
 import { prisma } from "../config/database.js";
 import { getStoreMirrorState } from "../services/mirrorHealthService.js";
-import { trackFilterUsage } from "../services/productQueryTrackingService.js";
-import { normalizeCanonicalFilterParams } from "../services/productService/productFilterContract.js";
 
 const productService = new Services();
-const MAX_SEARCH_LENGTH = 100;
-const FILTER_VALUE_FIELDS = new Set([
-  "vendor",
-  "tag",
-  "product_type",
-  "category",
-  "option_name_1",
-  "option_name_2",
-  "option_name_3",
-  "collection",
-  "googleShoppingCategory",
-  "googleShoppingColor",
-  "googleShoppingCustomLabel0",
-  "googleShoppingCustomLabel1",
-  "googleShoppingCustomLabel2",
-  "googleShoppingCustomLabel3",
-  "googleShoppingCustomLabel4",
-  "googleShoppingMpn",
-  "googleShoppingMaterial",
-  "googleShoppingSize",
-  "categoryAgeGroup",
-  "categoryColor",
-  "categoryFabric",
-  "categoryFit",
-  "categorySize",
-  "categoryTargetGender",
-  "categoryWaistRise",
-  "option_value_1",
-  "option_value_2",
-  "option_value_3",
-  "country_of_origin",
-  "inventory_policy",
-  "weight_unit",
-]);
 
 function successOptionResponse(message, data) {
   return {
@@ -53,109 +17,36 @@ function successOptionResponse(message, data) {
   };
 }
 
-function buildHttpError(statusCode, message) {
-  const error = new Error(message);
-  error.statusCode = statusCode;
-  error.userMessage = message;
-  return error;
-}
-
-function getSessionShop(res) {
+/**
+ * GET /api/products
+ * Product listing with filters (still backed by your Mongo/PG filter engine in Services)
+ * Only tracking (FilterTrack) is converted to Prisma here.
+ */
+export const getProductsWithQuery = async (req, res) => {
   const session = res.locals.shopify?.session;
-  const shop = session?.shop;
-
-  if (!shop) {
-    throw buildHttpError(401, "Session expired. Please reload the app.");
-  }
-
-  return { session, shop };
-}
-
-function normalizeSearch(value) {
-  if (typeof value !== "string") {
-    return "";
-  }
-
-  return value.trim().slice(0, MAX_SEARCH_LENGTH);
-}
-
-function normalizePositiveInteger(value, fallback, { min = 1, max = 250 } = {}) {
-  const parsed = Number.parseInt(value, 10);
-  if (!Number.isFinite(parsed)) {
-    return fallback;
-  }
-
-  return Math.min(Math.max(parsed, min), max);
-}
-
-function normalizeQueryParams(query = {}) {
-  const allowedSortKeys = new Set([
-    "CREATED_AT",
-    "ID",
-    "INVENTORY_TOTAL",
-    "PRODUCT_TYPE",
-    "PUBLISHED_AT",
-    "TITLE",
-    "UPDATED_AT",
-    "VENDOR",
-    "",
-    undefined,
-    null,
-  ]);
-
-  const normalizedSortKey = allowedSortKeys.has(query.sortKey)
-    ? query.sortKey || undefined
-    : undefined;
-  const normalizedSortOrder = query.sortOrder === "asc" ? "asc" : "desc";
-
-  return {
-    ...query,
-    page: normalizePositiveInteger(query.page, 1, { min: 1, max: 10000 }),
-    limit: normalizePositiveInteger(query.limit, 20, { min: 1, max: 100 }),
-    sortKey: normalizedSortKey,
-    sortOrder: normalizedSortOrder,
-    search: normalizeSearch(query.search),
-  };
-}
-
-function normalizeFilterParams(filterParams) {
-  try {
-    return normalizeCanonicalFilterParams(filterParams);
-  } catch (error) {
-    throw buildHttpError(400, error.message || "Invalid filter parameters.");
-  }
-}
-
-function normalizeFieldParam(field) {
-  const normalizedField = String(field || "").trim();
-
-  if (!FILTER_VALUE_FIELDS.has(normalizedField)) {
-    throw buildHttpError(400, "Unsupported filter field.");
-  }
-
-  return normalizedField;
-}
-
-export const getProductsWithQuery = asyncHandler(async (req, res) => {
-  const { shop } = getSessionShop(res);
-  const normalizedQueryParams = normalizeQueryParams(req.query);
-  const normalizedFilterParams = normalizeFilterParams(req.body?.filterParams);
 
   try {
-    const [result, mirrorState] = await Promise.all([
-      productService.getProductsWithFilters({
-        queryParams: normalizedQueryParams,
-        filterParams: normalizedFilterParams,
-        shop,
-      }),
-      getStoreMirrorState(shop),
-    ]);
+    if (!session) {
+      return res.status(403).json(errorResponse("Session expired"));
+    }
 
-    trackFilterUsage({
-      shop,
-      filterParams: normalizedFilterParams,
-      respondProductCount: result?.count || 0,
+    const result = await productService.getProductsWithFilters({
+      queryParams: req.query,
+      filterParams: req.body.filterParams,
+      shop: session.shop,
     });
+    const mirrorState = await getStoreMirrorState(session.shop);
+
+    if (process.env.NODE_ENV === "production") {
+      await prisma.filterTrack.create({
+        data: {
+          shop: session.shop,
+          filterParams: req.body?.filterParams || {},
+          respondProductCount: result?.count || 0,
+          type: "filter",
+        },
+      });
+    }
 
     return res
       .status(200)
@@ -165,7 +56,7 @@ export const getProductsWithQuery = asyncHandler(async (req, res) => {
       }));
   } catch (err) {
     await logApiError({
-      shop,
+      shop: session?.shop,
       err,
       req,
       source: "GET /api/products",
@@ -173,21 +64,13 @@ export const getProductsWithQuery = asyncHandler(async (req, res) => {
 
     return res.status(500).json(errorResponse("Failed to fetch products"));
   }
-});
+};
 
 export const checkEditStatus = asyncHandler(async (req, res) => {
-  const { shop } = getSessionShop(res);
-  const id = String(req.params.id || "").trim();
+  const id = req.params.id;
 
-  if (!id) {
-    return res.status(400).json(errorResponse("Edit history id is required"));
-  }
-
-  const history = await prisma.editHistory.findFirst({
-    where: {
-      id,
-      shop,
-    },
+  const history = await prisma.editHistory.findUnique({
+    where: { id },
     select: {
       processedCount: true,
       totalItems: true,
@@ -195,30 +78,39 @@ export const checkEditStatus = asyncHandler(async (req, res) => {
     },
   });
 
-  if (!history) {
-    return res.status(404).json(errorResponse("Edit history not found"));
+  if (history) {
+    return res.status(200).json({
+      rootObjectCount: history.processedCount,
+      totalItems: history.totalItems,
+      duration: history.durationMs,
+    });
   }
 
   return res.status(200).json({
-    rootObjectCount: history.processedCount,
-    totalItems: history.totalItems,
-    duration: history.durationMs,
+    status: "not_found",
+    message: "No history found",
   });
 });
 
-export const getProductTypes = asyncHandler(async (req, res) => {
-  const { shop } = getSessionShop(res);
-  const search = normalizeSearch(req.query.search);
-  const cacheKey = `${shop}:productTypes:${search.toLowerCase()}`;
-  const cached = await getCache(cacheKey);
-
-  if (cached) {
-    return res
-      .status(200)
-      .json(successOptionResponse("Product types fetched from cache", cached));
-  }
-
+export const getProductTypes = async (req, res) => {
   try {
+    const { search = "" } = req.query;
+    const session = res.locals.shopify?.session;
+
+    if (!session?.shop) {
+      return res.status(401).json({ message: "Shopify session missing" });
+    }
+
+    const shop = session.shop;
+    const cacheKey = `${shop}:productTypes:${search.toLowerCase()}`;
+    const cached = await getCache(cacheKey);
+
+    if (cached) {
+      return res
+        .status(200)
+        .json(successOptionResponse("Product types fetched from cache", cached));
+    }
+
     const productTypes = await productService.getDistinctProductFilterValues({
       shop,
       field: "product_type",
@@ -235,25 +127,27 @@ export const getProductTypes = asyncHandler(async (req, res) => {
       ),
     );
   } catch (error) {
-    await logApiError({
-      shop,
-      err: error,
-      req,
-      source: "GET /api/products/product-type-all",
+    return res.status(500).json({
+      error: error.message,
+      message: "Failed to fetch product types",
     });
-
-    return res.status(500).json(errorResponse("Failed to fetch product types"));
   }
-});
+};
 
-export const getProductFilterValues = asyncHandler(async (req, res) => {
-  const { shop } = getSessionShop(res);
-  const field = normalizeFieldParam(req.params.field);
-  const search = normalizeSearch(req.query.search);
+export const getProductFilterValues = async (req, res) => {
+  const session = res.locals.shopify?.session;
 
   try {
+    if (!session?.shop) {
+      return res.status(401).json({ message: "Shopify session missing" });
+    }
+
+    const field = String(req.params.field || "").trim();
+    const search =
+      typeof req.query.search === "string" ? req.query.search.trim() : "";
+
     const data = await productService.getDistinctProductFilterValues({
-      shop,
+      shop: session.shop,
       field,
       search,
       take: 20,
@@ -263,15 +157,9 @@ export const getProductFilterValues = asyncHandler(async (req, res) => {
       .status(200)
       .json(successOptionResponse("Product filter values fetched successfully", data));
   } catch (error) {
-    await logApiError({
-      shop,
-      err: error,
-      req,
-      source: `GET /api/products/filter-values/${field}`,
+    return res.status(400).json({
+      error: error.message,
+      message: "Failed to fetch product filter values",
     });
-
-    return res
-      .status(500)
-      .json(errorResponse("Failed to fetch product filter values"));
   }
-});
+};

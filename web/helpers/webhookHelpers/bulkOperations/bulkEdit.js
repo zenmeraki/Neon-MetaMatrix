@@ -12,7 +12,6 @@ import { prisma } from "../../../config/database.js";
 import { finalizeRecurringRunFromHistory } from "../../../services/recurringEditExecutionService.js";
 import { finalizeAutomaticProductRuleRunFromHistory } from "../../../services/automaticProductRuleExecutionService.js";
 import { adminGraphqlWithRetry } from "../../../utils/shopifyAdminApi.js";
-import { buildQueueExecutionPayload } from "../../../utils/executionIdentity.js";
 import {
   BULK_EDIT_EXECUTION_STATES,
   BULK_UNDO_STATES,
@@ -435,16 +434,12 @@ async function finalizeEditSuccess(history) {
       },
     });
 
-    await addbulkEditJob(
-      buildQueueExecutionPayload(
-        {
-          historyId: history.id,
-          shop: history.shop,
-          source: "bulk_edit_continuation",
-        },
-        history,
-      ),
-    );
+    await addbulkEditJob({
+      historyId: history.id,
+      shop: history.shop,
+      source: "bulk_edit_continuation",
+      executionId: history.executionIdentity || history.id,
+    });
 
     return { continued: true };
   }
@@ -527,19 +522,12 @@ async function finalizeUndoSuccess(history) {
       },
     });
 
-    await addbulkUndoJob(
-      buildQueueExecutionPayload(
-        {
-          historyId: history.id,
-          shop: history.shop,
-          source: "bulk_undo_continuation",
-        },
-        {
-          id: history.id,
-          executionIdentity: undo.executionIdentity || history.executionIdentity,
-        },
-      ),
-    );
+    await addbulkUndoJob({
+      historyId: history.id,
+      shop: history.shop,
+      source: "bulk_undo_continuation",
+      executionId: undo.executionIdentity || history.executionIdentity || history.id,
+    });
 
     return { continued: true };
   }
@@ -648,8 +636,9 @@ export async function handleProductEditOperation({ bulkOperationId, shop = null 
     return { success: false, reason: "bulk_operation_failed" };
   }
 
+  await applyBulkMirrorUpdates(history, bulkOperation);
+
   if (claimKind === "edit") {
-    await applyBulkMirrorUpdates(history, bulkOperation);
     const result = await finalizeEditSuccess(history);
     await clearKeyCaches(`${history.shop}:historyDetails:${history.id}`);
     return { success: true, continued: result.continued, kind: "edit" };
@@ -782,32 +771,21 @@ async function processNextEdit(shop) {
 
   if (nextEdit.status === "Undo pending") {
     const undo = normalizeUndoState(nextEdit.undo);
-    await addbulkUndoJob(
-      buildQueueExecutionPayload(
-        {
-          historyId: nextEdit.id,
-          shop: nextEdit.shop,
-          source: "bulk_edit_followup_undo",
-        },
-        {
-          id: nextEdit.id,
-          executionIdentity: undo.executionIdentity || nextEdit.executionIdentity,
-        },
-      ),
-    );
+    await addbulkUndoJob({
+      historyId: nextEdit.id,
+      shop: nextEdit.shop,
+      source: "bulk_edit_followup_undo",
+      executionId: undo.executionIdentity || nextEdit.executionIdentity || nextEdit.id,
+    });
     return;
   }
 
-  await addbulkEditJob(
-    buildQueueExecutionPayload(
-      {
-        historyId: nextEdit.id,
-        shop: nextEdit.shop,
-        source: "bulk_edit_followup",
-      },
-      nextEdit,
-    ),
-  );
+  await addbulkEditJob({
+    historyId: nextEdit.id,
+    shop: nextEdit.shop,
+    source: "bulk_edit_followup",
+    executionId: nextEdit.executionIdentity || nextEdit.id,
+  });
 }
 
 async function fetchBulkOperationDetails(session, bulkOperationId) {

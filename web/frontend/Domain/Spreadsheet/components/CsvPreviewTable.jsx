@@ -1,15 +1,11 @@
 import { Card, Text, Select, DataTable, BlockStack, InlineStack } from "@shopify/polaris";
-import { useTranslation } from "react-i18next";
-import { getProductFields } from "../constants";
+import { productFields } from "../constants";
 
 export default function CsvPreviewTable({
     parsedData,
     columnMappings,
     onMappingChange,
 }) {
-    const { t } = useTranslation();
-    const productFields = getProductFields(t);
-
     if (!parsedData.length) return null;
 
     const headers = Object.keys(parsedData[0]);
@@ -17,11 +13,7 @@ export default function CsvPreviewTable({
     return (
         <Card>
             <BlockStack gap="300">
-                <Text variant="headingSm">
-                    {t("spreadsheetPreviewMapColumns", {
-                        defaultValue: "Preview & Map Columns",
-                    })}
-                </Text>
+                <Text variant="headingSm">Preview & Map Columns</Text>
 
                 <DataTable
                     columnContentTypes={headers.map(() => "text")}
@@ -55,21 +47,17 @@ export default function CsvPreviewTable({
 
                 <InlineStack align="space-between">
                     <Text tone="subdued">
-                        {t("spreadsheetRowsLoaded", {
-                            defaultValue: "{{count}} rows loaded",
-                            count: parsedData.length,
-                        })}
+                        {parsedData.length} rows loaded
                     </Text>
 
                     <Text tone="subdued">
-                        {t("spreadsheetColumnsMapped", {
-                            defaultValue: "{{count}} columns mapped",
-                            count: Object.values({
+                        {
+                            Object.values({
                                 ...columnMappings,
                                 [headers[0]]: "id",
                                 [headers[1]]: "variant_id",
-                            }).filter(Boolean).length,
-                        })}
+                            }).filter(Boolean).length
+                        } columns mapped
                     </Text>
                 </InlineStack>
             </BlockStack>

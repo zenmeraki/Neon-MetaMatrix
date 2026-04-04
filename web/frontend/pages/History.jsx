@@ -1,5 +1,10 @@
 import HistoryPage from "../Domain/History/pages/HistoryPage";
+import { Frame } from "@shopify/polaris"
 
 export default function History() {
-  return <HistoryPage />;
+  return (
+    <Frame>
+          <HistoryPage />
+    </Frame>
+  )
 }

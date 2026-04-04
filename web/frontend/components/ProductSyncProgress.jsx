@@ -19,7 +19,6 @@ import {
   AlertCircleIcon,
 } from "@shopify/polaris-icons";
 import { useNavigate } from "react-router-dom";
-import { authenticatedFetch } from "../hooks/useAuthenticatedFetch";
 
 export default function ProductSyncPage({verifyStoreAccess}) {
   const navigate = useNavigate()
@@ -39,7 +38,7 @@ export default function ProductSyncPage({verifyStoreAccess}) {
   useEffect(() => {
     const pollInterval = setInterval(async () => {
       try {
-        const response = await authenticatedFetch(`/api/sync/product-track`);
+        const response = await fetch(`/api/sync/product-track`);
 
         if (!response.ok) throw new Error("Failed to fetch");
 

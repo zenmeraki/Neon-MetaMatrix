@@ -1,10 +1,6 @@
 // web/frontend/components/ErrorBoundary.tsx
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { Banner, InlineStack, Text } from '@shopify/polaris';
-import {
-  authenticatedFetch,
-  redirectToAuthWithReturnTo,
-} from '../../hooks/useAuthenticatedFetch';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -20,15 +16,6 @@ interface ErrorBoundaryState {
 }
 
 const MAX_RETRY = 3;
-
-function isSessionRecoveryError(error?: Error) {
-  const message = String(error?.message || "").toLowerCase();
-  return (
-    message.includes("session expired") ||
-    message.includes("shopify session missing") ||
-    message.includes("unauthorized")
-  );
-}
 
 class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   public state: ErrorBoundaryState = {
@@ -79,14 +66,10 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     });
   };
 
-  public reconnect = () => {
-    redirectToAuthWithReturnTo();
-  };
-
   // Report to your own logging endpoint
   private async reportError(error: Error, errorInfo: ErrorInfo) {
     try {
-      await authenticatedFetch('/api/log-error', {
+      await fetch('/api/log-error', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -118,7 +101,6 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 
       // Determine if we can still retry
       const canRetry = retryCount < MAX_RETRY;
-      const canReconnect = isSessionRecoveryError(error);
 
       // Build a clear context message
       const contextMsg = context
@@ -129,12 +111,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
         <Banner
           status="critical"
           action={
-            canReconnect
-              ? {
-                  content: "Reconnect Shopify",
-                  onAction: this.reconnect,
-                }
-              : canRetry
+            canRetry
               ? {
                   content: `Try Again (${retryCount + 1}/${MAX_RETRY})`,
                   onAction: this.retry,

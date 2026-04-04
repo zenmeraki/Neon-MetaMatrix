@@ -24,23 +24,8 @@ import {
 } from "./productTargetingService.js";
 import {
   BULK_EDIT_EXECUTION_STATES,
-  appendExecutionError,
-  buildExecutionError,
   buildPlannedUndoState,
 } from "../bulkEditExecutionStateService.js";
-import {
-  createIdempotencyFingerprint,
-  stableStringify,
-  withAdvisoryLock,
-} from "../../utils/idempotencyUtils.js";
-import logger from "../../utils/loggerUtils.js";
-import {
-  bindOperationFingerprintToResource,
-  markOperationFingerprintFailed,
-  reserveOperationFingerprint,
-} from "../operationFingerprintService.js";
-import { persistEditHistoryTargetingMetadata } from "../historyTargetingMetadataService.js";
-import { buildQueueExecutionPayload } from "../../utils/executionIdentity.js";
 
 const OPTION_NAME_FIELDS = new Set([
   "option1Name",
@@ -105,6 +90,141 @@ function determineMutationMode(fields = []) {
   return PRODUCT_SET_MODE.PRODUCT_ONLY;
 }
 
+function normalizeMirrorProductForPreview(rawProduct) {
+  const options = Array.isArray(rawProduct?.options)
+    ? rawProduct.options
+    : Array.isArray(rawProduct?.optionsJson)
+      ? rawProduct.optionsJson
+      : [];
+
+  const variants = Array.isArray(rawProduct?.variants)
+    ? rawProduct.variants.map((variant) => ({
+        ...variant,
+        selectedOptions: Array.isArray(variant?.selectedOptions)
+          ? variant.selectedOptions
+          : Array.isArray(variant?.selectedOptionsJson)
+            ? variant.selectedOptionsJson
+            : [],
+      }))
+    : [];
+
+  return {
+    ...rawProduct,
+    options,
+    variants,
+    seo: {
+      title: rawProduct?.seo?.title ?? rawProduct?.seoTitle ?? "",
+      description: rawProduct?.seo?.description ?? rawProduct?.seoDescription ?? "",
+    },
+    category: rawProduct?.category ?? (
+      rawProduct?.categoryId || rawProduct?.categoryName
+        ? {
+            id: rawProduct.categoryId ?? null,
+            name: rawProduct.categoryName ?? "",
+          }
+        : null
+    ),
+    collections: Array.isArray(rawProduct?.collections)
+      ? rawProduct.collections
+      : Array.isArray(rawProduct?.collectionsJson)
+        ? rawProduct.collectionsJson
+        : [],
+    featuredMedia: rawProduct?.featuredMedia ?? (
+      rawProduct?.featuredImageUrl
+        ? {
+            preview: {
+              image: {
+                url: rawProduct.featuredImageUrl,
+              },
+            },
+          }
+        : null
+    ),
+  };
+}
+
+function normalizeMirrorVariantForPreview(variant) {
+  return {
+    ...variant,
+    selectedOptions: Array.isArray(variant?.selectedOptions)
+      ? variant.selectedOptions
+      : Array.isArray(variant?.selectedOptionsJson)
+        ? variant.selectedOptionsJson
+        : [],
+  };
+}
+
+function groupFallbackVariantsByProduct(variants) {
+  const grouped = new Map();
+
+  for (const variant of variants) {
+    const productId = variant?.productId;
+    if (!productId) continue;
+
+    const bucket = grouped.get(productId) || new Map();
+    const batchKey = variant?.mirrorBatchId || "legacy";
+    const items = bucket.get(batchKey) || [];
+    items.push(normalizeMirrorVariantForPreview(variant));
+    bucket.set(batchKey, items);
+    grouped.set(productId, bucket);
+  }
+
+  const resolved = new Map();
+  for (const [productId, batches] of grouped.entries()) {
+    if (batches.has("legacy")) {
+      resolved.set(productId, batches.get("legacy"));
+      continue;
+    }
+
+    const [firstBatchVariants] = batches.values();
+    resolved.set(productId, firstBatchVariants || []);
+  }
+
+  return resolved;
+}
+
+async function hydrateMissingVariantsForProducts(products, shop) {
+  const list = Array.isArray(products) ? products : [];
+  const missingProductIds = list
+    .filter((product) => Array.isArray(product?.variants) && product.variants.length === 0)
+    .map((product) => product.id)
+    .filter(Boolean);
+
+  if (!missingProductIds.length) {
+    return list;
+  }
+
+  const fallbackVariants = await prisma.variant.findMany({
+    where: {
+      shop,
+      productId: { in: missingProductIds },
+    },
+    orderBy: [{ productId: "asc" }, { mirrorBatchId: "asc" }, { position: "asc" }],
+  });
+
+  if (!fallbackVariants.length) {
+    return list;
+  }
+
+  const fallbackByProduct = groupFallbackVariantsByProduct(fallbackVariants);
+
+  return list.map((product) => {
+    if (!Array.isArray(product?.variants) || product.variants.length > 0) {
+      return product;
+    }
+
+    const fallback = fallbackByProduct.get(product.id);
+    if (!fallback?.length) {
+      return product;
+    }
+
+    return {
+      ...product,
+      variants: fallback,
+    };
+  });
+}
+
 function normalizeRules(body) {
   const {
     editedType,
@@ -153,37 +273,6 @@ async function buildHistoryTitle(rules) {
   return createMultiLanguage(updatedTitle || "Bulk edit");
 }
 
-async function markBulkEditKickoffFailed(historyId, shop, error) {
-  const existing = await prisma.editHistory.findFirst({
-    where: { id: historyId, shop },
-    select: { error: true },
-  });
-
-  await prisma.editHistory.updateMany({
-    where: {
-      id: historyId,
-      shop,
-      bulkOperationId: null,
-      status: { in: ["pending", "processing"] },
-    },
-    data: {
-      status: "failed",
-      executionState: BULK_EDIT_EXECUTION_STATES.FAILED,
-      failureStage: "queue_enqueue",
-      completedAt: new Date(),
-      error: appendExecutionError(
-        existing?.error,
-        buildExecutionError({
-          code: "bulk_edit_queue_failure",
-          stage: "queue_enqueue",
-          message: error.message,
-          retryable: true,
-        }),
-      ),
-    },
-  });
-}
-
 export default class ProductBulkService {
   constructor(session) {
     this.client = new shopify.api.clients.Graphql({ session });
@@ -196,120 +285,36 @@ export default class ProductBulkService {
         req.body,
         req.subscription || {},
       );
-      const fingerprint = createIdempotencyFingerprint("manual_bulk_edit", {
-        shop: historyData.shop,
-        queryFilter: historyData.queryFilter,
-        rules: historyData.rules,
-        locationId: historyData.locationId ?? null,
-        targetMirrorBatchId: historyData.targetMirrorBatchId ?? null,
+
+      const history = await prisma.editHistory.create({
+        data: historyData,
       });
 
-      const { result } = await withAdvisoryLock(
-        `manual-bulk-edit:${historyData.shop}:${fingerprint}`,
-        async () => {
-          const reservation = await reserveOperationFingerprint({
-            shop: historyData.shop,
-            operationType: "manual_bulk_edit",
-            fingerprint,
-            resourceType: "EDIT_HISTORY",
-          });
+      const frozenCount = await this.freezeEditHistoryTargets(history.id);
 
-          if (reservation?.resourceId) {
-            const existing = await prisma.editHistory.findFirst({
-              where: {
-                id: reservation.resourceId,
-                shop: historyData.shop,
-                status: {
-                  in: ["pending", "processing"],
-                },
-              },
-            });
-
-            if (existing) {
-              return existing;
-            }
-          }
-
-          const history = await prisma.editHistory.create({
-            data: historyData,
-          });
-
-          await persistEditHistoryTargetingMetadata({
-            historyId: history.id,
-            filterParams: req.body?.filterParams ?? [],
-          });
-
-          await bindOperationFingerprintToResource({
-            shop: history.shop,
-            operationType: "manual_bulk_edit",
-            fingerprint,
-            resourceId: history.id,
-          });
-
-          const frozenCount = await this.freezeEditHistoryTargets(history.id);
-
-          await prisma.editHistory.update({
-            where: { id: history.id },
-            data: {
-              totalItems: frozenCount,
-              targetSnapshotCount: frozenCount,
-            },
-          });
-
-          try {
-            await addbulkEditJob(
-              buildQueueExecutionPayload(
-                {
-                  historyId: history.id,
-                  shop: history.shop,
-                  source: "manual_bulk_edit",
-                },
-                history,
-              ),
-            );
-          } catch (error) {
-            await markBulkEditKickoffFailed(history.id, history.shop, error);
-            await markOperationFingerprintFailed({
-              shop: history.shop,
-              operationType: "manual_bulk_edit",
-              fingerprint,
-              error,
-            });
-            throw error;
-          }
-
-          await prisma.editHistory.updateMany({
-            where: {
-              id: history.id,
-              shop: history.shop,
-              bulkOperationId: null,
-              executionState: BULK_EDIT_EXECUTION_STATES.PLANNED,
-            },
-            data: {
-              executionState: BULK_EDIT_EXECUTION_STATES.QUEUED,
-            },
-          });
-
-          await clearKeyCaches(`${history.shop}:fetchHistories`).catch((error) => {
-            logger.warn("Failed to clear bulk edit history cache after queue", {
-              shop: history.shop,
-              historyId: history.id,
-              message: error.message,
-            });
-          });
-
-          return prisma.editHistory.findFirst({
-            where: {
-              id: history.id,
-              shop: history.shop,
-            },
-          });
+      await prisma.editHistory.update({
+        where: { id: history.id },
+        data: {
+          totalItems: frozenCount,
+          targetSnapshotCount: frozenCount,
+          executionState: BULK_EDIT_EXECUTION_STATES.QUEUED,
         },
-      );
+      });
 
-      return result;
+      await clearKeyCaches(`${history.shop}:fetchHistories`);
+
+      await addbulkEditJob({
+        historyId: history.id,
+        shop: history.shop,
+        source: "manual_bulk_edit",
+        executionId: history.executionIdentity,
+      });
+
+      return prisma.editHistory.findUnique({
+        where: { id: history.id },
+      });
     } catch (error) {
-      throw error;
+      throw new Error(error.message);
     }
   }
 
@@ -336,8 +341,7 @@ export default class ProductBulkService {
         page: 1,
         limit: 20,
       },
-      sampleLimit: 0,
-      includeSample: false,
+      sampleLimit: 20,
     });
 
     const count = resolvedTarget.count;
@@ -383,12 +387,9 @@ export default class ProductBulkService {
     };
   }
 
-  async freezeEditHistoryTargets(historyId, shop = this.session?.shop) {
-    const history = await prisma.editHistory.findFirst({
-      where: {
-        id: historyId,
-        ...(shop ? { shop } : {}),
-      },
+  async freezeEditHistoryTargets(historyId) {
+    const history = await prisma.editHistory.findUnique({
+      where: { id: historyId },
       select: {
         shop: true,
         queryFilter: true,
@@ -401,13 +402,7 @@ export default class ProductBulkService {
       throw new Error("Edit history not found");
     }
 
-    let where;
-    try {
-      where = JSON.parse(history.queryFilter || "{}");
-    } catch {
-      throw new Error("Stored edit target is invalid");
-    }
-
+    const where = JSON.parse(history.queryFilter || "{}");
     const frozenCount = await freezeTargetSnapshot({
       ownerType: "EDIT_HISTORY",
       ownerId: historyId,
@@ -497,16 +492,13 @@ export default class ProductBulkService {
 
       return result;
     } catch (err) {
-      throw err;
+      throw new Error(err.message);
     }
   }
 
-  async _preparingBulkOperation({ historyId, shop = this.session?.shop }) {
-    const history = await prisma.editHistory.findFirst({
-      where: {
-        id: historyId,
-        ...(shop ? { shop } : {}),
-      },
+  async _preparingBulkOperation({ historyId }) {
+    const history = await prisma.editHistory.findUnique({
+      where: { id: historyId },
       select: {
         shop: true,
         batch: true,
@@ -554,7 +546,7 @@ export default class ProductBulkService {
     const include = buildProductInclude(fields);
     const orderedIds = rows.map((row) => row.productId);
 
-    const products = await prisma.product.findMany({
+    let products = await prisma.product.findMany({
       where: {
         shop: history.shop,
         id: {
@@ -568,6 +560,10 @@ export default class ProductBulkService {
       },
       ...(include ? { include } : {}),
     });
+
+    if (include?.variants) {
+      products = await hydrateMissingVariantsForProducts(products, history.shop);
+    }
 
     const productsById = new Map(products.map((product) => [product.id, product]));
     const formattedProducts = [];
@@ -651,14 +647,12 @@ export default class ProductBulkService {
     try {
       const changes = [];
       const isVariant = isVariantLevelField(field);
-      const include = buildProductInclude([field]);
 
       const target = await resolveCanonicalProductTarget({
         shop: this.session.shop,
         filterParams,
         queryParams: { page, limit },
         sampleLimit: Number.parseInt(limit, 10) || 20,
-        sampleInclude: include || undefined,
       });
 
       const productLimit = subscription?.limit || 100;
@@ -682,18 +676,29 @@ export default class ProductBulkService {
         }
       }
 
+      const include = buildProductInclude([field]);
+      const productIds = target.sampleProducts.map((product) => product.id);
+      let products = await prisma.product.findMany({
+        where: {
+          shop: this.session.shop,
+          id: { in: productIds },
+          ...(target.mirrorBatchId ? { mirrorBatchId: target.mirrorBatchId } : {}),
+        },
+        ...(include ? { include } : {}),
+      });
+
+      if (include?.variants) {
+        products = await hydrateMissingVariantsForProducts(products, this.session.shop);
+      }
+
+      const productMap = new Map(products.map((product) => [product.id, product]));
       const formattedProducts = [];
 
       for (const targetProduct of target.sampleProducts) {
-        const product = {
-          ...targetProduct,
-          variants: Array.isArray(targetProduct.variants) ? targetProduct.variants : [],
-          options: Array.isArray(targetProduct.options)
-            ? targetProduct.options
-            : Array.isArray(targetProduct.optionsJson)
-              ? targetProduct.optionsJson
-              : [],
-        };
+        const rawProduct = productMap.get(targetProduct.id);
+        if (!rawProduct) continue;
+
+        const product = normalizeMirrorProductForPreview(rawProduct);
 
         const result = getUpdatedProducts({
           product,
@@ -724,7 +729,7 @@ export default class ProductBulkService {
         subscription: subscriptionWarning ? { warning: subscriptionWarning } : {},
       };
     } catch (err) {
-      throw err;
+      throw new Error(err.message || "Failed to track edit products");
     }
   }
 }

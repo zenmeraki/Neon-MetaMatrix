@@ -1,13 +1,14 @@
-import { PassThrough } from "stream";
+import fs from "fs";
+import os from "os";
+import path from "path";
 import { format } from "@fast-csv/format";
 import { Worker } from "bullmq";
 import logger from "../../utils/loggerUtils.js";
 import { connection } from "../../Config/redis.js";
-import { uploadCsvStreamToCloudinary } from "../../utils/uploadCsvToCloudinary.js";
+import { uploadCsvToCloudinary } from "../../utils/uploadCsvToCloudinary.js";
 import { clearKeyCaches } from "../../utils/cacheUtils.js";
 import { prisma } from "../../config/database.js";
 import { finalizeScheduledExportRunFromExportJob } from "../../services/scheduledExportExecutionService.js";
-import { clearExportHistoryCaches } from "../../services/exportHistoryCacheService.js";
 import { getFrozenTargetProductIds } from "../../services/productService/productTargetingService.js";
 import {
   acquireExclusiveShopWork,
@@ -26,10 +27,6 @@ import {
   buildExportExecutionError,
   isTerminalExportExecutionState,
 } from "../../services/exportExecutionStateService.js";
-import {
-  assertShopActiveForWorker,
-  isSkippableWorkerError,
-} from "../../services/workerSafetyService.js";
 
 const QUEUE_NAME = process.env.EXPORT_QUEUE || "bulk-export";
 const WORKER_NAME = "bulkExportWorker";
@@ -61,70 +58,6 @@ const VARIANT_FIELD_RESOLVERS = {
   variantTitle: (v) => v.title ?? "",
   inventoryQuantity: (v) => v.inventoryQuantity ?? "",
 };
-
-function buildExportProductSelect(fields = []) {
-  const normalizedFields = Array.isArray(fields) ? fields : [];
-
-  const productSelect = {
-    id: true,
-  };
-  const variantSelect = {
-    id: true,
-  };
-
-  for (const field of normalizedFields) {
-    switch (field) {
-      case "title":
-      case "description":
-      case "vendor":
-      case "productType":
-      case "handle":
-      case "status":
-      case "seoTitle":
-      case "seoDescription":
-      case "tags":
-      case "collectionsJson":
-      case "categoryName":
-        productSelect[field] = true;
-        break;
-      case "metaTitle":
-        productSelect.seoTitle = true;
-        break;
-      case "metaDescription":
-        productSelect.seoDescription = true;
-        break;
-      case "collections":
-        productSelect.collectionsJson = true;
-        break;
-      case "category":
-        productSelect.categoryName = true;
-        break;
-      case "price":
-      case "compareAtPrice":
-      case "sku":
-      case "barcode":
-      case "taxable":
-      case "inventoryQuantity":
-        break;
-      case "variantTitle":
-        variantSelect.title = true;
-        break;
-      default:
-        if (field in VARIANT_FIELD_RESOLVERS) {
-          variantSelect[field] = true;
-        }
-        break;
-    }
-  }
-
-  return {
-    ...productSelect,
-    variants: {
-      select: variantSelect,
-      orderBy: { id: "asc" },
-    },
-  };
-}
 
 class RetryableExportError extends Error {
   constructor(message, code = "retryable_export") {
@@ -180,13 +113,6 @@ async function claimExportJob(exportJobId, shop, executionId, jobId, attempt) {
       return { state: "terminal", exportJob: currentJob };
     }
 
-    if (
-      currentJob.executionState === EXPORT_EXECUTION_STATES.FINALIZING &&
-      currentJob.fileUrl
-    ) {
-      return { state: "resume_finalize", exportJob: currentJob };
-    }
-
     if (currentJob.executionState === EXPORT_EXECUTION_STATES.FINALIZING) {
       return { state: "finalizing", exportJob: currentJob };
     }
@@ -195,7 +121,7 @@ async function claimExportJob(exportJobId, shop, executionId, jobId, attempt) {
       currentJob.executionState === EXPORT_EXECUTION_STATES.RUNNING &&
       currentJob.fileUrl
     ) {
-      return { state: "resume_finalize", exportJob: currentJob };
+      return { state: "uploaded_pending_finalize", exportJob: currentJob };
     }
 
     const activeExport = await tx.exportJob.findFirst({
@@ -361,23 +287,6 @@ async function finalizeExportSuccess(exportJob, fileUrl, totalRows) {
   return updated.count === 1;
 }
 
-async function persistUploadedExportArtifact(exportJobId, shop, fileUrl, totalRows) {
-  const updated = await prisma.exportJob.updateMany({
-    where: {
-      id: exportJobId,
-      shop,
-      status: "PROCESSING",
-      executionState: EXPORT_EXECUTION_STATES.FINALIZING,
-    },
-    data: {
-      fileUrl,
-      totalItems: totalRows,
-    },
-  });
-
-  return updated.count === 1;
-}
-
 async function markFinalizing(exportJobId, shop) {
   const updated = await prisma.exportJob.updateMany({
     where: {
@@ -404,11 +313,10 @@ const bulkExportWorker = new Worker(
       throw new Error("bulk export job requires exportJobId, shop, and executionId");
     }
 
+    let filePath = null;
     let shopLockKey = null;
 
     try {
-      await assertShopActiveForWorker(shop);
-
       const lock = await acquireExclusiveShopWork({
         shop,
         activity: "bulk_export_execution",
@@ -436,7 +344,7 @@ const bulkExportWorker = new Worker(
         throw new Error("Export job not found");
       }
 
-      if (["terminal", "not_claimed", "finalizing"].includes(claimResult.state)) {
+      if (["terminal", "not_claimed", "finalizing", "uploaded_pending_finalize"].includes(claimResult.state)) {
         return { skipped: true, reason: claimResult.state, shop, exportJobId };
       }
 
@@ -447,51 +355,17 @@ const bulkExportWorker = new Worker(
         );
       }
 
-      if (claimResult.state === "resume_finalize") {
-        const finalized = await finalizeExportSuccess(
-          exportJob,
-          exportJob.fileUrl,
-          exportJob.totalItems || 0,
-        );
+      await clearKeyCaches(`${shop}:fetchExportHistories:`);
 
-        if (!finalized) {
-          throw new Error("Export finalization could not be resumed safely");
-        }
-
-        await finalizeScheduledExportRunFromExportJob({
-          exportJobId,
-          status: "SUCCESS",
-        }).catch(() => {});
-
-        await clearExportHistoryCaches(shop);
-        return {
-          success: true,
-          exportJobId,
-          totalRows: exportJob.totalItems || 0,
-          shop,
-          resumed: true,
-        };
-      }
-
-      await clearExportHistoryCaches(shop);
-
+      filePath = path.join(os.tmpdir(), exportJob.filename);
+      const writeStream = fs.createWriteStream(filePath);
       const csvStream = format({ headers: true });
-      const uploadInput = new PassThrough();
-      csvStream.pipe(uploadInput);
-      const uploadPromise = uploadCsvStreamToCloudinary(
-        uploadInput,
-        exportJob.id,
-        exportJob.filename,
-      );
+      csvStream.pipe(writeStream);
 
       const pageSize = 500;
       let lastProductId = null;
       let hasMore = true;
       let totalRows = 0;
-      const requestedFields = Array.isArray(fields) && fields.length
-        ? fields
-        : exportJob.fields;
-      const productSelect = buildExportProductSelect(requestedFields);
 
       while (hasMore) {
         const snapshotPage = await getFrozenTargetProductIds({
@@ -515,7 +389,11 @@ const bulkExportWorker = new Worker(
               ? { mirrorBatchId: exportJob.targetMirrorBatchId }
               : {}),
           },
-          select: productSelect,
+          include: {
+            variants: {
+              orderBy: { id: "asc" },
+            },
+          },
         });
 
         const productMap = new Map(products.map((product) => [product.id, product]));
@@ -529,7 +407,7 @@ const bulkExportWorker = new Worker(
           if (!variants.length) {
             const row = { id: productId };
 
-            for (const field of requestedFields) {
+            for (const field of fields || exportJob.fields) {
               const productResolver = PRODUCT_FIELD_RESOLVERS[field];
               if (productResolver) {
                 row[field] = productResolver(product);
@@ -548,7 +426,7 @@ const bulkExportWorker = new Worker(
               variant_id: variant.id,
             };
 
-            for (const field of requestedFields) {
+            for (const field of fields || exportJob.fields) {
               const productResolver = PRODUCT_FIELD_RESOLVERS[field];
               if (productResolver) {
                 row[field] = index === 0 ? productResolver(product) : "";
@@ -569,23 +447,26 @@ const bulkExportWorker = new Worker(
         hasMore = snapshotPage.hasMore;
       }
 
+      csvStream.end();
+
+      await new Promise((resolve, reject) => {
+        writeStream.on("finish", resolve);
+        writeStream.on("error", reject);
+      });
+
       const movedToFinalizing = await markFinalizing(exportJob.id, exportJob.shop);
       if (!movedToFinalizing) {
-        csvStream.destroy(new Error("Export could not transition to finalizing"));
         throw new Error("Export could not transition to finalizing");
       }
 
-      csvStream.end();
-      const fileUrl = await uploadPromise;
-      const persistedArtifact = await persistUploadedExportArtifact(
+      const fileUrl = await uploadCsvToCloudinary(
+        filePath,
         exportJob.id,
-        exportJob.shop,
-        fileUrl,
-        totalRows,
+        exportJob.filename,
       );
-      if (!persistedArtifact) {
-        throw new Error("Uploaded export artifact could not be persisted safely");
-      }
+
+      await fs.promises.unlink(filePath).catch(() => {});
+      filePath = null;
 
       const finalized = await finalizeExportSuccess(exportJob, fileUrl, totalRows);
       if (!finalized) {
@@ -597,7 +478,7 @@ const bulkExportWorker = new Worker(
         status: "SUCCESS",
       }).catch(() => {});
 
-      await clearExportHistoryCaches(shop);
+      await clearKeyCaches(`${shop}:fetchExportHistories:`);
 
       logger.info("Bulk export worker completed export generation", {
         worker: WORKER_NAME,
@@ -665,7 +546,11 @@ const bulkExportWorker = new Worker(
         }).catch(() => {});
       }
 
-      await clearExportHistoryCaches(shop);
+      await clearKeyCaches(`${shop}:fetchExportHistories:`);
+
+      if (filePath) {
+        await fs.promises.unlink(filePath).catch(() => {});
+      }
 
       await logWorkerError({
         shop,
@@ -682,15 +567,6 @@ const bulkExportWorker = new Worker(
           retryable: isRetryableError(error),
         },
       });
-
-      if (isSkippableWorkerError(error)) {
-        return {
-          skipped: true,
-          reason: error.code,
-          shop,
-          exportJobId,
-        };
-      }
 
       throw error;
     } finally {

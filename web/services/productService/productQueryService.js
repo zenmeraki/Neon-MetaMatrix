@@ -10,8 +10,6 @@ import {
   resolveCanonicalProductTarget,
 } from "./productTargetingService.js";
 import { prisma } from "../../config/database.js";
-import { stableStringify } from "../../utils/idempotencyUtils.js";
-import { serializeCanonicalFilterParams } from "./productFilterContract.js";
 
 const FILTER_VALUE_FIELD_MAP = {
   vendor: { source: "product", field: "vendor" },
@@ -80,7 +78,7 @@ export async function getProductsWithFilters({
 }) {
   const { page = 1, limit = 20, sortKey, sortOrder } = queryParams;
 
-  const cacheKey = `${shop}:ProductFetch:${stableStringify(queryParams)}:${serializeCanonicalFilterParams(filterParams)}`;
+  const cacheKey = `${shop}:ProductFetch:${JSON.stringify(queryParams)}:${JSON.stringify(filterParams)}`;
   const cachData = await getCache(cacheKey);
 
   if (cachData) return cachData;
@@ -110,14 +108,12 @@ export async function getDistinctProductFilterValues({
   search = "",
   take = 20,
 }) {
-  const normalizedSearch = typeof search === "string" ? search.trim().slice(0, 100) : "";
-  const normalizedTake = Math.min(Math.max(Number.parseInt(take, 10) || 20, 1), 50);
   const fieldConfig = FILTER_VALUE_FIELD_MAP[field];
   if (!fieldConfig) {
     throw new Error("Unsupported filter field");
   }
 
-  const cacheKey = `${shop}:ProductFilterValues:${field}:${normalizedSearch.toLowerCase()}:${normalizedTake}`;
+  const cacheKey = `${shop}:ProductFilterValues:${field}:${search.toLowerCase()}:${take}`;
   const cachedData = await getCache(cacheKey);
   if (cachedData) return cachedData;
 
@@ -129,16 +125,16 @@ export async function getDistinctProductFilterValues({
       shop,
       field: fieldConfig.field,
       mirrorBatchId,
-      search: normalizedSearch,
-      take: normalizedTake,
+      search,
+      take,
     });
   } else if (fieldConfig.source === "variant") {
     rows = await findDistinctVariantFieldValues({
       shop,
       field: fieldConfig.field,
       mirrorBatchId,
-      search: normalizedSearch,
-      take: normalizedTake,
+      search,
+      take,
     });
   } else if (fieldConfig.source === "collection") {
     const store = await prisma.store.findUnique({
@@ -148,15 +144,14 @@ export async function getDistinctProductFilterValues({
     rows = await findDistinctCollectionTitles({
       shop,
       mirrorBatchId: store?.activeCollectionBatchId || null,
-      search: normalizedSearch,
-      take: normalizedTake,
+      search,
+      take,
     });
   } else if (fieldConfig.source === "product_tags") {
     rows = await findDistinctProductTagValues({
       shop,
-      mirrorBatchId,
-      search: normalizedSearch,
-      take: normalizedTake,
+      search,
+      take,
     });
   }
 
@@ -165,7 +160,7 @@ export async function getDistinctProductFilterValues({
     { splitValues: fieldConfig.splitValues === true },
   );
 
-  await setCache(cacheKey, result, normalizedSearch ? 300 : 1800);
+  await setCache(cacheKey, result, 300);
 
   return result;
 }

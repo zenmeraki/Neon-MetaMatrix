@@ -1,15 +1,17 @@
 import logger from "../../utils/loggerUtils.js";
+import dayjs from "dayjs";
 import { Worker } from "bullmq";
 import { connection } from "../../Config/redis.js";
+import CacheService from "../../utils/cacheService.js";
+import { clearKeyCaches } from "../../utils/cacheUtils.js";
 import {
-  assertShopActiveForWorker,
-  getWebhookEventTimestamp,
-  isSkippableWorkerError,
-} from "../../services/workerSafetyService.js";
+  extractVariantsForPrisma,
+  transformWebhookPayload,
+} from "../../utils/webhookTransformers.js";
+import { enqueueAutomaticProductRuleSignalJob } from "../../services/automaticProductRuleExecutionService.js";
+import { prisma } from "../../config/database.js";
+import { markWebhookProcessed } from "../../services/mirrorHealthService.js";
 import { recordMirrorAnomaly } from "../../services/mirrorAnomalyService.js";
-import { recordProductReconcileSignal } from "../../services/productReconcileSignalService.js";
-import { MIRROR_SOURCE_KINDS } from "../../services/mirrorFreshnessService.js";
-import { addProductReconcileJob } from "../Queues/productReconcileJob.js";
 
 const QueueName =
   process.env.NODE_ENV === "production"
@@ -19,48 +21,105 @@ const QueueName =
 const productCreateWorker = new Worker(
   QueueName,
   async (job) => {
-    const { shop, id, webhookId, ...payload } = job.data || {};
-
     try {
-      if (!shop || !id) {
-        throw new Error("product-create job requires shop and id");
-      }
+      const { shop, id, ...payload } = job.data;
 
-      await assertShopActiveForWorker(shop);
-
-      await recordProductReconcileSignal({
-        shop,
-        productId: id,
-        topic: "PRODUCTS_CREATE",
-        webhookId: webhookId || null,
-        sourceUpdatedAt: payload.updated_at || payload.created_at || null,
-        sourceEventAt: getWebhookEventTimestamp(payload, job.timestamp),
-        sourceKind: MIRROR_SOURCE_KINDS.WEBHOOK_CREATE,
-      });
-
-      await addProductReconcileJob({
-        shop,
-        productId: id,
-        mode: "product",
-        topic: "PRODUCTS_CREATE",
-        webhookId: webhookId || null,
-      });
-
-      return { forwarded: true, productId: id };
-    } catch (err) {
-      if (isSkippableWorkerError(err)) {
+      const cache = await CacheService.get(`${shop}:PRODUCT_CREATE`);
+      if (cache) {
         return {
-          skipped: true,
-          reason: err.code,
+          message:
+            "ignored product create webhook - bulk operation running in background",
         };
       }
 
+      const store = await prisma.store.findUnique({
+        where: { shopUrl: shop },
+        select: { activeMirrorBatchId: true },
+      });
+      const activeMirrorBatchId = store?.activeMirrorBatchId || null;
+
+      const product = transformWebhookPayload(payload, shop);
+      const variants = extractVariantsForPrisma(payload, id, shop);
+
+      await prisma.$transaction(async (tx) => {
+        if (activeMirrorBatchId) {
+          await tx.product.deleteMany({
+            where: {
+              shop,
+              id,
+              mirrorBatchId: activeMirrorBatchId,
+            },
+          });
+        } else {
+          await tx.product.deleteMany({
+            where: {
+              shop,
+              id,
+            },
+          });
+        }
+
+        await tx.product.create({
+          data: {
+            shop,
+            id,
+            mirrorBatchId: activeMirrorBatchId || "legacy",
+            ...product,
+          },
+        });
+
+        await tx.variant.deleteMany({
+          where: {
+            shop,
+            productId: id,
+          },
+        });
+
+        if (variants.length > 0) {
+          await tx.variant.createMany({
+            data: variants.map((variant) => ({
+              shop,
+              id: variant.id,
+              productId: id,
+              mirrorBatchId: activeMirrorBatchId || "legacy",
+              title: variant.title ?? null,
+              sku: variant.sku ?? null,
+              barcode: variant.barcode ?? null,
+              price: variant.price ?? null,
+              compareAtPrice: variant.compareAtPrice ?? null,
+              inventoryQuantity: variant.inventoryQuantity ?? null,
+              inventoryPolicy: variant.inventoryPolicy ?? null,
+              taxable: variant.taxable ?? null,
+              taxCode: variant.taxCode ?? null,
+              position: variant.position ?? null,
+              selectedOptionsJson: variant.selectedOptionsJson ?? null,
+            })),
+          });
+        }
+      });
+
+      await markWebhookProcessed(shop, {
+        lastIncrementalSyncAt: new Date(),
+      }).catch(() => {});
+
+      await clearKeyCaches(`${shop}:ProductFetch:`);
+      await clearKeyCaches(`${shop}:productTypes:`);
+      await clearKeyCaches(`${shop}:ProductFilterValues:`);
+      await enqueueAutomaticProductRuleSignalJob({
+        shop,
+        productIds: [id],
+        triggerReference: `product_create:${id}:${payload.updated_at || payload.created_at || ""}`,
+        triggerSource: "WEBHOOK",
+      });
+
+      return { success: true, productId: id };
+    } catch (err) {
       await recordMirrorAnomaly({
-        shop: shop || "unknown",
+        shop: job.data?.shop || "unknown",
         severity: "high",
-        type: "product_create_forward_failure",
+        type: "product_create_worker_failure",
         entityType: "product",
-        entityId: id || null,
+        entityId: job.data?.id || null,
         message: err.message,
       }).catch(() => {});
       throw err;
@@ -69,17 +128,47 @@ const productCreateWorker = new Worker(
   {
     connection,
     concurrency: 5,
+    limiter: {
+      max: 10,
+      duration: 1000,
+    },
   },
 );
 
-productCreateWorker.on("failed", (job, err) => {
-  logger.error("productCreateWorker failed", {
-    worker: "productCreateWorker",
-    jobId: job?.id,
-    shop: job?.data?.shop,
-    productId: job?.data?.id,
-    message: err?.message || String(err),
-  });
-});
+const logTime = () => `[${dayjs().format("YYYY-MM-DD HH:mm:ss")}]`;
+
+if (process.env.NODE_ENV !== "production") {
+  productCreateWorker
+    .on("error", (err) => {
+      logger.error(
+        `${logTime()} Queue Error in productCreateWorker: ${err.message}`,
+        {
+          stack: err.stack,
+        },
+      );
+    })
+    .on("waiting", (jobId) => {
+      logger.info(
+        `${logTime()} productCreateWorker - Job waiting | Job ID: ${jobId}`,
+      );
+    })
+    .on("active", (job) => {
+      logger.info(
+        `${logTime()} productCreateWorker - Job started | Job ID: ${job.id}`,
+      );
+    })
+    .on("completed", (job, result) => {
+      logger.info(
+        `${logTime()} productCreateWorker - Job completed | Job ID: ${job.id}`,
+        { result },
+      );
+    })
+    .on("failed", (job, err) => {
+      logger.error(
+        `${logTime()} productCreateWorker - Job failed | Job ID: ${job.id} | Error: ${err.message}`,
+        { error: err },
+      );
+    });
+}
 
 export default productCreateWorker;

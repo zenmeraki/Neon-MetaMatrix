@@ -10,7 +10,6 @@ import {
   Frame,
   Toast,
 } from "@shopify/polaris";
-import { authenticatedFetch } from "../../../../hooks/useAuthenticatedFetch";
 
 function ScheduledExportModal({
   show,
@@ -77,7 +76,7 @@ function ScheduledExportModal({
         status: "Active",
       };
 
-      const response = await authenticatedFetch("/api/products/create-scheduled-export", {
+      const response = await fetch("/api/products/create-scheduled-export", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

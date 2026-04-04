@@ -9,7 +9,6 @@ import {
   Divider,
 } from "@shopify/polaris";
 import { useTranslation } from "react-i18next";
-import { i18n as appI18n } from "../../../utils/i18nUtils";
 
 // Lazy-loaded components for better performance
 import DemoVideo from "../components/DemoVideo";
@@ -19,7 +18,7 @@ import MetamatrixCardGroup from "../components/MetamatrixCardGroup";
  * Component to display promotional content
  */
 const PromotionalContent = () => {
-  const { t } = useTranslation(undefined, { i18n: appI18n });
+  const { t } = useTranslation();
 
   return (
     <BlockStack gap="500">

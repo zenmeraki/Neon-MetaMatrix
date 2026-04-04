@@ -18,14 +18,8 @@ import {
 } from "./productSyncTransformers.js";
 import {
   extractMetaobjectIds,
-  fetchMetaobjectLookupByIdsDetailed,
+  fetchMetaobjectLookupByIds,
 } from "./productSyncMetaobjects.js";
-import {
-  SYNC_EXECUTION_STATES,
-  updateSyncExecutionState,
-} from "../syncExecutionStateService.js";
-import { markRepairRequired, MIRROR_STALE_REASONS } from "../mirrorHealthService.js";
-import { recordMirrorAnomaly } from "../mirrorAnomalyService.js";
 
 export async function startBulkOperationToFetchProducts({
   session,
@@ -33,7 +27,7 @@ export async function startBulkOperationToFetchProducts({
 }) {
   const { bulkOperationId, responseBody } = await runProductBulkFetch({ session });
 
-  await markProductSyncStarted({ shop: session.shop, isInitialSync });
+  await markProductSyncStarted({ shop: session.shop });
   await clearProductSyncCache(session.shop);
   const syncHistory = await createProductSyncHistory({
     shop: session.shop,
@@ -57,245 +51,191 @@ export async function formatAndSyncProductsToDB({
   syncBatchId,
   syncHistoryId = null,
 }) {
-  const PRODUCT_BATCH_SIZE = 1000;
-  let productBatch = [];
-  let referencedMetaobjectIds = new Set();
-  let totalProductsProcessed = 0;
-  let totalVariantsProcessed = 0;
-  let lineNumber = 0;
-  let currentProduct = null;
-  let metaobjectEnrichmentDegraded = false;
+  let metaobjectLookup = new Map();
 
-  const enrichProductNode = (json) => {
-    const productMetafields = extractMetafields(json.metafields);
+  return new Promise((resolve, reject) => {
+    const PRODUCT_BATCH_SIZE = 1000;
 
-    for (const metafield of productMetafields) {
-      for (const id of extractMetaobjectIds(metafield?.value)) {
-        referencedMetaobjectIds.add(id);
-      }
-    }
+    let productBatch = [];
+    let totalProductsProcessed = 0;
+    let totalVariantsProcessed = 0;
 
-    return {
-      ...json,
-      variants: extractVariants(json.variants),
-      metafields: productMetafields,
-      collections: extractCollections(json.collections),
-      options: Array.isArray(json.options) ? json.options : [],
-      featuredMedia: json.featuredMedia || null,
-    };
-  };
+    const productsMap = new Map();
+    const referencedMetaobjectIds = new Set();
 
-  const queueCompletedProduct = async () => {
-    if (!currentProduct) {
-      return;
-    }
+    const flushProductsAndVariants = async () => {
+      if (productBatch.length === 0) return;
 
-    productBatch.push(currentProduct);
-    currentProduct = null;
+      const currentProducts = productBatch;
+      productBatch = [];
 
-    if (productBatch.length >= PRODUCT_BATCH_SIZE) {
-      await flushProductsAndVariants();
-    }
-  };
+      const productRows = [];
+      const variantRows = [];
 
-  const flushProductsAndVariants = async () => {
-    if (productBatch.length === 0) return;
+      for (const rawProduct of currentProducts) {
+        productRows.push(flattenProduct(rawProduct, shop, metaobjectLookup));
 
-    const currentProducts = productBatch;
-    productBatch = [];
-    const currentMetaobjectIds = Array.from(referencedMetaobjectIds);
-    referencedMetaobjectIds = new Set();
-    let metaobjectLookup = new Map();
+        const rawVariants = Array.isArray(rawProduct.variants)
+          ? rawProduct.variants
+          : [];
 
-    const productRows = [];
-    const variantRows = [];
-
-    if (session?.accessToken && currentMetaobjectIds.length > 0) {
-      const metaobjectResult = await fetchMetaobjectLookupByIdsDetailed(
-        session,
-        currentMetaobjectIds,
-        { bestEffort: true },
-      );
-      metaobjectLookup = metaobjectResult.lookup;
-      if (metaobjectResult.degraded) {
-        metaobjectEnrichmentDegraded = true;
-      }
-    }
-
-    for (const rawProduct of currentProducts) {
-      productRows.push(flattenProduct(rawProduct, shop, metaobjectLookup));
-
-      const rawVariants = Array.isArray(rawProduct.variants)
-        ? rawProduct.variants
-        : [];
-
-      for (const rawVariant of rawVariants) {
-        if (!rawVariant?.id) continue;
-        variantRows.push(flattenVariant(rawProduct.id, rawVariant, shop));
-      }
-    }
-
-    const insertResult = await insertProductMirrorBatch({
-      productRows,
-      variantRows,
-      syncBatchId,
-    });
-
-    totalProductsProcessed += insertResult?.insertedProducts ?? productRows.length;
-    totalVariantsProcessed += insertResult?.insertedVariants ?? variantRows.length;
-
-    if (totalProductsProcessed > 0 && totalProductsProcessed % 5000 === 0) {
-      await updateInitialSyncProgress({ shop, totalProductsProcessed });
-      if (syncHistoryId) {
-        await updateSyncExecutionState({
-          syncHistoryId,
-          shop,
-          state: SYNC_EXECUTION_STATES.FINALIZING,
-          stage: "MIRROR_STAGING",
-        });
-      }
-    }
-  };
-
-  const rl = readline.createInterface({
-    input: dataStream,
-    crlfDelay: Infinity,
-  });
-
-  try {
-    for await (const line of rl) {
-      lineNumber += 1;
-
-      if (!line.trim()) {
-        continue;
+        for (const rawVariant of rawVariants) {
+          if (!rawVariant?.id) continue;
+          variantRows.push(flattenVariant(rawProduct.id, rawVariant, shop));
+        }
       }
 
-      let json;
-      try {
-        json = JSON.parse(line);
-      } catch (error) {
-        throw new Error(
-          `Product sync JSONL parse failed at line ${lineNumber}: ${error.message}`,
-        );
-      }
-
-      if (!json.__parentId && json.__typename === "Product") {
-        await queueCompletedProduct();
-        currentProduct = enrichProductNode(json);
-        continue;
-      }
-
-      if (!currentProduct || currentProduct.id !== json.__parentId) {
-        continue;
-      }
-
-      switch (json.__typename) {
-        case "ProductVariant":
-          currentProduct.variants.push({
-            id: json.id,
-            title: json.title,
-            sku: json.sku,
-            barcode: json.barcode,
-            price: json.price,
-            compareAtPrice: json.compareAtPrice,
-            inventoryQuantity: json.inventoryQuantity,
-            inventoryPolicy: json.inventoryPolicy,
-            taxable: json.taxable,
-            taxCode: json.taxCode,
-            position: json.position,
-            selectedOptions: Array.isArray(json.selectedOptions)
-              ? json.selectedOptions
-              : [],
-            inventoryItem: json.inventoryItem || null,
-          });
-          break;
-
-        case "Collection":
-          currentProduct.collections.push({
-            id: json.id,
-            title: json.title,
-          });
-          break;
-
-        case "Metafield":
-          for (const id of extractMetaobjectIds(json.value)) {
-            referencedMetaobjectIds.add(id);
-          }
-
-          currentProduct.metafields.push({
-            namespace: json.namespace,
-            key: json.key,
-            type: json.type,
-            value: json.value,
-          });
-          break;
-
-        case "MediaImage":
-          currentProduct.featuredMedia = json;
-          break;
-
-        default:
-          break;
-      }
-    }
-
-    if (!syncBatchId) {
-      throw new Error("syncBatchId is required for staged product sync");
-    }
-
-    await stageProductMirrorBatch({ shop, syncBatchId });
-    if (syncHistoryId) {
-      await updateSyncExecutionState({
-        syncHistoryId,
-        shop,
-        state: SYNC_EXECUTION_STATES.FINALIZING,
-        stage: "MIRROR_STAGING",
+      await insertProductMirrorBatch({
+        productRows,
+        variantRows,
+        syncBatchId,
       });
-    }
 
-    await queueCompletedProduct();
+      totalProductsProcessed += productRows.length;
+      totalVariantsProcessed += variantRows.length;
 
-    await flushProductsAndVariants();
+      if (totalProductsProcessed > 0 && totalProductsProcessed % 5000 === 0) {
+        await updateInitialSyncProgress({ shop, totalProductsProcessed });
+      }
+    };
 
-    await activateProductMirrorBatch({
-      shop,
-      syncBatchId,
-      totalProductsProcessed,
-      syncHistoryId,
+    const rl = readline.createInterface({
+      input: dataStream,
+      crlfDelay: Infinity,
     });
 
-    if (metaobjectEnrichmentDegraded) {
-      await markRepairRequired({
-        shop,
-        reason: MIRROR_STALE_REASONS.PARTIAL_MIRROR_DETECTED,
-        summary: "Metaobject/category enrichment was incomplete during full sync",
-        severity: "medium",
-        details: {
+    rl.on("line", (line) => {
+      if (!line.trim()) return;
+
+      try {
+        const json = JSON.parse(line);
+
+        if (!json.__parentId && json.__typename === "Product") {
+          if (!productsMap.has(json.id)) {
+            const productMetafields = extractMetafields(json.metafields);
+
+            for (const metafield of productMetafields) {
+              for (const id of extractMetaobjectIds(metafield?.value)) {
+                referencedMetaobjectIds.add(id);
+              }
+            }
+
+            productsMap.set(json.id, {
+              ...json,
+              variants: extractVariants(json.variants),
+              metafields: productMetafields,
+              collections: extractCollections(json.collections),
+              options: Array.isArray(json.options) ? json.options : [],
+              featuredMedia: json.featuredMedia || null,
+            });
+          }
+          return;
+        }
+
+        const parent = productsMap.get(json.__parentId);
+        if (!parent) return;
+
+        switch (json.__typename) {
+          case "ProductVariant":
+            parent.variants.push({
+              id: json.id,
+              title: json.title,
+              sku: json.sku,
+              barcode: json.barcode,
+              price: json.price,
+              compareAtPrice: json.compareAtPrice,
+              inventoryQuantity: json.inventoryQuantity,
+              inventoryPolicy: json.inventoryPolicy,
+              taxable: json.taxable,
+              taxCode: json.taxCode,
+              position: json.position,
+              selectedOptions: Array.isArray(json.selectedOptions)
+                ? json.selectedOptions
+                : [],
+              inventoryItem: json.inventoryItem || null,
+            });
+            break;
+
+          case "Collection":
+            parent.collections.push({
+              id: json.id,
+              title: json.title,
+            });
+            break;
+
+          case "Metafield":
+            for (const id of extractMetaobjectIds(json.value)) {
+              referencedMetaobjectIds.add(id);
+            }
+
+            parent.metafields.push({
+              namespace: json.namespace,
+              key: json.key,
+              type: json.type,
+              value: json.value,
+            });
+            break;
+
+          case "MediaImage":
+            parent.featuredMedia = json;
+            break;
+
+          default:
+            break;
+        }
+      } catch (error) {
+        console.error("Product sync line parse error:", error.message);
+      }
+    });
+
+    rl.on("close", async () => {
+      try {
+        if (!syncBatchId) {
+          throw new Error("syncBatchId is required for staged product sync");
+        }
+
+        if (session?.accessToken && referencedMetaobjectIds.size > 0) {
+          try {
+            metaobjectLookup = await fetchMetaobjectLookupByIds(
+              session,
+              Array.from(referencedMetaobjectIds),
+            );
+          } catch (error) {
+            console.error(
+              `Failed to resolve metaobject labels for shop ${shop}: ${error.message}`,
+            );
+          }
+        }
+
+        await stageProductMirrorBatch({ shop, syncBatchId });
+
+        for (const product of productsMap.values()) {
+          productBatch.push(product);
+
+          if (productBatch.length >= PRODUCT_BATCH_SIZE) {
+            await flushProductsAndVariants();
+          }
+        }
+
+        await flushProductsAndVariants();
+
+        await activateProductMirrorBatch({
+          shop,
+          syncBatchId,
+          totalProductsProcessed,
           syncHistoryId,
-          syncBatchId,
-          source: "product_full_sync",
-        },
-      }).catch(() => {});
+        });
 
-      await recordMirrorAnomaly({
-        shop,
-        severity: "medium",
-        type: "metaobject_enrichment_degraded",
-        entityType: "syncHistory",
-        entityId: syncHistoryId,
-        message: "Metaobject/category enrichment was incomplete during full sync",
-        details: {
+        resolve({
+          totalProductsProcessed,
+          totalVariantsProcessed,
           syncBatchId,
-        },
-      }).catch(() => {});
-    }
+        });
+      } catch (error) {
+        reject(error);
+      }
+    });
 
-    return {
-      totalProductsProcessed,
-      totalVariantsProcessed,
-      syncBatchId,
-    };
-  } finally {
-    rl.close();
-  }
+    rl.on("error", reject);
+  });
 }

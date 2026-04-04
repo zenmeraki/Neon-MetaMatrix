@@ -62,7 +62,8 @@ router.post("/get-all", validateQuery(productQuerySchema), getProductsWithQuery)
 
 router.post(
   "/export",
-  validateBody(productExportSchema),
+  // restrictSubscribeUserWork,
+  
   createProductExport
 );
 router.post(

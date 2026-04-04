@@ -13,10 +13,7 @@ import http from "http";
 import { Server } from "socket.io";
 
 // Shopify
-import shopify, {
-  captureEmbeddedAuthContext,
-  redirectToEmbeddedAppAfterAuth,
-} from "./shopify.js";
+import shopify from "./shopify.js";
 import PrivacyWebhookHandlers from "./privacy.js";
 
 // Routes
@@ -51,7 +48,6 @@ import "./Jobs/Workers/appInstallationWorker.js";
 import "./Jobs/Workers/scheduledEditWorker.js";
 import "./Jobs/Workers/appUninstallWorker.js";
 import "./Jobs/Workers/bulkImportEditWorker.js";
-import "./Jobs/Workers/productReconcileWorker.js";
 import "./Jobs/Workers/shopSyncWorker.js";
 import "./workers/recurringEditExecutionWorker.js";
 import "./workers/recurringEditSchedulerWorker.js";
@@ -60,12 +56,9 @@ import "./workers/scheduledExportSchedulerWorker.js";
 import "./workers/automaticProductRuleExecutionWorker.js";
 import "./workers/automaticProductRuleSchedulerWorker.js";
 import "./workers/automaticProductRuleSignalWorker.js";
-import "./workers/productReconcileRepairSchedulerWorker.js";
-import "./workers/syncRepairSchedulerWorker.js";
 
 // Utils / Middleware
 import logger from "./utils/loggerUtils.js";
-import { ensureIdempotencySchema } from "./services/idempotencySchemaService.js";
 import {
   appInstallMiddleware,
   shopPreInstallation,
@@ -94,7 +87,6 @@ const app = express();
 app.use(
   helmet({
     contentSecurityPolicy: false,
-    frameguard: false,
     crossOriginEmbedderPolicy: false,
     crossOriginOpenerPolicy: { policy: "same-origin" },
     crossOriginResourcePolicy: { policy: "cross-origin" },
@@ -134,18 +126,13 @@ redis.on("error", (err) => {
 /*  Shopify Auth & Webhooks                                            */
 /* ------------------------------------------------------------------ */
 
-app.get(
-  shopify.config.auth.path,
-  shopPreInstallation,
-  captureEmbeddedAuthContext,
-  shopify.auth.begin(),
-);
+app.get(shopify.config.auth.path, shopPreInstallation, shopify.auth.begin());
 
 app.get(
   shopify.config.auth.callbackPath,
   shopify.auth.callback(),
   appInstallMiddleware,
-  redirectToEmbeddedAppAfterAuth,
+  shopify.redirectToShopifyOrAppRoot()
 );
 
 app.post(
@@ -171,25 +158,10 @@ const apiLimiter = rateLimit({
   max: 1000,
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) =>
-    process.env.NODE_ENV !== "production" ||
-    req.path === "/sync/sync-status" ||
-    req.path === "/sync/product-track" ||
-    req.path === "/products/get-all",
-  keyGenerator: (req, res) =>
-    res.locals.shopify?.session?.shop ||
-    req.get("x-shopify-shop-domain") ||
-    req.ip,
-  handler: (_req, res) =>
-    res.status(429).json({
-      error: "Too many requests, please try again later.",
-    }),
 });
 
 
 app.use("/api", apiLimiter);
-
-
 app.use("/api/products", productRoutes);
 app.use("/api/category", categorytRoutes);
 app.use("/api/collection", collectionRoutes);
@@ -237,11 +209,10 @@ app.use((err, req, res, _next) => {
 /*  Start Server                                                       */
 /* ------------------------------------------------------------------ */
 
-await ensureIdempotencySchema();
-
 server.listen(PORT, () => {
   (async () => {
     try {
+
       console.log(
         `🚀 Worker ${process.pid} running at http://localhost:${PORT}`
       );

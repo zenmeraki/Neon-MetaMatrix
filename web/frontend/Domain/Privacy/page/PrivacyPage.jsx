@@ -43,7 +43,7 @@ const PrivacyPage = () => {
       : "en";
 
     // Check if user previously selected a language
-    const storedLang = localStorage.getItem("appLanguage");
+    const storedLang = localStorage.getItem("selectedLanguage");
 
     // Use stored language if available, otherwise use browser language
     i18n.changeLanguage(storedLang || languageToUse);

@@ -14,11 +14,13 @@ import { PlayIcon } from "@shopify/polaris-icons";
 import { useTranslation } from "react-i18next";
 import { i18n as appI18n } from "../../../utils/i18nUtils";
 
+
 /**
  * Demo video component (Polaris 13 design + simplified logic)
  */
 const DemoVideo = () => {
   const { t } = useTranslation(undefined, { i18n: appI18n });
+
   const [videoLoaded, setVideoLoaded] = useState(false);
   const [showVideo, setShowVideo] = useState(false);
 
@@ -152,3 +154,4 @@ const DemoVideo = () => {
 };
 
 export default DemoVideo;
+

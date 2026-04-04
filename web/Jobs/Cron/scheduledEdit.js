@@ -1,7 +1,8 @@
 // web/Jobs/Cron/scheduledEdit.js
 import cron from "node-cron";
-import UndoEditService from "../../services/productService/productBulkUndoService.js";
 import { addbulkEditJob } from "../../Jobs/Queues/bulkEditJob.js";
+import { addbulkUndoJob } from "../../Jobs/Queues/bulkUndoJob.js";
+import { scheduledEditQueue } from "../Queues/scheduledEditQueue.js";
 import { clearKeyCaches } from "../../utils/cacheUtils.js";
 import { getSession } from "../../utils/sessionHandler.js";
 import {
@@ -11,7 +12,6 @@ import {
   buildExecutionError,
   normalizeUndoState,
 } from "../../services/bulkEditExecutionStateService.js";
-import { buildQueueExecutionPayload } from "../../utils/executionIdentity.js";
 
 // ✅ Prisma
 import { prisma } from "../../config/database.js";
@@ -52,16 +52,12 @@ export const updateProducts = async (historyId, isUndo, shopFromJob = null) => {
       //  Scheduled EDIT
       // ─────────────────────────────────────────────────────────
       try {
-        await addbulkEditJob(
-          buildQueueExecutionPayload(
-            {
-              historyId: history.id,
-              shop: history.shop,
-              source: "scheduled_edit",
-            },
-            history,
-          ),
-        );
+        await addbulkEditJob({
+          historyId: history.id, // Prisma PK
+          shop: history.shop,
+          source: "scheduled_edit",
+          executionId: history.executionIdentity || history.id,
+        });
       } catch (error) {
         const existingErrors = Array.isArray(history.error)
           ? history.error
@@ -92,8 +88,70 @@ export const updateProducts = async (historyId, isUndo, shopFromJob = null) => {
       //  Scheduled UNDO
       // ─────────────────────────────────────────────────────────
       try {
-        const service = new UndoEditService(session);
-        await service.undoEdit(history.id);
+        if (history.status !== "completed") {
+          if (["failed", "cancelled", "partial"].includes(history.status)) {
+            const existingErrors = Array.isArray(history.error)
+              ? history.error
+              : [];
+
+            const undoObj = normalizeUndoState(history.undo);
+
+            await prisma.editHistory.update({
+              where: { id: history.id },
+              data: {
+                undo: {
+                  ...undoObj,
+                  status: "failed",
+                  state: BULK_UNDO_STATES.FAILED,
+                  completedAt: new Date(),
+                  error: buildExecutionError({
+                    code: "scheduled_undo_blocked",
+                    stage: "scheduled_dispatch",
+                    message: "Scheduled undo cannot run because the scheduled edit did not complete successfully",
+                    retryable: false,
+                  }),
+                },
+                error: appendExecutionError(
+                  existingErrors,
+                  buildExecutionError({
+                    code: "scheduled_undo_blocked",
+                    stage: "scheduled_dispatch",
+                    message: "Scheduled undo was skipped because the scheduled edit did not complete successfully",
+                    retryable: false,
+                  }),
+                ),
+              },
+            });
+
+            return {
+              success: false,
+              message: "scheduled undo blocked by failed edit",
+            };
+          }
+
+          await scheduledEditQueue.add(
+            "undo-task",
+            { historyId: history.id, shop: history.shop },
+            {
+              delay: 60_000,
+              jobId: `scheduled-undo-retry:${history.shop}:${history.id}:${Date.now()}`,
+            },
+          );
+
+          return {
+            success: true,
+            message: "scheduled undo deferred until edit completes",
+          };
+        }
+
+        const undoObj = normalizeUndoState(history.undo);
+
+        await addbulkUndoJob({
+          historyId: history.id,
+          shop: history.shop,
+          source: "scheduled_undo",
+          executionId: undoObj.executionIdentity || history.executionIdentity || history.id,
+        });
       } catch (error) {
         const existingErrors = Array.isArray(history.error)
           ? history.error

@@ -1,14 +1,10 @@
-import crypto from "crypto";
 import { prisma } from "../../config/database.js";
 import {
   buildPrismaSortQuery,
   getProductPrismaWhere,
 } from "./productFilterCompiler.js";
-import { normalizeCanonicalFilterParams } from "./productFilterContract.js";
 import { recordMirrorAnomaly } from "../mirrorAnomalyService.js";
 import { getStoreMirrorState } from "../mirrorHealthService.js";
-import { getCache, setCache } from "../../utils/cacheUtils.js";
-import { stableStringify } from "../../utils/idempotencyUtils.js";
 
 function mergeWithMirrorBatch(where, shop, mirrorBatchId) {
   const scoped = {
@@ -23,28 +19,6 @@ function mergeWithMirrorBatch(where, shop, mirrorBatchId) {
   }
 
   return scoped;
-}
-
-function normalizeSnapshotWhere(where, cursorId = null) {
-  return {
-    AND: [
-      ...(Array.isArray(where?.AND) ? where.AND : [where && typeof where === "object" ? where : {}]),
-      ...(cursorId ? [{ id: { gt: cursorId } }] : []),
-    ],
-  };
-}
-
-async function getCachedTargetCount({ shop, mirrorBatchId, where }) {
-  const cacheKey = `${shop}:TargetCount:${mirrorBatchId || "none"}:${stableStringify(where)}`;
-  const cached = await getCache(cacheKey);
-
-  if (typeof cached === "number") {
-    return cached;
-  }
-
-  const count = await prisma.product.count({ where });
-  await setCache(cacheKey, count, 120).catch(() => {});
-  return count;
 }
 
 export async function getActiveMirrorBatchId(shop) {
@@ -63,16 +37,12 @@ export async function resolveCanonicalProductTarget({
   explicitWhere = null,
   explicitProductIds = [],
   sampleLimit = 20,
-  includeSample = true,
-  sampleSelect = null,
-  sampleInclude = null,
   freeze = false,
   ownerType = null,
   ownerId = null,
 }) {
   const mirrorBatchId = await getActiveMirrorBatchId(shop);
-  const normalizedFilterParams = normalizeCanonicalFilterParams(filterParams);
-  const baseWhere = explicitWhere || getProductPrismaWhere(normalizedFilterParams, shop);
+  const baseWhere = explicitWhere || getProductPrismaWhere(filterParams, shop);
   const where = mergeWithMirrorBatch(baseWhere, shop, mirrorBatchId);
 
   if (Array.isArray(explicitProductIds) && explicitProductIds.length > 0) {
@@ -88,36 +58,28 @@ export async function resolveCanonicalProductTarget({
   const limit = Number.parseInt(queryParams.limit, 10) || sampleLimit;
   const skip = (page - 1) * limit;
 
-  const defaultSampleSelect = {
-    id: true,
-    title: true,
-    status: true,
-    productType: true,
-    vendor: true,
-    totalInventory: true,
-    featuredImageUrl: true,
-    categoryName: true,
-    handle: true,
-    templateSuffix: true,
-    variantCount: true,
-    visibleOnlineStore: true,
-  };
-
-  const sampleQuery = includeSample
-    ? prisma.product.findMany({
-        where,
-        ...(sampleInclude
-          ? { include: sampleInclude }
-          : { select: sampleSelect || defaultSampleSelect }),
-        orderBy,
-        skip,
-        take: Math.min(limit, sampleLimit),
-      })
-    : Promise.resolve([]);
-
   const [count, sampleProducts] = await Promise.all([
-    getCachedTargetCount({ shop, mirrorBatchId, where }),
-    sampleQuery,
+    prisma.product.count({ where }),
+    prisma.product.findMany({
+      where,
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        productType: true,
+        vendor: true,
+        totalInventory: true,
+        featuredImageUrl: true,
+        categoryName: true,
+        handle: true,
+        templateSuffix: true,
+        variantCount: true,
+        visibleOnlineStore: true,
+      },
+      orderBy,
+      skip,
+      take: Math.min(limit, sampleLimit),
+    }),
   ]);
 
   if (freeze && ownerType && ownerId) {
@@ -147,75 +109,49 @@ export async function freezeTargetSnapshot({
   where,
   mirrorBatchId,
 }) {
-  const stagingOwnerType = `${ownerType}__STAGING`;
-  const stagingOwnerId = `${ownerId}::${crypto.randomUUID()}`;
+  await prisma.targetSnapshot.deleteMany({
+    where: { ownerType, ownerId },
+  });
 
   const BATCH_SIZE = 1000;
   let cursorId = null;
   let totalInserted = 0;
 
-  try {
-    while (true) {
-      const products = await prisma.product.findMany({
-        where: normalizeSnapshotWhere(where, cursorId),
-        select: { id: true },
-        orderBy: { id: "asc" },
-        take: BATCH_SIZE,
-      });
+  while (true) {
+    const snapshotWhere = {
+      AND: [
+        ...(Array.isArray(where?.AND) ? where.AND : [where]),
+        ...(cursorId ? [{ id: { gt: cursorId } }] : []),
+      ],
+    };
 
-      if (!products.length) {
-        break;
-      }
-
-      await prisma.targetSnapshot.createMany({
-        data: products.map((product) => ({
-          ownerType: stagingOwnerType,
-          ownerId: stagingOwnerId,
-          shop,
-          productId: product.id,
-          mirrorBatchId,
-        })),
-        skipDuplicates: true,
-      });
-
-      totalInserted += products.length;
-      cursorId = products[products.length - 1].id;
-    }
-
-    await prisma.$transaction(async (tx) => {
-      await tx.targetSnapshot.deleteMany({
-        where: {
-          ownerType,
-          ownerId,
-          shop,
-        },
-      });
-
-      await tx.targetSnapshot.updateMany({
-        where: {
-          ownerType: stagingOwnerType,
-          ownerId: stagingOwnerId,
-          shop,
-        },
-        data: {
-          ownerType,
-          ownerId,
-        },
-      });
+    const products = await prisma.product.findMany({
+      where: snapshotWhere,
+      select: { id: true },
+      orderBy: { id: "asc" },
+      take: BATCH_SIZE,
     });
 
-    return totalInserted;
-  } catch (error) {
-    await prisma.targetSnapshot.deleteMany({
-      where: {
-        ownerType: stagingOwnerType,
-        ownerId: stagingOwnerId,
-        shop,
-      },
-    }).catch(() => {});
+    if (!products.length) {
+      break;
+    }
 
-    throw error;
+    await prisma.targetSnapshot.createMany({
+      data: products.map((product) => ({
+        ownerType,
+        ownerId,
+        shop,
+        productId: product.id,
+        mirrorBatchId,
+      })),
+      skipDuplicates: true,
+    });
+
+    totalInserted += products.length;
+    cursorId = products[products.length - 1].id;
   }
+
+  return totalInserted;
 }
 
 export async function getFrozenTargetProductIds({

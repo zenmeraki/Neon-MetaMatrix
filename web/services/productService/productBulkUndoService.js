@@ -11,13 +11,9 @@ import { FIELD_CONFIGS } from "../../helpers/productBulkOperationHelpers/constan
 import { prisma } from "../../config/database.js";
 import {
   BULK_UNDO_STATES,
-  appendExecutionError,
-  buildExecutionError,
   buildPlannedUndoState,
   normalizeUndoState,
 } from "../bulkEditExecutionStateService.js";
-import logger from "../../utils/loggerUtils.js";
-import { buildQueueExecutionPayload } from "../../utils/executionIdentity.js";
 
 const OPTION_NAME_FIELDS = new Set([
   "option1Name",
@@ -98,65 +94,14 @@ class UndoEditService {
       throw new Error("Undo could not be queued");
     }
 
-    try {
-      await addbulkUndoJob(
-        buildQueueExecutionPayload(
-          {
-            historyId,
-            shop: this.session.shop,
-            source: "manual_undo",
-          },
-          executionIdentity,
-        ),
-      );
-    } catch (error) {
-      await prisma.editHistory.updateMany({
-        where: {
-          id: historyId,
-          shop: this.session.shop,
-          status: "completed",
-        },
-        data: {
-          undo: {
-            ...undoData,
-            status: "failed",
-            state: BULK_UNDO_STATES.FAILED,
-            queuedAt: new Date(),
-            startedAt: null,
-            completedAt: new Date(),
-            processedCount: 0,
-            durationMs: 0,
-            bulkOperationId: null,
-            executionIdentity,
-            error: appendExecutionError(
-              undoData.error,
-              buildExecutionError({
-                code: "bulk_undo_queue_failure",
-                stage: "queue_enqueue",
-                message: error.message,
-                retryable: true,
-              }),
-            ),
-          },
-        },
-      });
+    await clearKeyCaches(`${this.session.shop}:fetchHistories`);
+    await clearKeyCaches(`${this.session.shop}:historyDetails:${historyId}`);
 
-      throw error;
-    }
-
-    await clearKeyCaches(`${this.session.shop}:fetchHistories`).catch((error) => {
-      logger.warn("Failed to clear undo history cache after queue", {
-        shop: this.session.shop,
-        historyId,
-        message: error.message,
-      });
-    });
-    await clearKeyCaches(`${this.session.shop}:historyDetails:${historyId}`).catch((error) => {
-      logger.warn("Failed to clear undo details cache after queue", {
-        shop: this.session.shop,
-        historyId,
-        message: error.message,
-      });
+    await addbulkUndoJob({
+      historyId,
+      shop: this.session.shop,
+      source: "manual_undo",
+      executionId: executionIdentity,
     });
 
     return {

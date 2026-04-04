@@ -42,15 +42,7 @@ export const recurringEditSchema = Joi.object({
 
   timezone: Joi.string().default("UTC"),
 
-  filterParams: Joi.array()
-    .items(
-      Joi.object({
-        field: Joi.string().trim().max(100).required(),
-        operator: Joi.string().allow("", null),
-        value: Joi.any(),
-      })
-    )
-    .required(),
+  filterParams: Joi.object().required(),
 
   steps: Joi.array()
     .items(

@@ -1,6 +1,4 @@
 import shopify from "../../shopify.js";
-import { getCache, setCache } from "../../utils/cacheUtils.js";
-import { adminGraphqlWithRetry } from "../../utils/shopifyAdminApi.js";
 
 const METAOBJECT_LABEL_KEYS = [
   "label",
@@ -63,38 +61,17 @@ export function extractMetaobjectIds(rawValue) {
   }
 }
 
-export async function fetchMetaobjectLookupByIdsDetailed(
-  session,
-  ids = [],
-  { bestEffort = false } = {},
-) {
+export async function fetchMetaobjectLookupByIds(session, ids = []) {
   if (!session?.accessToken || !Array.isArray(ids) || ids.length === 0) {
-    return {
-      lookup: new Map(),
-      degraded: false,
-      missingIds: [],
-    };
+    return new Map();
   }
 
+  const client = new shopify.api.clients.Graphql({ session });
   const lookup = new Map();
-  const uniqueIds = Array.from(new Set(ids.filter(Boolean)));
-  const uncachedIds = [];
   const chunkSize = 100;
 
-  for (const id of uniqueIds) {
-    const cached = await getCache(`${session.shop}:metaobject_label:${id}`);
-    if (cached) {
-      lookup.set(id, cached);
-    } else {
-      uncachedIds.push(id);
-    }
-  }
-
-  let degraded = false;
-  const missingIds = [];
-
-  for (let i = 0; i < uncachedIds.length; i += chunkSize) {
-    const chunk = uncachedIds.slice(i, i + chunkSize);
+  for (let i = 0; i < ids.length; i += chunkSize) {
+    const chunk = ids.slice(i, i + chunkSize);
 
     const query = `
       query GetMetaobjectsByIds($ids: [ID!]!) {
@@ -107,57 +84,25 @@ export async function fetchMetaobjectLookupByIdsDetailed(
       }
     `;
 
-    try {
-      const response = await adminGraphqlWithRetry({
-        session,
-        shop: session.shop,
-        operationName: "metaobjectLookup.fetchByIds",
-        data: {
-          query,
-          variables: { ids: chunk },
-        },
-      });
+    const response = await client.query({
+      data: {
+        query,
+        variables: { ids: chunk },
+      },
+    });
 
-      const nodes = response.body?.data?.nodes || [];
-      const resolvedIds = new Set();
+    const nodes = response.body?.data?.nodes || [];
 
-      for (const node of nodes) {
-        const label = getMetaobjectDisplayValue(node);
+    for (const node of nodes) {
+      const label = getMetaobjectDisplayValue(node);
 
-        if (node?.id) {
-          resolvedIds.add(node.id);
-        }
-
-        if (node?.id && label) {
-          lookup.set(node.id, label);
-          await setCache(`${session.shop}:metaobject_label:${node.id}`, label, 24 * 3600);
-        }
+      if (node?.id && label) {
+        lookup.set(node.id, label);
       }
-
-      for (const id of chunk) {
-        if (!resolvedIds.has(id)) {
-          missingIds.push(id);
-        }
-      }
-    } catch (error) {
-      if (!bestEffort) {
-        throw error;
-      }
-
-      degraded = true;
     }
   }
 
-  return {
-    lookup,
-    degraded,
-    missingIds,
-  };
-}
-
-export async function fetchMetaobjectLookupByIds(session, ids = []) {
-  const result = await fetchMetaobjectLookupByIdsDetailed(session, ids);
-  return result.lookup;
+  return lookup;
 }
 
 export async function fetchMetaobjectLookup(session, ids = []) {

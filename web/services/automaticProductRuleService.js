@@ -12,16 +12,6 @@ import {
 import { createManualAutomaticProductRuleRun } from "./automaticProductRuleExecutionService.js";
 import { getUpdatedProducts } from "../helpers/productBulkOperationHelpers/productUpdateHandler.js";
 import { FIELD_CONFIGS } from "../helpers/productBulkOperationHelpers/constants.js";
-import { normalizeCanonicalFilterParams } from "./productService/productFilterContract.js";
-import {
-  buildCanonicalFilterMetadata,
-  persistFilterDefinitionMetadata,
-} from "./filterDefinitionStorageService.js";
-import { withAdvisoryLock, stableStringify } from "../utils/idempotencyUtils.js";
-import {
-  mapDefinitionStatusForClient,
-  normalizeDefinitionSteps,
-} from "./definitionPresentationService.js";
 
 function normalizeStatus(rawStatus, fallback = "ACTIVE") {
   if (!rawStatus) return fallback;
@@ -182,6 +172,15 @@ function defaultTitleFromActions(actions = []) {
     .join(" + ") || "Automatic product rule";
 }
 
+function mapStatusForClient(status) {
+  return {
+    ACTIVE: "Active",
+    PAUSED: "Paused",
+    FAILED: "Failed",
+    CANCELLED: "Cancelled",
+  }[status] || status;
+}
+
 function indexRunCounts(statusCounts = []) {
   return statusCounts.reduce((accumulator, row) => {
     const current = accumulator[row.automaticProductRuleId] || {
@@ -211,7 +210,6 @@ function indexLatestRuns(runs = []) {
 }
 
 function serializeRule(rule, countsById = {}, latestRunsById = {}) {
-  const normalizedActions = normalizeDefinitionSteps(rule.actions);
   const counts = countsById[rule.id] || {
     total: rule.runCount || 0,
     success: 0,
@@ -225,7 +223,7 @@ function serializeRule(rule, countsById = {}, latestRunsById = {}) {
     _id: rule.id,
     shop: rule.shop,
     title: rule.title,
-    status: mapDefinitionStatusForClient(rule.status, { pausedLabel: "Paused" }),
+    status: mapStatusForClient(rule.status),
     statusKey: rule.status,
     triggerType: rule.triggerType,
     scheduleType: rule.scheduleType,
@@ -234,10 +232,8 @@ function serializeRule(rule, countsById = {}, latestRunsById = {}) {
     cronExpression: rule.cronExpression,
     intervalMinutes: rule.intervalMinutes,
     scopeType: rule.scopeType,
-    filterVersion: rule.filterVersion ?? null,
-    canonicalFilterKey: rule.canonicalFilterKey ?? null,
     conditions: rule.conditions,
-    actions: normalizedActions,
+    actions: rule.actions,
     applyMode: rule.applyMode,
     priority: rule.priority,
     cooldownMinutes: rule.cooldownMinutes,
@@ -315,13 +311,11 @@ export async function createAutomaticProductRule({ shop, body, subscription, cre
   const actions = validateActions(buildActionsFromBody(body));
   const scopeType = normalizeScopeType(body.scopeType, actions);
   const status = normalizeStatus(body.status, "ACTIVE");
-  const conditionsInput = Array.isArray(body.conditions)
+  const conditions = Array.isArray(body.conditions)
     ? body.conditions
     : Array.isArray(body.filterParams)
       ? body.filterParams
       : [];
-  const conditions = normalizeCanonicalFilterParams(conditionsInput);
-  const filterMetadata = buildCanonicalFilterMetadata(conditions);
 
   if (status === "ACTIVE") {
     await assertAutomaticProductRuleActiveLimit({
@@ -347,87 +341,30 @@ export async function createAutomaticProductRule({ shop, body, subscription, cre
         scheduleInput.startAt || new Date(),
       )
     : null;
-  const normalizedTitle =
-    String(body.title || "").trim() || defaultTitleFromActions(actions);
 
-  const applyMode = normalizeApplyMode(body.applyMode);
-  const priority = normalizePriority(body.priority);
-  const cooldownMinutes = normalizeOptionalInteger(
-    body.cooldownMinutes,
-    "cooldownMinutes",
-  );
-  const maxAffectedPerRun = normalizeOptionalInteger(
-    body.maxAffectedPerRun,
-    "maxAffectedPerRun",
-  );
-
-  const { result: created } = await withAdvisoryLock(
-    `automatic-rule-definition:${shop}:${filterMetadata.canonicalFilterKey}`,
-    async () => {
-      const existingRules = await automaticProductRuleRepository.listByShop(shop);
-      const existing = existingRules.find((rule) => (
-        rule.title === normalizedTitle &&
-        rule.status === status &&
-        rule.triggerType === triggerType &&
-        rule.scheduleType === scheduleInput.scheduleType &&
-        rule.timezone === scheduleInput.timezone &&
-        rule.scopeType === scopeType &&
-        rule.applyMode === applyMode &&
-        rule.priority === priority &&
-        Number(rule.cooldownMinutes ?? null) === Number(cooldownMinutes ?? null) &&
-        Number(rule.maxAffectedPerRun ?? null) === Number(maxAffectedPerRun ?? null) &&
-        String(rule.startAt || "") === String(scheduleInput.startAt || "") &&
-        String(rule.endAt || "") === String(scheduleInput.endAt || "") &&
-        String(rule.cronExpression || "") === String(scheduleInput.cronExpression || "") &&
-        Number(rule.intervalMinutes ?? null) === Number(scheduleInput.intervalMinutes ?? null) &&
-        stableStringify(rule.scheduleConfig ?? null) === stableStringify(scheduleInput.scheduleConfig ?? null) &&
-        stableStringify(rule.actions ?? []) === stableStringify(actions) &&
-        (
-          rule.canonicalFilterKey === filterMetadata.canonicalFilterKey ||
-          (
-            !rule.canonicalFilterKey &&
-            stableStringify(rule.conditions ?? []) === stableStringify(conditions)
-          )
-        )
-      ));
-
-      if (existing) {
-        return existing;
-      }
-
-      const createdRule = await automaticProductRuleRepository.create({
-        shop,
-        title: normalizedTitle,
-        status,
-        triggerType,
-        scheduleType: scheduleInput.scheduleType,
-        timezone: scheduleInput.timezone,
-        scheduleConfig: scheduleInput.scheduleConfig,
-        cronExpression: scheduleInput.cronExpression,
-        intervalMinutes: scheduleInput.intervalMinutes,
-        startAt: scheduleInput.startAt,
-        endAt: scheduleInput.endAt,
-        scopeType,
-        conditions,
-        actions,
-        applyMode,
-        priority,
-        cooldownMinutes,
-        maxAffectedPerRun,
-        nextRunAt,
-        createdBy,
-        updatedBy: createdBy,
-      });
-
-      await persistFilterDefinitionMetadata({
-        tableName: "AutomaticProductRule",
-        id: createdRule.id,
-        filterParams: conditions,
-      });
-
-      return createdRule;
-    },
-  );
+  const created = await automaticProductRuleRepository.create({
+    shop,
+    title: String(body.title || "").trim() || defaultTitleFromActions(actions),
+    status,
+    triggerType,
+    scheduleType: scheduleInput.scheduleType,
+    timezone: scheduleInput.timezone,
+    scheduleConfig: scheduleInput.scheduleConfig,
+    cronExpression: scheduleInput.cronExpression,
+    intervalMinutes: scheduleInput.intervalMinutes,
+    startAt: scheduleInput.startAt,
+    endAt: scheduleInput.endAt,
+    scopeType,
+    conditions,
+    actions,
+    applyMode: normalizeApplyMode(body.applyMode),
+    priority: normalizePriority(body.priority),
+    cooldownMinutes: normalizeOptionalInteger(body.cooldownMinutes, "cooldownMinutes"),
+    maxAffectedPerRun: normalizeOptionalInteger(body.maxAffectedPerRun, "maxAffectedPerRun"),
+    nextRunAt,
+    createdBy,
+    updatedBy: createdBy,
+  });
 
   return getHydratedRule(created.id, shop);
 }
@@ -465,12 +402,11 @@ export async function updateAutomaticProductRule({
     : existing.actions;
   const scopeType = normalizeScopeType(body.scopeType ?? existing.scopeType, actions);
   const status = normalizeStatus(body.status, existing.status);
-  const conditionsInput = Array.isArray(body.conditions)
+  const conditions = Array.isArray(body.conditions)
     ? body.conditions
     : Array.isArray(body.filterParams)
       ? body.filterParams
       : existing.conditions;
-  const conditions = normalizeCanonicalFilterParams(conditionsInput);
 
   if (status === "ACTIVE") {
     await assertAutomaticProductRuleAccess(subscription);
@@ -521,12 +457,6 @@ export async function updateAutomaticProductRule({
     nextRunAt,
     updatedBy,
     isDeleted: false,
-  });
-
-  await persistFilterDefinitionMetadata({
-    tableName: "AutomaticProductRule",
-    id: existing.id,
-    filterParams: conditions,
   });
 
   return getHydratedRule(existing.id, shop);

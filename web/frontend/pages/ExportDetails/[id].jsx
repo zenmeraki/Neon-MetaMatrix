@@ -15,10 +15,6 @@ import {
 import { ArrowLeftIcon } from "@shopify/polaris-icons";
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import {
-    authenticatedFetch,
-    redirectToTopLevel,
-} from "../../hooks/useAuthenticatedFetch";
 
 export default function ExportHistoryDetailsPage() {
     const { id } = useParams();
@@ -33,7 +29,7 @@ export default function ExportHistoryDetailsPage() {
     // 🔥 Fetch Export Details
     const fetchExportDetails = async () => {
         try {
-            const res = await authenticatedFetch(`/api/history/get-export-details/${id}`);
+            const res = await fetch(`/api/history/get-export-details/${id}`);
             const data = await res.json();
 
             if (!res.ok || !data.success) {
@@ -161,7 +157,7 @@ export default function ExportHistoryDetailsPage() {
                 status === "COMPLETED"
                     ? {
                         content: "Download CSV",
-                        onAction: () => redirectToTopLevel(fileUrl),
+                        onAction: () => window.open(fileUrl, "_blank"),
                     }
                     : undefined
             }

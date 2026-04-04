@@ -17,26 +17,8 @@ import {
 } from '@shopify/polaris';
 import { CheckIcon, StarFilledIcon } from '@shopify/polaris-icons';
 import { Modal } from "@shopify/polaris";
-import { useTranslation } from "react-i18next";
-import {
-  redirectToAuthWithReturnTo,
-  redirectToTopLevel,
-  useAuthenticatedFetch,
-} from "../hooks/useAuthenticatedFetch";
 import { useNavigate } from "react-router-dom"
-
-function isSessionErrorMessage(message) {
-  const normalized = String(message || "").toLowerCase();
-  return (
-    normalized.includes("session expired") ||
-    normalized.includes("shopify session missing") ||
-    normalized.includes("unauthorized")
-  );
-}
-
 export default function PricingPage() {
-  const { t } = useTranslation();
-  const fetchWithAuth = useAuthenticatedFetch();
   const navigate = useNavigate()
   const [openFaqIndex, setOpenFaqIndex] = useState(null);
   const [showFreeModal, setShowFreeModal] = useState(false);
@@ -44,27 +26,24 @@ export default function PricingPage() {
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [subscriptionError, setSubscriptionError] = useState(null);
   const [subscribing, setSubscribing] = useState(null);
 
   // ✅ Move fetchPlans outside of useEffect so we can reuse it
   const fetchPlans = async () => {
     try {
       setLoading(true);
-      setError(null);
-      const response = await fetchWithAuth('/api/subscription/get-plans');
-      if (!response) return;
+      const response = await fetch('/api/subscription/get-plans');
       const data = await response.json();
 
       if (data.success && data.plans) {
         setPlans(data.plans);
       }
       else {
-        setError(t("pricingLoadPlansFailed"));
+        setError('Failed to load plans');
       }
     } catch (err) {
       console.error('Error fetching plans:', err);
-      setError(t("pricingLoadPlansRetry"));
+      setError('Failed to load plans. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -87,25 +66,25 @@ export default function PricingPage() {
 
   const faqs = [
     {
-      question: t("pricingFaqSubscriptionsQuestion"),
-      answer: t("pricingFaqSubscriptionsAnswer"),
+      question: 'How do subscriptions work?',
+      answer: 'Our subscription plans are billed monthly through your Shopify account. You can upgrade, downgrade, or cancel your subscription at any time. All charges appear directly on your Shopify invoice.',
     },
     {
-      question: t("pricingFaqLimitsQuestion"),
-      answer: t("pricingFaqLimitsAnswer"),
+      question: 'What happens if I exceed my plan limits?',
+      answer: "You'll receive notifications when you're approaching your limit. You can upgrade your plan at any time to increase your limits without losing any data or configurations.",
     },
     {
-      question: t("pricingFaqCancelQuestion"),
-      answer: t("pricingFaqCancelAnswer"),
+      question: 'How do I cancel my subscription?',
+      answer: 'You can cancel your subscription at any time from the subscription management page. Your plan will remain active until the end of your billing period, and you can continue using all features during that time.',
     },
     {
-      question: t("pricingFaqSwitchQuestion"),
-      answer: t("pricingFaqSwitchAnswer"),
+      question: 'Can I switch between plans?',
+      answer: 'Yes! You can upgrade or downgrade at any time. Upgrades take effect immediately with prorated billing, while downgrades take effect at the start of your next billing cycle.',
     },
 
     {
-      question: t("pricingFaqSecurityQuestion"),
-      answer: t("pricingFaqSecurityAnswer"),
+      question: 'Is my data secure?',
+      answer: 'Absolutely. All data is encrypted in transit and at rest. We follow industry best practices and comply with Shopify\'s security requirements to keep your information safe.',
     },
   ];
 
@@ -113,31 +92,11 @@ export default function PricingPage() {
     setOpenFaqIndex(openFaqIndex === index ? null : index);
   };
 
-  const getPlanTranslationKey = (planKey, suffix) => `pricingPlan.${planKey}.${suffix}`;
-
-  const getLocalizedPlanName = (plan) =>
-    t(getPlanTranslationKey(plan.key, "name"), { defaultValue: plan.name });
-
-  const getLocalizedPlanDescription = (plan) =>
-    t(getPlanTranslationKey(plan.key, "description"), { defaultValue: plan.description });
-
-  const getLocalizedPlanHighlight = (plan) =>
-    t(getPlanTranslationKey(plan.key, "highlight"), { defaultValue: plan.highlight });
-
-  const getLocalizedPlanButtonText = (plan) =>
-    t(getPlanTranslationKey(plan.key, "buttonText"), { defaultValue: plan.buttonText });
-
-  const getLocalizedPlanFeatures = (plan) =>
-    (plan.features || []).map((feature, index) =>
-      t(getPlanTranslationKey(plan.key, `features.${index}`), { defaultValue: feature }),
-    );
-
   const handleSelectPlan = async (plan) => {
     try {
       setSubscribing(plan.key);
-      setSubscriptionError(null);
 
-      const response = await fetchWithAuth("/api/subscription/create-subscription", {
+      const response = await fetch("/api/subscription/create-subscription", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -147,12 +106,11 @@ export default function PricingPage() {
           returnUrl: `${window.location.origin}/pricing`,
         }),
       });
-      if (!response) return;
 
       const data = await response.json();
 
       if (!data.success) {
-        throw new Error(data.message || t("pricingSubscriptionFailed"));
+        throw new Error(data.message || "Subscription failed");
       }
 
       // ✅ Handle FREE plan - refetch to update UI
@@ -165,15 +123,10 @@ export default function PricingPage() {
       }
 
       // Redirect to Shopify payment page for paid plans
-      redirectToTopLevel(data.confirmationUrl);
+      window.top.location.href = data.confirmationUrl;
     } catch (err) {
       console.error("Subscription error:", err);
-      const message =
-        err?.message || t("pricingStartSubscriptionFailed");
-      setSubscriptionError({
-        message,
-        requiresReconnect: isSessionErrorMessage(message),
-      });
+      alert("Failed to start subscription. Please try again.");
       setSubscribing(null);
     }
   };
@@ -187,7 +140,7 @@ export default function PricingPage() {
               <BlockStack gap="400" inlineAlign="center">
                 <Spinner size="large" />
                 <Text variant="bodyLg" as="p" tone="subdued">
-                  {t("pricingLoadingPlans")}
+                  Loading plans...
                 </Text>
               </BlockStack>
             </Box>
@@ -203,7 +156,7 @@ export default function PricingPage() {
         <Layout>
           <Layout.Section>
             <Box paddingBlockStart="400">
-              <Banner tone="critical" title={t("pricingErrorTitle")}>
+              <Banner tone="critical" title="Error loading plans">
                 <p>{error}</p>
               </Banner>
             </Box>
@@ -215,26 +168,11 @@ export default function PricingPage() {
 
   return (
     <Page
-      title={t("pricingPageTitle")}
-      subtitle={t("pricingPageSubtitle")}
+      title='Choose the perfect plan for your business'
+      subtitle='Start free and upgrade as you grow. All plans include our core features with no hidden fees.'
     >
       <Layout>
         <Layout.Section>
-          {subscriptionError && (
-            <Box paddingBlockEnd="400">
-              <Banner
-                tone="critical"
-                title={t("pricingErrorTitle")}
-                action={subscriptionError.requiresReconnect ? {
-                  content: t("common.reconnectShopify", "Reconnect Shopify"),
-                  onAction: () => redirectToAuthWithReturnTo(),
-                } : undefined}
-                onDismiss={() => setSubscriptionError(null)}
-              >
-                <p>{subscriptionError.message}</p>
-              </Banner>
-            </Box>
-          )}
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
@@ -249,7 +187,7 @@ export default function PricingPage() {
                 <Card>
                   {plan.isCurrent && (
                     <Box position="absolute" insetBlockStart="200" insetInlineEnd="200">
-                      <Badge tone="success">{t("pricingCurrentPlan")}</Badge>
+                      <Badge tone="success">Current plan</Badge>
                     </Box>
                   )}
                   <div style={{
@@ -261,20 +199,20 @@ export default function PricingPage() {
                     {plan.popular && (
                       <InlineStack align="center" gap="200" blockAlign="center">
                         <Text variant="headingSm" as="p" tone="text-inverse">
-                          {t("pricingMostPopular")}
+                          Most Popular
                         </Text>
                       </InlineStack>
                     )}
                   </div>
 
                   <Box paddingBlockStart={plan.popular ? "400" : "0"}>
-                      <BlockStack gap="500">
+                    <BlockStack gap="500">
                       <BlockStack gap="200">
                         <Text variant="headingXl" as="h2">
-                          {getLocalizedPlanName(plan)}
+                          {plan.name}
                         </Text>
                         <Text variant="bodyMd" as="p" tone="subdued">
-                          {getLocalizedPlanDescription(plan)}
+                          {plan.description}
                         </Text>
                       </BlockStack>
 
@@ -294,17 +232,17 @@ export default function PricingPage() {
 
                           <Box paddingBlockEnd="100">
                             <Text variant="headingMd" as="p" tone="subdued">
-                              {t("pricingPerMonth")}
+                              /month
                             </Text>
                           </Box>
                         </InlineStack>
 
 
                         {plan.isFree ? (
-                          <Badge tone="success">{t("pricingFreeForever")}</Badge>
+                          <Badge tone="success">Free forever</Badge>
                         ) : (
                           <Text variant="bodySm" as="p" tone="subdued">
-                            {getLocalizedPlanHighlight(plan)}
+                            {plan.highlight}
                           </Text>
                         )}
                       </BlockStack>
@@ -326,12 +264,12 @@ export default function PricingPage() {
                         {subscribing === plan.key ? (
                           <InlineStack gap="200" align="center">
                             <Spinner size="small" />
-                            <Text as="span">{t("pricingProcessing")}</Text>
+                            <Text as="span">Processing…</Text>
                           </InlineStack>
                         ) : plan.isCurrent ? (
-                          t("pricingCurrentPlanButton")
+                          "Current Plan"
                         ) : (
-                          getLocalizedPlanButtonText(plan)
+                          plan.buttonText
                         )}
                       </Button>
 
@@ -339,10 +277,10 @@ export default function PricingPage() {
 
                       <BlockStack gap="300">
                         <Text variant="headingMd" as="h3">
-                          {t("pricingWhatsIncluded")}
+                          What's included
                         </Text>
                         <BlockStack gap="300">
-                          {getLocalizedPlanFeatures(plan).map((feature, featureIndex) => (
+                          {plan.features.map((feature, featureIndex) => (
                             <InlineStack key={featureIndex} gap="300" blockAlign="start">
                               <div style={{
                                 marginTop: '2px',
@@ -371,11 +309,11 @@ export default function PricingPage() {
             <BlockStack gap="600" inlineAlign="center">
               <BlockStack gap="300" inlineAlign="center">
                 <Text variant="heading2xl" as="h2" alignment="center">
-                  {t("pricingFaqTitle")}
+                  Frequently Asked Questions
                 </Text>
                 <Box maxWidth="600px">
                   <Text variant="bodyLg" as="p" tone="subdued" alignment="center">
-                    {t("pricingFaqSubtitle")}
+                    Everything you need to know about our plans and billing
                   </Text>
                 </Box>
               </BlockStack>
@@ -426,17 +364,17 @@ export default function PricingPage() {
                 <BlockStack gap="400" inlineAlign="center">
                   <BlockStack gap="200" inlineAlign="center">
                     <Text variant="headingLg" as="h3" alignment="center">
-                      {t("pricingSupportTitle")}
+                      Still have questions?
                     </Text>
                     <Text variant="bodyMd" as="p" tone="subdued" alignment="center">
-                      {t("pricingSupportSubtitle")}
+                      Our support team is here to help you choose the right plan
                     </Text>
                   </BlockStack>
                   <InlineStack gap="300" align="center">
                     <Button variant="primary" size="large"
                       onClick={() => navigate("/suggestionpage")}
                     >
-                      {t("pricingContactSupport")}
+                      Contact Support
                     </Button>
 
                   </InlineStack>
@@ -449,9 +387,9 @@ export default function PricingPage() {
       <Modal
         open={showFreeModal}
         onClose={() => setShowFreeModal(false)}
-        title={t("pricingFreeModalTitle")}
+        title="Activate Free Plan?"
         primaryAction={{
-          content: t("pricingConfirm"),
+          content: "Confirm",
           onAction: async () => {
             setShowFreeModal(false);
             if (selectedFreePlan) {
@@ -461,20 +399,20 @@ export default function PricingPage() {
         }}
         secondaryActions={[
           {
-            content: t("pricingCancel"),
+            content: "Cancel",
             onAction: () => setShowFreeModal(false),
           },
         ]}
       >
         <Modal.Section>
           <Text variant="bodyMd" as="p">
-            {t("pricingFreeModalBodyLine1")}
+            You are about to activate the Free plan.
             <br />
             <br />
-            {t("pricingFreeModalBodyLine2")}
+            This plan includes limited features. You can upgrade anytime.
             <br />
             <br />
-            {t("pricingFreeModalBodyLine3")}
+            Do you want to continue?
           </Text>
         </Modal.Section>
       </Modal>

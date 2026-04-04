@@ -2,7 +2,6 @@ import React, { useMemo, useState } from "react";
 import { Badge, Banner, BlockStack, Card, InlineStack, Layout, Page, Text } from "@shopify/polaris";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
-import { authenticatedFetch } from "../../../../hooks/useAuthenticatedFetch";
 import {
   selectFilters,
   selectProductCount,
@@ -65,7 +64,7 @@ export default function CsvExportPage() {
     };
 
     try {
-      const res = await authenticatedFetch("/api/products/export", {
+      const res = await fetch("/api/products/export", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -76,7 +75,7 @@ export default function CsvExportPage() {
       if (!res.ok) {
         setBanner({
           tone: "critical",
-          message: data.message || data.error || "Export failed",
+          message: data.error || "Export failed",
         });
       } else {
         setBanner({

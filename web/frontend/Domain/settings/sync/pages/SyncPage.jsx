@@ -16,7 +16,6 @@ import {
 import { RefreshIcon, ArrowLeftIcon } from "@shopify/polaris-icons";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { authenticatedFetch } from "../../../../hooks/useAuthenticatedFetch";
 
 const rows = [{ name: "Products", api: "/api/sync/products" }];
 
@@ -33,131 +32,36 @@ export default function DataSyncPage() {
   const [syncingItem, setSyncingItem] = useState("");
   const [shouldPoll, setShouldPoll] = useState(false);
   const [waitingForSync, setWaitingForSync] = useState(false);
-  const [statusErrorShown, setStatusErrorShown] = useState(false);
 
   const showToast = (message, error = false) =>
     setToast({ active: true, message, error });
 
   const hideToast = () => setToast((current) => ({ ...current, active: false }));
 
-  const fetchJsonSafely = useCallback(async (url) => {
-    const response = await authenticatedFetch(url);
-    const rawText = await response.text();
-    let result = null;
-
-    if (rawText) {
-      try {
-        result = JSON.parse(rawText);
-      } catch {
-        result = null;
-      }
-    }
-
-    return { response, result };
-  }, []);
-
-  const isProductSyncActive = useCallback(
-    (status) => Boolean(status?.isProductSyncing || status?.isProductInitialySyning),
-    [],
-  );
-
-  const applySyncStatus = useCallback((ds) => {
-    setDataSources(ds);
-
-    const anyRunning =
-      isProductSyncActive(ds) ||
-      ds.isProductTypeSyncing ||
-      ds.isCollectionSyncing;
-    const nextWaitingForSync = waitingForSync && !anyRunning;
-
-    if (waitingForSync && anyRunning) {
-      setWaitingForSync(false);
-    }
-
-    if (!anyRunning && waitingForSync) {
-      setWaitingForSync(false);
-    }
-
-    setShouldPoll(anyRunning || nextWaitingForSync);
-    if (isProductSyncActive(ds)) {
-      setSyncingItem("Products");
-    } else {
-      setSyncingItem("");
-    }
-    setStatusErrorShown(false);
-  }, [isProductSyncActive, waitingForSync]);
-
-  const fallbackToProductTrack = useCallback(async (baseStatus = {}) => {
-    const { response, result } = await fetchJsonSafely("/api/sync/product-track");
-
-    if (!response.ok || !result) {
-      throw new Error(result?.error || "Failed to load product sync progress");
-    }
-
-    const isRunning = result.status === "syncing";
-    const isCompleted = result.status === "completed";
-
-    const nextStatus = {
-      ...(dataSources || {}),
-      ...baseStatus,
-      isProductSyncing: isRunning,
-      isProductInitialySyning: isRunning,
-      lastProductSyncAt:
-        isCompleted && !dataSources?.lastProductSyncAt
-          ? new Date().toISOString()
-          : dataSources?.lastProductSyncAt || null,
-      productInitialSyncProgress: result.processedProducts || 0,
-      storeTotalProducts: result.totalProducts || dataSources?.storeTotalProducts || 0,
-      syncProgressStage: result.stage || dataSources?.syncProgressStage || null,
-    };
-
-    applySyncStatus(nextStatus);
-    return isRunning;
-  }, [applySyncStatus, dataSources, fetchJsonSafely]);
-
   const fetchSyncStatus = useCallback(async () => {
     try {
-      const { response, result } = await fetchJsonSafely("/api/sync/sync-status");
+      const response = await fetch("/api/sync/sync-status");
+      const result = await response.json();
 
       if (response.ok && result?.syncStatus) {
-        const nextStatus = result.syncStatus;
-        const shouldVerifyProductTrack =
-          !isProductSyncActive(nextStatus) &&
-          (waitingForSync || isProductSyncActive(dataSources));
+        const ds = result.syncStatus;
+        setDataSources(ds);
 
-        if (shouldVerifyProductTrack) {
-          const productTrackShowsSyncing = await fallbackToProductTrack(nextStatus);
+        const anyRunning =
+          ds.isProductSyncing ||
+          ds.isProductTypeSyncing ||
+          ds.isCollectionSyncing;
 
-          if (productTrackShowsSyncing) {
-            return;
-          }
+        if (waitingForSync && anyRunning) {
+          setWaitingForSync(false);
         }
 
-        applySyncStatus(nextStatus);
-        return;
+        setShouldPoll(anyRunning || waitingForSync);
       }
-
-      if (waitingForSync || isProductSyncActive(dataSources)) {
-        await fallbackToProductTrack();
-        return;
-      }
-
-      throw new Error(result?.error || "Failed to load sync status");
     } catch {
-      if (!statusErrorShown) {
-        showToast("Failed to load sync status", true);
-        setStatusErrorShown(true);
-      }
+      showToast("Failed to load sync status", true);
     }
-  }, [
-    applySyncStatus,
-    fallbackToProductTrack,
-    fetchJsonSafely,
-    isProductSyncActive,
-    statusErrorShown,
-    waitingForSync,
-    dataSources,
-  ]);
+  }, [waitingForSync]);
 
   useEffect(() => {
     fetchSyncStatus();
@@ -169,7 +73,7 @@ export default function DataSyncPage() {
   }, [fetchSyncStatus, shouldPoll]);
 
   const isAnySyncRunning =
-    isProductSyncActive(dataSources) ||
+    dataSources?.isProductSyncing ||
     dataSources?.isProductTypeSyncing ||
     dataSources?.isCollectionSyncing;
 
@@ -190,18 +94,10 @@ export default function DataSyncPage() {
     setShouldPoll(true);
 
     try {
-      const response = await authenticatedFetch(row.api);
+      const response = await fetch(row.api);
       const result = await response.json();
       if (!response.ok) throw new Error(result?.error);
-
-      if (result?.skipped) {
-        setSyncingItem("");
-        setWaitingForSync(false);
-        setShouldPoll(false);
-      }
-
       showToast(`${row.name} sync started`);
-      setStatusErrorShown(false);
     } catch {
       showToast(`Failed to sync ${row.name}`, true);
       setSyncingItem("");
@@ -228,13 +124,13 @@ export default function DataSyncPage() {
     (name) => {
       if (!dataSources) return null;
       const map = {
-        Products: isProductSyncActive(dataSources),
+        Products: dataSources.isProductSyncing,
         "Product Types": dataSources.isProductTypeSyncing,
         Collections: dataSources.isCollectionSyncing,
       };
       return map[name] ? "Syncing" : "Synced";
     },
-    [dataSources, isProductSyncActive],
+    [dataSources],
   );
 
   const summaryTone = isAnySyncRunning || waitingForSync ? "warning" : "success";

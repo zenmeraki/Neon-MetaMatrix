@@ -19,9 +19,8 @@ import {
   Divider,
 } from "@shopify/polaris";
 import { useTranslation } from "react-i18next";
-import { authenticatedFetch } from "../../../hooks/useAuthenticatedFetch";
 
-const RecurringEditModal = ({ open, onClose, data, isLoading, error }) => {
+const RecurringEditModal = ({ open, onClose, data, isLoading, error, onUpdated }) => {
   const { t } = useTranslation();
 
   // Generate time slots every 15 minutes
@@ -311,7 +310,7 @@ const RecurringEditModal = ({ open, onClose, data, isLoading, error }) => {
         requestBody.daysOfWeekToRun = formData.daysOfWeekToRun;
       }
 
-      const response = await authenticatedFetch(`/api/products/update-recurring-edit/${data.id}`, {
+      const response = await fetch(`/api/products/update-recurring-edit/${data.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -332,6 +331,10 @@ const RecurringEditModal = ({ open, onClose, data, isLoading, error }) => {
       }
 
       // Success - close modal
+      if (typeof onUpdated === "function") {
+        await onUpdated();
+      }
+
       handleClose();
 
       // You might want to call a success callback here
@@ -597,7 +600,7 @@ const RecurringEditModal = ({ open, onClose, data, isLoading, error }) => {
                       <Text as="span" fontWeight="semibold">
                         Step {index + 1}:
                       </Text>{" "}
-                      Edit <Tag>{step.field}</Tag> using "{step.editType || step.editOption}" to
+                      Edit <Tag>{step.field}</Tag> using "{step.editType}" to
                       value "
                       <Text as="span" fontWeight="semibold">
                         {step.value}

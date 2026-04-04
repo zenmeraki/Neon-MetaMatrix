@@ -21,7 +21,6 @@ import {
   ClockIcon,
   ViewIcon,
 } from "@shopify/polaris-icons";
-import { authenticatedFetch } from "../../../hooks/useAuthenticatedFetch";
 
 export default function ImportHistory() {
   const [importHistory, setImportHistory] = useState([]);
@@ -35,7 +34,7 @@ export default function ImportHistory() {
           const fetchData = async () => {
             try {
               setLoading(true);
-              const res = await authenticatedFetch(`/api/history/get-shop-importhistory?page=${currentPage}&limit=10`);
+              const res = await fetch(`/api/history/get-shop-importhistory?page=${currentPage}&limit=10`);
               const result = await res.json();
 
               if (result.success) {

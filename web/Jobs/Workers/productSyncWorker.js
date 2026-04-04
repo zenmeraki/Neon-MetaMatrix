@@ -1,24 +1,27 @@
+// ============================================
+// Jobs/Workers/productSyncWorker.js
+// ============================================
 import { Worker } from "bullmq";
-import dotenv from "dotenv";
 import { connection } from "../../Config/redis.js";
-import { prisma } from "../../config/database.js";
 import { Services } from "../../services/productService/productFilterService.js";
-import shopify from "../../shopify.js";
 import { getCurrentBulkOperationStatus } from "../../utils/bulkOperationHelper.js";
-import { withAdvisoryLock } from "../../utils/idempotencyUtils.js";
 import { productSyncQueue } from "../Queues/productSyncQueue.js";
-import logger from "../../utils/loggerUtils.js";
-import {
-  RetryableWorkerError,
-  assertShopActiveForWorker,
-  isSkippableWorkerError,
-} from "../../services/workerSafetyService.js";
 
+// 🔹 Use the shared Prisma client (Neon / Postgres)
+import { prisma } from "../../config/database.js";
+
+// 🔹 Use the same Shopify app instance that is configured
+//     with PostgreSQLSessionStorage (DATABASE_URL)
+import shopify from "../../shopify.js";
+
+import dotenv from "dotenv";
 dotenv.config();
 
 const service = new Services();
-const QUEUE_NAME = "product-sync-queue";
 
+// ============================================
+// SYNC ALL STORES IN BATCHES (Prisma version)
+// ============================================
 async function syncAllStoresBatched() {
   const batchSize = 20;
   let lastId = null;
@@ -26,6 +29,8 @@ async function syncAllStoresBatched() {
   while (true) {
     const stores = await prisma.store.findMany({
       where: {
+        // Mongo: $or: [{ isUnInstalled: false }, { isUnInstalled: { $exists: false } }]
+        // Prisma: default false, so just filter isUnInstalled === false
         isUnInstalled: false,
       },
       select: {
@@ -42,9 +47,7 @@ async function syncAllStoresBatched() {
       }),
     });
 
-    if (stores.length === 0) {
-      break;
-    }
+    if (stores.length === 0) break;
 
     for (const store of stores) {
       await syncStore(store.shopUrl);
@@ -54,6 +57,47 @@ async function syncAllStoresBatched() {
   }
 }
 
+// ============================================
+// WORKER
+// ============================================
+export const productSyncWorker = new Worker(
+  "product-sync-queue",
+  async (job) => {
+    const { shopUrl, type } = job.data;
+
+    try {
+      // Handle scheduler jobs (cron triggers)
+      if (type === "auto-sync") {
+        await handleAutoSync();
+      } else if (type === "priority-sync") {
+        await handlePrioritySync();
+      }
+      // Handle individual store sync jobs
+      else if (shopUrl) {
+        await syncStore(shopUrl);
+      }
+      // Backward compatibility - sync all stores
+      else {
+        await syncAllStoresBatched();
+      }
+    } catch (error) {
+      console.error(`❌ Job ${job.id} failed:`, error?.message || error);
+      throw error;
+    }
+  },
+  {
+    connection,
+    concurrency: 3,
+    limiter: {
+      max: 10,
+      duration: 60000,
+    },
+  },
+);
+
+// ============================================
+// AUTO SYNC HANDLER - Every 6 hours (Prisma)
+// ============================================
 async function handleAutoSync() {
   const now = new Date();
   const sixHoursAgo = new Date(now.getTime() - 6 * 60 * 60 * 1000);
@@ -75,21 +119,25 @@ async function handleAutoSync() {
     take: 10,
   });
 
-  for (let index = 0; index < storesToSync.length; index += 1) {
-    const store = storesToSync[index];
-    const delayMs = index * 30_000;
+  // Queue individual store syncs with staggered delays
+  for (let i = 0; i < storesToSync.length; i++) {
+    const store = storesToSync[i];
+    const delayMs = i * 30_000; // 30-second delay between stores
 
     await productSyncQueue.add(
       "auto-sync-job",
       { shopUrl: store.shopUrl },
       {
         delay: delayMs,
-        jobId: `sync-${store.shopUrl}`,
+        jobId: `sync-${store.shopUrl}-${Date.now()}`,
       },
     );
   }
 }
 
+// ============================================
+// PRIORITY SYNC HANDLER - Every 2 hours (Prisma)
+// ============================================
 async function handlePrioritySync() {
   const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
 
@@ -97,7 +145,11 @@ async function handlePrioritySync() {
     where: {
       isUnInstalled: false,
       lastProductSyncAt: { lt: twoHoursAgo },
-      OR: [{ lastActivityAt: { gt: twoHoursAgo } }],
+      OR: [
+        { lastActivityAt: { gt: twoHoursAgo } },
+        // If you later add `isPremium` Boolean to Store model:
+        // { isPremium: true },
+      ],
     },
     select: {
       shopUrl: true,
@@ -111,154 +163,65 @@ async function handlePrioritySync() {
       { shopUrl: store.shopUrl },
       {
         priority: 1,
-        jobId: `priority-sync-${store.shopUrl}`,
+        jobId: `priority-sync-${store.shopUrl}-${Date.now()}`,
       },
     );
   }
 }
 
-async function restoreSession(shop) {
-  const sessionId = `offline_${shop}`;
-  const session = await shopify.config.sessionStorage.loadSession(sessionId);
-  return session || null;
-}
-
+// ============================================
+// SYNC INDIVIDUAL STORE
+// ============================================
 async function syncStore(shopUrl) {
-  const store = await assertShopActiveForWorker(shopUrl);
-  const existingSync = await prisma.syncHistory.findFirst({
-    where: {
-      shop: shopUrl,
-      operationType: "Product",
-      status: "processing",
-    },
-    select: {
-      id: true,
-      createdAt: true,
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
+  try {
+    const session = await restoreSession(shopUrl);
+    if (!session) {
+      console.warn(`⚠️ No offline session found for shop ${shopUrl}, skipping sync`);
+      return;
+    }
 
-  if (store?.isProductSyncing || existingSync) {
-    return {
-      skipped: true,
-      reason: "local_sync_in_progress",
-      shopUrl,
-    };
+    const { status } = await getCurrentBulkOperationStatus(session, "QUERY");
+    if (status === "RUNNING") {
+      // Bulk operation already running, don't start another
+      return;
+    }
+
+    await service.startBulkOperationToFetchProducts({ session });
+  } catch (error) {
+    console.error(`❌ Error syncing ${shopUrl}:`, error?.message || error);
   }
-
-  const { locked, result } = await withAdvisoryLock(
-    `product-sync-worker:${shopUrl}`,
-    async () => {
-      const session = await restoreSession(shopUrl);
-      if (!session) {
-        throw new RetryableWorkerError(
-          `No offline session found for shop ${shopUrl}`,
-          "missing_offline_session",
-        );
-      }
-
-      const { status } = await getCurrentBulkOperationStatus(session, "QUERY");
-      if (status === "RUNNING") {
-        throw new RetryableWorkerError(
-          "Another Shopify query bulk operation is already running",
-          "shopify_bulk_busy",
-        );
-      }
-
-      return service.startBulkOperationToFetchProducts({ session });
-    },
-  );
-
-  if (!locked) {
-    throw new RetryableWorkerError(
-      `Product sync already in progress for ${shopUrl}`,
-      "product_sync_worker_lock_conflict",
-    );
-  }
-
-  return result;
 }
 
-export const productSyncWorker = new Worker(
-  QUEUE_NAME,
-  async (job) => {
-    const { shopUrl, type } = job.data;
+// ============================================
+// RESTORE SESSION – from PostgreSQLSessionStorage
+// ============================================
+async function restoreSession(shop) {
+  try {
+    const sessionId = `offline_${shop}`;
+    const session = await shopify.config.sessionStorage.loadSession(sessionId);
 
-    try {
-      if (type === "auto-sync") {
-        await handleAutoSync();
-      } else if (type === "priority-sync") {
-        await handlePrioritySync();
-      } else if (shopUrl) {
-        await syncStore(shopUrl);
-      } else {
-        await syncAllStoresBatched();
-      }
-    } catch (error) {
-      if (isSkippableWorkerError(error)) {
-        logger.info("Product sync worker skipped job", {
-          worker: "productSyncWorker",
-          queue: QUEUE_NAME,
-          jobId: job.id,
-          shop: shopUrl || null,
-          type: type || null,
-          reason: error.code,
-          message: error.message,
-        });
-        return {
-          skipped: true,
-          reason: error.code,
-        };
-      }
-
-      logger.error("Product sync worker failed", {
-        worker: "productSyncWorker",
-        queue: QUEUE_NAME,
-        jobId: job.id,
-        shop: shopUrl || null,
-        type: type || null,
-        message: error?.message || String(error),
-      });
-      throw error;
+    if (!session) {
+      return null;
     }
-  },
-  {
-    connection,
-    concurrency: 3,
-    limiter: {
-      max: 10,
-      duration: 60000,
-    },
-  },
-);
 
+    return session;
+  } catch (err) {
+    console.error("❌ Error restoring session for", shop, ":", err?.message || err);
+    return null;
+  }
+}
+
+// ============================================
+// WORKER EVENT HANDLERS
+// ============================================
 productSyncWorker.on("completed", (job) => {
-  logger.info("Product sync worker completed", {
-    worker: "productSyncWorker",
-    queue: QUEUE_NAME,
-    jobId: job.id,
-    shop: job.data?.shopUrl || null,
-    type: job.data?.type || null,
-  });
+  console.log(`✅ Job ${job.id} completed`);
 });
 
-productSyncWorker.on("failed", (job, error) => {
-  logger.error("Product sync worker failed event", {
-    worker: "productSyncWorker",
-    queue: QUEUE_NAME,
-    jobId: job?.id,
-    shop: job?.data?.shopUrl || null,
-    type: job?.data?.type || null,
-    message: error?.message || String(error),
-  });
+productSyncWorker.on("failed", (job, err) => {
+  console.error(`❌ Job ${job?.id} failed:`, err?.message || err);
 });
 
-productSyncWorker.on("error", (error) => {
-  logger.error("Product sync worker error", {
-    worker: "productSyncWorker",
-    queue: QUEUE_NAME,
-    message: error?.message || String(error),
-  });
+productSyncWorker.on("error", (err) => {
+  console.error("❌ Worker error:", err);
 });

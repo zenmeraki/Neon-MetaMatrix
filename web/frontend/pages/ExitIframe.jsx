@@ -2,7 +2,6 @@ import { useAppBridge } from "@shopify/app-bridge-react";
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { Banner, Layout, Page } from "@shopify/polaris";
-import { redirectToTopLevel } from "../hooks/useAuthenticatedFetch";
 
 export default function ExitIframe() {
   const app = useAppBridge();
@@ -21,7 +20,7 @@ export default function ExitIframe() {
         [location.hostname, "admin.shopify.com"].includes(url.hostname) ||
         url.hostname.endsWith(".myshopify.com")
       ) {
-        redirectToTopLevel(url.toString());
+        window.open(url, "_top");
       } else {
         setShowWarning(true);
       }

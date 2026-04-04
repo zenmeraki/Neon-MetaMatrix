@@ -6,17 +6,6 @@ import {
   computeScheduledExportNextRunAt,
 } from "./scheduledExportScheduleService.js";
 import logger from "../utils/loggerUtils.js";
-import {
-  createIdempotencyFingerprint,
-  stableStringify,
-  withAdvisoryLock,
-} from "../utils/idempotencyUtils.js";
-import { normalizeCanonicalFilterParams } from "./productService/productFilterContract.js";
-import {
-  buildCanonicalFilterMetadata,
-  persistFilterDefinitionMetadata,
-} from "./filterDefinitionStorageService.js";
-import { mapDefinitionStatusForClient } from "./definitionPresentationService.js";
 
 function normalizeStatus(rawStatus, fallback = "ACTIVE") {
   if (!rawStatus) return fallback;
@@ -53,6 +42,23 @@ function validateFields(fields = []) {
   return Array.from(
     new Set(fields.map((field) => String(field).trim()).filter(Boolean)),
   );
+}
+
+function mapStatusForClient(status) {
+  switch (status) {
+    case "ACTIVE":
+      return "Active";
+    case "PAUSED":
+      return "Inactive";
+    case "COMPLETED":
+      return "Completed";
+    case "FAILED":
+      return "Failed";
+    case "CANCELLED":
+      return "Cancelled";
+    default:
+      return status;
+  }
 }
 
 function mapFrequencyForClient(item) {
@@ -114,7 +120,7 @@ function serializeScheduledExport(item, countsById = {}, latestRunsById = {}) {
     id: item.id,
     shop: item.shop,
     title: item.title,
-    status: mapDefinitionStatusForClient(item.status, { pausedLabel: "Inactive" }),
+    status: mapStatusForClient(item.status),
     statusKey: item.status,
     frequency: mapFrequencyForClient(item),
     scheduleType: item.scheduleType,
@@ -124,8 +130,6 @@ function serializeScheduledExport(item, countsById = {}, latestRunsById = {}) {
     intervalMinutes: item.intervalMinutes,
     fields: item.fields,
     filename: item.filename,
-    filterVersion: item.filterVersion ?? null,
-    canonicalFilterKey: item.canonicalFilterKey ?? null,
     filterParams: item.filterParams,
     totalRuns: counts.total,
     successfulRuns: counts.success,
@@ -172,8 +176,7 @@ export async function createScheduledExport({ shop, body, subscription }) {
 
   const fields = validateFields(body.fields);
   const filename = normalizeFilename(body.filename ?? body.fileName);
-  const filterParams = normalizeCanonicalFilterParams(body.filterParams);
-  const filterMetadata = buildCanonicalFilterMetadata(filterParams);
+  const filterParams = Array.isArray(body.filterParams) ? body.filterParams : [];
   const status = normalizeStatus(body.status, "ACTIVE");
   const scheduleInput = buildScheduledExportScheduleInput({
     ...body,
@@ -192,7 +195,7 @@ export async function createScheduledExport({ shop, body, subscription }) {
     throw new Error("Scheduled export time must be in the future");
   }
 
-  const fingerprint = createIdempotencyFingerprint("scheduled_export_definition", {
+  const created = await scheduledExportRepository.create({
     shop,
     title,
     status,
@@ -206,59 +209,8 @@ export async function createScheduledExport({ shop, body, subscription }) {
     filterParams,
     fields,
     filename,
+    nextRunAt,
   });
-
-  const { result: created } = await withAdvisoryLock(
-    `scheduled-export-definition:${shop}:${fingerprint}`,
-    async () => {
-      const existingItems = await scheduledExportRepository.listByShop(shop);
-      const existing = existingItems.find((item) => (
-        item.title === title &&
-        item.status === status &&
-        item.scheduleType === scheduleInput.scheduleType &&
-        item.timezone === scheduleInput.timezone &&
-        item.filename === filename &&
-        stableStringify(item.fields || []) === stableStringify(fields) &&
-        stableStringify(item.scheduleConfig) === stableStringify(scheduleInput.scheduleConfig) &&
-        (
-          item.canonicalFilterKey === filterMetadata.canonicalFilterKey ||
-          (
-            !item.canonicalFilterKey &&
-            stableStringify(item.filterParams) === stableStringify(filterParams)
-          )
-        )
-      ));
-
-      if (existing) {
-        return existing;
-      }
-
-      const created = await scheduledExportRepository.create({
-        shop,
-        title,
-        status,
-        scheduleType: scheduleInput.scheduleType,
-        timezone: scheduleInput.timezone,
-        scheduleConfig: scheduleInput.scheduleConfig,
-        cronExpression: scheduleInput.cronExpression,
-        intervalMinutes: scheduleInput.intervalMinutes,
-        startAt: scheduleInput.startAt,
-        endAt: scheduleInput.endAt,
-        filterParams,
-        fields,
-        filename,
-        nextRunAt,
-      });
-
-      await persistFilterDefinitionMetadata({
-        tableName: "ScheduledExport",
-        id: created.id,
-        filterParams,
-      });
-
-      return created;
-    },
-  );
 
   logger.info("Scheduled export created", {
     shop,
@@ -323,8 +275,8 @@ export async function updateScheduledExport({
       ? normalizeFilename(body.filename ?? body.fileName)
       : existing.filename;
   const filterParams = Array.isArray(body.filterParams)
-    ? normalizeCanonicalFilterParams(body.filterParams)
-    : normalizeCanonicalFilterParams(existing.filterParams);
+    ? body.filterParams
+    : existing.filterParams;
   const title =
     body.title !== undefined
       ? String(body.title || "").trim() || filename.replace(/\.csv$/i, "")
@@ -363,12 +315,6 @@ export async function updateScheduledExport({
     isDeleted: false,
   });
 
-  await persistFilterDefinitionMetadata({
-    tableName: "ScheduledExport",
-    id: existing.id,
-    filterParams,
-  });
-
   return getScheduledExportHydrated(existing.id, shop);
 }
 
@@ -396,6 +342,10 @@ export async function toggleScheduledExportStatus({
     requestedStatus === "ACTIVE"
       ? computeScheduledExportNextRunAt(existing, new Date())
       : null;
+
+  if (requestedStatus === "ACTIVE" && !nextRunAt) {
+    throw new Error("Scheduled export time must be in the future");
+  }
 
   await scheduledExportRepository.updateById(existing.id, {
     status: requestedStatus,

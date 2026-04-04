@@ -1,25 +1,31 @@
 import { DeliveryMethod } from "@shopify/shopify-api";
-import crypto from "crypto";
+import { addProductCreateJob } from "./Jobs/Queues/productCreateJob.js";
+import { addProductUpdateJob } from "./Jobs/Queues/productUpdateJob.js";
+import { addProductDeleteJob } from "./Jobs/Queues/productDeleteJob.js";
 import { addAppUninstallJob } from "./Jobs/Queues/appUninstallJob.js";
 import { addbulkOperatonQueryJob } from "./Jobs/Queues/bulkOperationQueryJob.js";
 import { addbulkOperatonMutationJob } from "./Jobs/Queues/bulkOperationMutationJob.js";
 import { addShopSyncJob } from "./Jobs/Queues/shopSyncJob.js";
-import { addProductReconcileJob } from "./Jobs/Queues/productReconcileJob.js";
+import CacheService from "./utils/cacheService.js";
 import { mapPlanKeyFromName } from "./services/SubscriptionService/SubscriptionService.js";
-import { processWebhookOnce } from "./services/webhookDeliveryService.js";
 import { prisma } from "./config/database.js";
 import { clearKeyCaches } from "./utils/cacheUtils.js";
 import logger from "./utils/loggerUtils.js";
-import { withAdvisoryLock } from "./utils/idempotencyUtils.js";
-import { recordProductReconcileSignal } from "./services/productReconcileSignalService.js";
-import { MIRROR_SOURCE_KINDS } from "./services/mirrorFreshnessService.js";
 
-function createPayloadHash(body) {
-  if (!body) {
-    return null;
+function webhookDedupeKey({ topic, shop, webhookId, entityId }) {
+  return `webhook:${topic}:${shop}:${webhookId || entityId || "unknown"}`;
+}
+
+async function reserveWebhook(topic, shop, webhookId, entityId) {
+  const key = webhookDedupeKey({ topic, shop, webhookId, entityId });
+  const existing = await CacheService.get(key);
+
+  if (existing) {
+    return false;
   }
 
-  return crypto.createHash("sha256").update(String(body)).digest("hex");
+  await CacheService.set(key, Date.now(), 300);
+  return true;
 }
 
 async function queueProductWebhook({
@@ -29,48 +35,22 @@ async function queueProductWebhook({
   payload,
   producer,
   entityId,
-  body,
 }) {
-  return processWebhookOnce({
-    topic,
+  const reserved = await reserveWebhook(topic, shop, webhookId, entityId);
+  if (!reserved) {
+    return { success: true, message: "Duplicate ignored" };
+  }
+
+  await producer({
+    ...payload,
     shop,
     webhookId,
-    entityId,
-    body,
-    handler: async () => {
-      const payloadHash = createPayloadHash(body);
-      const eventTimestamp = payload.updated_at || payload.deleted_at || payload.created_at || null;
-      const sourceKind =
-        topic === "PRODUCTS_DELETE"
-          ? MIRROR_SOURCE_KINDS.WEBHOOK_DELETE
-          : topic === "PRODUCTS_CREATE"
-            ? MIRROR_SOURCE_KINDS.WEBHOOK_CREATE
-            : MIRROR_SOURCE_KINDS.WEBHOOK_UPDATE;
-
-      await recordProductReconcileSignal({
-        shop,
-        productId: entityId,
-        topic,
-        webhookId,
-        payloadHash,
-        sourceUpdatedAt: payload.updated_at || payload.deleted_at || payload.created_at || null,
-        sourceEventAt: eventTimestamp,
-        sourceKind,
-      });
-
-      await producer({
-        shop,
-        productId: entityId,
-        mode: "product",
-        topic,
-        webhookId,
-      });
-
-      await clearKeyCaches(`${shop}:sync_details`);
-
-      return { success: true, message: `${topic} queued` };
-    },
+    id: entityId,
   });
+
+  await clearKeyCaches(`${shop}:sync_details`);
+
+  return { success: true, message: `${topic} queued` };
 }
 
 async function queueShopSyncWebhook({
@@ -79,26 +59,21 @@ async function queueShopSyncWebhook({
   webhookId,
   entityId,
   syncType,
-  body,
 }) {
-  return processWebhookOnce({
-    topic,
+  const reserved = await reserveWebhook(topic, shop, webhookId, entityId);
+  if (!reserved) {
+    return { success: true, message: "Duplicate ignored" };
+  }
+
+  await addShopSyncJob({
     shop,
-    webhookId,
-    entityId,
-    body,
-    handler: async () => {
-      await addShopSyncJob({
-        shop,
-        syncType,
-        reason: topic,
-      });
-
-      await clearKeyCaches(`${shop}:sync_details`);
-
-      return { success: true, message: `${topic} queued` };
-    },
+    syncType,
+    reason: topic,
   });
+
+  await clearKeyCaches(`${shop}:sync_details`);
+
+  return { success: true, message: `${topic} queued` };
 }
 
 export default {
@@ -123,28 +98,19 @@ export default {
   SHOP_UPDATE: {
     deliveryMethod: DeliveryMethod.Http,
     callbackUrl: "/api/webhooks",
-    callback: async (_topic, shop, body, webhookId) => {
+    callback: async (_topic, shop, body) => {
       const payload = JSON.parse(body);
 
-      return processWebhookOnce({
-        topic: "SHOP_UPDATE",
-        shop,
-        webhookId,
-        entityId: payload.admin_graphql_api_id || payload.id || payload.email,
-        body,
-        handler: async () => {
-          await prisma.store.updateMany({
-            where: { shopUrl: shop },
-            data: {
-              shopEmail: payload.email || undefined,
-              updatedAt: new Date(),
-              lastActivityAt: new Date(),
-            },
-          });
-
-          return { success: true, message: "Shop updated" };
+      await prisma.store.updateMany({
+        where: { shopUrl: shop },
+        data: {
+          shopEmail: payload.email || undefined,
+          updatedAt: new Date(),
+          lastActivityAt: new Date(),
         },
       });
+
+      return { success: true, message: "Shop updated" };
     },
   },
 
@@ -160,9 +126,8 @@ export default {
         shop,
         webhookId,
         payload,
-        producer: addProductReconcileJob,
+        producer: addProductCreateJob,
         entityId: productId,
-        body,
       });
     },
   },
@@ -178,10 +143,9 @@ export default {
         topic: "PRODUCTS_DELETE",
         shop,
         webhookId,
-        payload,
-        producer: addProductReconcileJob,
+        payload: {},
+        producer: addProductDeleteJob,
         entityId: productId,
-        body,
       });
     },
   },
@@ -198,9 +162,8 @@ export default {
         shop,
         webhookId,
         payload,
-        producer: addProductReconcileJob,
+        producer: addProductUpdateJob,
         entityId: productId,
-        body,
       });
     },
   },
@@ -216,7 +179,6 @@ export default {
         webhookId,
         entityId: payload.admin_graphql_api_id || payload.id,
         syncType: "collection",
-        body,
       });
     },
   },
@@ -232,7 +194,6 @@ export default {
         webhookId,
         entityId: payload.admin_graphql_api_id || payload.id,
         syncType: "collection",
-        body,
       });
     },
   },
@@ -248,7 +209,6 @@ export default {
         webhookId,
         entityId: payload.admin_graphql_api_id || payload.id,
         syncType: "collection",
-        body,
       });
     },
   },
@@ -264,7 +224,6 @@ export default {
         webhookId,
         entityId: payload.inventory_item_id || payload.location_id,
         syncType: "product",
-        body,
       });
     },
   },
@@ -280,7 +239,6 @@ export default {
         webhookId,
         entityId: payload.admin_graphql_api_id || payload.id,
         syncType: "product",
-        body,
       });
     },
   },
@@ -296,7 +254,6 @@ export default {
         webhookId,
         entityId: payload.admin_graphql_api_id || payload.id,
         syncType: "product",
-        body,
       });
     },
   },
@@ -312,7 +269,6 @@ export default {
         webhookId,
         entityId: payload.admin_graphql_api_id || payload.id,
         syncType: "product",
-        body,
       });
     },
   },
@@ -328,7 +284,6 @@ export default {
         webhookId,
         entityId: payload.inventory_item_id || payload.location_id,
         syncType: "product",
-        body,
       });
     },
   },
@@ -344,7 +299,6 @@ export default {
         webhookId,
         entityId: payload.inventory_item_id || payload.location_id,
         syncType: "product",
-        body,
       });
     },
   },
@@ -355,34 +309,35 @@ export default {
     callback: async (_topic, shop, body, webhookId) => {
       const payload = JSON.parse(body);
       const bulkOperationId = payload.admin_graphql_api_id || payload.id;
-
-      return processWebhookOnce({
-        topic: "BULK_OPERATIONS_FINISH",
+      const reserved = await reserveWebhook(
+        "BULK_OPERATIONS_FINISH",
         shop,
         webhookId,
-        entityId: bulkOperationId,
-        body,
-        handler: async () => {
-          const jobData = {
-            ...payload,
-            shop,
-            webhookId,
-          };
+        bulkOperationId,
+      );
 
-          if (String(payload.type || "").toLowerCase() === "mutation") {
-            await addbulkOperatonMutationJob(jobData);
-          } else {
-            await addbulkOperatonQueryJob(jobData);
-          }
+      if (!reserved) {
+        return { success: true, message: "Duplicate ignored" };
+      }
 
-          await clearKeyCaches(`${shop}:sync_details`);
+      const jobData = {
+        ...payload,
+        shop,
+        webhookId,
+      };
 
-          return {
-            success: true,
-            message: "Bulk operation job queued",
-          };
-        },
-      });
+      if (String(payload.type || "").toLowerCase() === "mutation") {
+        await addbulkOperatonMutationJob(jobData);
+      } else {
+        await addbulkOperatonQueryJob(jobData);
+      }
+
+      await clearKeyCaches(`${shop}:sync_details`);
+
+      return {
+        success: true,
+        message: "Bulk operation job queued",
+      };
     },
   },
 
@@ -390,34 +345,25 @@ export default {
     deliveryMethod: DeliveryMethod.Http,
     callbackUrl: "/api/webhooks",
     callback: async (topic, shop, body, webhookId) => {
-      return processWebhookOnce({
-        topic,
+      await addAppUninstallJob({
         shop,
+        topic,
         webhookId,
-        entityId: shop,
+        receivedAt: new Date().toISOString(),
         body,
-        handler: async () => {
-          await addAppUninstallJob({
-            shop,
-            topic,
-            webhookId,
-            receivedAt: new Date().toISOString(),
-            body,
-          });
-
-          return {
-            success: true,
-            message: "App uninstall queued",
-          };
-        },
       });
+
+      return {
+        success: true,
+        message: "App uninstall queued",
+      };
     },
   },
 
   APP_SUBSCRIPTIONS_UPDATE: {
     deliveryMethod: DeliveryMethod.Http,
     callbackUrl: "/api/webhooks",
-    callback: async (_topic, shop, body, webhookId) => {
+    callback: async (_topic, shop, body) => {
       try {
         const payload = JSON.parse(body);
         const sub = payload.app_subscription;
@@ -426,100 +372,108 @@ export default {
           return;
         }
 
-        return processWebhookOnce({
-          topic: "APP_SUBSCRIPTIONS_UPDATE",
-          shop,
-          webhookId,
-          entityId: sub.admin_graphql_api_id || sub.name,
-          body,
-          handler: async () => {
-            const { locked } = await withAdvisoryLock(`subscription-webhook:${shop}`, async () => {
-              const incomingSubId = sub.admin_graphql_api_id;
-              const toDateOrNull = (value) => (value ? new Date(value) : null);
-              const existing = await prisma.subscription.findFirst({
+        const incomingSubId = sub.admin_graphql_api_id;
+        const existing = await prisma.subscription.findFirst({
+          where: { shop },
+        });
+        const toDateOrNull = (value) => (value ? new Date(value) : null);
+
+        if (sub.status === "ACTIVE") {
+          const isPendingApproval =
+            existing?.pendingSubscriptionId === incomingSubId;
+
+          if (isPendingApproval && existing) {
+            await prisma.subscription.updateMany({
+              where: { shop },
+              data: {
+                status: "ACTIVE",
+                subscriptionId: incomingSubId,
+                planKey: existing.pendingPlanKey,
+                planName: existing.pendingPlanName || sub.name,
+                currentPeriodEnd: toDateOrNull(sub.current_period_end),
+                trialEndsAt: toDateOrNull(sub.trial_ends_at),
+                pendingSubscriptionId: null,
+                pendingPlanKey: null,
+                pendingPlanName: null,
+              },
+            });
+          } else {
+            const planKey = mapPlanKeyFromName(sub.name);
+
+            if (existing) {
+              await prisma.subscription.updateMany({
                 where: { shop },
-                orderBy: { createdAt: "asc" },
+                data: {
+                  status: "ACTIVE",
+                  subscriptionId: incomingSubId,
+                  planKey,
+                  planName: sub.name,
+                  currentPeriodEnd: toDateOrNull(sub.current_period_end),
+                  trialEndsAt: toDateOrNull(sub.trial_ends_at),
+                },
               });
-
-              if (sub.status === "ACTIVE") {
-                const isPendingApproval =
-                  existing?.pendingSubscriptionId === incomingSubId;
-                const planName = isPendingApproval
-                  ? existing?.pendingPlanName || sub.name
-                  : sub.name;
-
-                const nextData = {
+            } else {
+              await prisma.subscription.create({
+                data: {
                   shop,
                   status: "ACTIVE",
                   subscriptionId: incomingSubId,
-                  planKey: mapPlanKeyFromName(planName),
-                  planName,
+                  planKey,
+                  planName: sub.name,
                   currentPeriodEnd: toDateOrNull(sub.current_period_end),
                   trialEndsAt: toDateOrNull(sub.trial_ends_at),
-                  pendingSubscriptionId: null,
-                  pendingPlanKey: null,
-                  pendingPlanName: null,
-                };
-
-                if (existing) {
-                  await prisma.subscription.update({
-                    where: { id: existing.id },
-                    data: nextData,
-                  });
-                } else {
-                  await prisma.subscription.create({
-                    data: nextData,
-                  });
-                }
-
-                return;
-              }
-
-              if (!["CANCELLED", "EXPIRED"].includes(sub.status) || !existing) {
-                return;
-              }
-
-              if (existing.pendingSubscriptionId === incomingSubId) {
-                await prisma.subscription.update({
-                  where: { id: existing.id },
-                  data: {
-                    pendingSubscriptionId: null,
-                    pendingPlanKey: null,
-                    pendingPlanName: null,
-                  },
-                });
-                return;
-              }
-
-              if (
-                existing.subscriptionId &&
-                existing.subscriptionId !== incomingSubId &&
-                existing.status === "ACTIVE"
-              ) {
-                return;
-              }
-
-              await prisma.subscription.update({
-                where: { id: existing.id },
-                data: {
-                  status: "FREE",
-                  planKey: "FREE",
-                  planName: "Free Plan",
-                  subscriptionId: null,
-                  currentPeriodEnd: null,
-                  trialEndsAt: null,
-                  pendingSubscriptionId: null,
-                  pendingPlanKey: null,
-                  pendingPlanName: null,
                 },
               });
-            });
-
-            if (!locked) {
-              return { success: true, message: "Subscription webhook already processing" };
             }
+          }
 
-            return { success: true, message: "Subscription webhook processed" };
+          return;
+        }
+
+        if (!["CANCELLED", "EXPIRED"].includes(sub.status)) {
+          return;
+        }
+
+        if (!existing) {
+          return;
+        }
+
+        if (existing.pendingSubscriptionId === incomingSubId) {
+          await prisma.subscription.updateMany({
+            where: { shop },
+            data: {
+              pendingSubscriptionId: null,
+              pendingPlanKey: null,
+              pendingPlanName: null,
+            },
+          });
+          return;
+        }
+
+        if (
+          existing.subscriptionId &&
+          existing.subscriptionId !== incomingSubId &&
+          existing.status === "ACTIVE"
+        ) {
+          return;
+        }
+
+        await prisma.subscription.updateMany({
+          where: {
+            shop,
+            subscriptionId: incomingSubId,
+            pendingSubscriptionId: null,
+          },
+          data: {
+            status: "FREE",
+            planKey: "FREE",
+            planName: "Free Plan",
+            subscriptionId: null,
+            currentPeriodEnd: null,
+            trialEndsAt: null,
+            pendingSubscriptionId: null,
+            pendingPlanKey: null,
+            pendingPlanName: null,
           },
         });
       } catch (error) {

@@ -27,7 +27,6 @@ import {
 } from "@shopify/polaris-icons";
 import Papa from "papaparse";
 import { useTranslation } from "react-i18next";
-import { authenticatedFetch } from "../../../../hooks/useAuthenticatedFetch";
 
 const FALLBACK_IMAGE = "https://www.otithee.com/img/fallback/fallback-2.png";
 
@@ -159,7 +158,7 @@ export default function EditDetails() {
       setIsLoadingHistory(true);
       setError(null);
 
-      const response = await authenticatedFetch(`/api/history/get-edit-history-details/${id}`);
+      const response = await fetch(`/api/history/get-edit-history-details/${id}`);
       if (!response.ok) {
         throw new Error("Failed to fetch history");
       }
@@ -181,7 +180,7 @@ export default function EditDetails() {
         setChangesError(null);
         setIsLoadingChanges(true);
 
-        const response = await authenticatedFetch(
+        const response = await fetch(
           `/api/history/get-edit-history/changes/${id}?page=${page}&limit=${itemsPerPage}`,
         );
 
@@ -256,7 +255,7 @@ export default function EditDetails() {
 
     const interval = setInterval(async () => {
       try {
-        const res = await authenticatedFetch(`/api/history/get-edit-history-details/${id}`);
+        const res = await fetch(`/api/history/get-edit-history-details/${id}`);
         if (!res.ok) return;
 
         const json = await res.json();

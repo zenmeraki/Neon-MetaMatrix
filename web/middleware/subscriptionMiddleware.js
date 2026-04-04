@@ -19,6 +19,7 @@ export const subscriptionMiddleware = async (req, res, next) => {
     }
 
     const shop = session.shop;
+    console.log("[SUBSCRIPTION_MIDDLEWARE] Checking subscription for shop:", shop);
 
 
     // Check if store has free credit (grandfathered access)
@@ -29,6 +30,8 @@ const store = await prisma.store.findUnique({
 
     // If store has isCreditAvailable = true, grant them Pro plan access for free
     if (store && store.isCreditAvailable === true) {
+      console.log("[SUBSCRIPTION_MIDDLEWARE] Store has free credit - granting Pro access");
+      
       req.subscription = {
         shop,
         planKey: "PRO_MONTHLY",
@@ -39,6 +42,8 @@ const store = await prisma.store.findUnique({
         subscriptionId: null,
         isCreditUser: true, // Flag to indicate this is a grandfathered user
       };
+
+      console.log("[SUBSCRIPTION_MIDDLEWARE] Subscription info (Credit User):", req.subscription);
       return next();
     }
 
@@ -88,6 +93,8 @@ const store = await prisma.store.findUnique({
       isCreditUser : false
     };
 
+    console.log("[SUBSCRIPTION_MIDDLEWARE] Subscription info:", req.subscription);
+
     // Continue to next middleware/controller
     next();
 
@@ -115,6 +122,7 @@ export const requirePaidPlanMiddleware = (req, res, next) => {
     
      // Allow credit users (grandfathered users) to access paid features
     if (isCreditUser === true) {
+      console.log("[REQUIRE_PAID_PLAN] Credit user detected - allowing access");
       return next();
     }
 

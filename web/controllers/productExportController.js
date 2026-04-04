@@ -1,20 +1,15 @@
+import { Services } from "../services/productService/productFilterService.js";
 import { errorResponse } from "../utils/responseUtils.js";
+import { addbulkExportJob } from "../Jobs/Queues/bulkExportJob.js";
 import { ProductExportService } from "../services/productService/productExportService.js";
+import { clearKeyCaches } from "../utils/cacheUtils.js";
 import { logApiError } from "../utils/errorLogUtils.js";
+import { prisma } from "../config/database.js";
 import {
+  freezeTargetSnapshot,
   resolveCanonicalProductTarget,
 } from "../services/productService/productTargetingService.js";
-import { createManualExportJob } from "../services/productExportJobService.js";
-import { normalizeCanonicalFilterParams } from "../services/productService/productFilterContract.js";
-
-function normalizeExportFilterParams(filterParams) {
-  try {
-    return normalizeCanonicalFilterParams(filterParams);
-  } catch (error) {
-    error.statusCode = 400;
-    throw error;
-  }
-}
+import { EXPORT_EXECUTION_STATES } from "../services/exportExecutionStateService.js";
 
 export const handleExportProductsData = async (req, res) => {
   const session = res.locals.shopify?.session;
@@ -24,34 +19,74 @@ export const handleExportProductsData = async (req, res) => {
       return res.status(403).json(errorResponse("Session expired"));
     }
 
-    const fields = req.body?.fields ?? req.body?.columns;
-    const fileName = req.body?.fileName ?? req.body?.filename;
-    const filterParams = normalizeExportFilterParams(req.body?.filterParams);
+    const { filterParams, fields, fileName } = req.body;
     const target = await resolveCanonicalProductTarget({
       shop: session.shop,
       filterParams,
       queryParams: { page: 1, limit: 20 },
-      sampleLimit: 0,
-      includeSample: false,
+      sampleLimit: 20,
     });
 
     const filename = fileName?.endsWith(".csv") ? fileName : `${fileName}.csv`;
-    const result = await createManualExportJob({
+
+    const newExportHistory = await prisma.exportHistory.create({
+      data: {
+        shop: session.shop,
+        filename,
+        filters: filterParams,
+        status: "pending",
+        duration: "Not completed yet.",
+      },
+    });
+
+    const exportJob = await prisma.exportJob.create({
+      data: {
+        shop: session.shop,
+        filename,
+        fields,
+        filterQuery: JSON.stringify(target.where),
+        status: "PENDING",
+        executionState: EXPORT_EXECUTION_STATES.PLANNED,
+        targetMirrorBatchId: target.mirrorBatchId,
+      },
+    });
+
+    const frozenCount = await freezeTargetSnapshot({
+      ownerType: "EXPORT_JOB",
+      ownerId: exportJob.id,
       shop: session.shop,
-      filename,
+      where: target.where,
+      mirrorBatchId: target.mirrorBatchId,
+    });
+
+    await prisma.exportJob.update({
+      where: { id: exportJob.id },
+      data: {
+        targetSnapshotCount: frozenCount,
+        executionState: EXPORT_EXECUTION_STATES.QUEUED,
+      },
+    });
+
+    const cacheKey = `${session.shop}:sync_details`;
+    const exportCacheKey = `${session.shop}:fetchExportHistories`;
+
+    await clearKeyCaches(cacheKey);
+    await clearKeyCaches(exportCacheKey);
+
+    await addbulkExportJob({
+      exportJobId: exportJob.id,
+      shop: session.shop,
       fields,
-      filterParams,
-      target,
       source: "manual_export_legacy_endpoint",
-      createHistory: true,
+      executionId: exportJob.id,
     });
 
     return res.status(200).json({
-      message: "Exporting started - queued in background",
-      data: result.exportHistory || { exportJobId: result.exportJob.id, reused: result.reused },
+      message: "Exporting started â€” queued in background",
+      data: newExportHistory,
     });
   } catch (err) {
-    const statusCode = err?.statusCode || 500;
+    console.log(err.message);
     await logApiError({
       shop: session?.shop,
       err,
@@ -60,20 +95,14 @@ export const handleExportProductsData = async (req, res) => {
     });
 
     return res
-      .status(statusCode)
-      .json(errorResponse(
-        statusCode >= 500
-          ? "Failed to start export process"
-          : err.message || "Failed to start export process",
-      ));
+      .status(500)
+      .json(errorResponse("Failed to start export process"));
   }
 };
 
 export const createProductExport = async (req, res) => {
   try {
-    const fields = req.body?.fields ?? req.body?.columns;
-    const fileName = req.body?.fileName ?? req.body?.filename;
-    const filterParams = normalizeExportFilterParams(req.body?.filterParams);
+    const { fields, fileName, filterParams } = req.body;
     const session = res.locals.shopify?.session;
 
     if (!session?.shop) {
@@ -93,39 +122,57 @@ export const createProductExport = async (req, res) => {
       shop,
       filterParams,
       queryParams: { page: 1, limit: 20 },
-      sampleLimit: 0,
-      includeSample: false,
+      sampleLimit: 20,
     });
 
     const filename = fileName.endsWith(".csv") ? fileName : `${fileName}.csv`;
-    const result = await createManualExportJob({
+
+    const job = await prisma.exportJob.create({
+      data: {
+        shop,
+        filename,
+        fields,
+        filterQuery: JSON.stringify(target.where),
+        status: "PENDING",
+        executionState: EXPORT_EXECUTION_STATES.PLANNED,
+        targetMirrorBatchId: target.mirrorBatchId,
+      },
+    });
+
+    const frozenCount = await freezeTargetSnapshot({
+      ownerType: "EXPORT_JOB",
+      ownerId: job.id,
       shop,
-      filename,
+      where: target.where,
+      mirrorBatchId: target.mirrorBatchId,
+    });
+
+    await prisma.exportJob.update({
+      where: { id: job.id },
+      data: {
+        targetSnapshotCount: frozenCount,
+        executionState: EXPORT_EXECUTION_STATES.QUEUED,
+      },
+    });
+
+    await clearKeyCaches(`${shop}:fetchExportHistories:`);
+
+    await addbulkExportJob({
+      exportJobId: job.id,
+      shop,
       fields,
-      filterParams,
-      target,
       source: "manual_export",
-      createHistory: false,
+      executionId: job.id,
     });
 
     return res.status(200).json({
-      exportJobId: result.exportJob.id,
-      status: result.exportJob.status,
-      reused: result.reused,
+      exportJobId: job.id,
+      status: job.status,
     });
   } catch (error) {
-    const statusCode = error?.statusCode || 500;
-    await logApiError({
-      shop: res.locals.shopify?.session?.shop,
-      err: error,
-      req,
-      source: "POST /api/product-exports",
-    });
-    return res.status(statusCode).json({
-      message:
-        statusCode >= 500
-          ? "Failed to create export job"
-          : error.message || "Failed to create export job",
+    console.error("Create Export Error:", error);
+    return res.status(500).json({
+      message: "Failed to create export job",
     });
   }
 };

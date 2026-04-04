@@ -80,6 +80,7 @@ model Product {
   @@index([shop, lastSourceEventAt])
   @@index([shop, lastSourceKind])
   @@index([shop, lastReconciledAt])
+
   @@index([shop, publishedAt])
   @@index([shop, categoryName])
   @@index([shop, googleShoppingEnabled])
@@ -116,6 +117,7 @@ model ProductTombstone {
   @@index([shop, deletedAt])
   @@index([shop, purgeAfter])
 }
+
 
 model Variant {
   shop                String
@@ -246,6 +248,7 @@ model Store {
 model Subscription {
   id                    String             @id @default(cuid())
   shop                  String             @unique
+
   planKey               String?
   planName              String?
   subscriptionId        String?
@@ -322,6 +325,7 @@ model OperationFingerprint {
   @@index([shop, status, createdAt])
 }
 
+
 model Suggestion {
   id         String   @id @default(cuid())
   email      String
@@ -342,6 +346,7 @@ model SyncHistory {
   executionIdentity    String?
   lastHeartbeatAt      DateTime?
   completedAt          DateTime?
+
   status               SyncStatus         @default(processing)
   stage                String?
   errorSummary         String?
@@ -355,6 +360,7 @@ model SyncHistory {
   @@index([shop, createdAt])
   @@index([shop, status])
   @@index([shop, executionState])
+
   @@index([shop, operationType])
 }
 
@@ -408,6 +414,7 @@ model EditHistory {
   @@index([shop])
   @@index([shop, executionState])
   @@index([shop, canonicalFilterKey])
+
   @@index([isSpreadsheetEdit])
   @@index([recurringEditId])
   @@index([recurringRunId])
@@ -429,6 +436,7 @@ model RecurringEdit {
   endAt             DateTime?
   filterVersion     Int                   @default(1)
   canonicalFilterKey String?
+
   filterParams      Json
   rules             Json
   runCount          Int                   @default(0)
@@ -446,6 +454,7 @@ model RecurringEdit {
   @@index([shop, status])
   @@index([shop, nextRunAt])
   @@index([shop, canonicalFilterKey])
+
   @@index([nextRunAt])
 }
 
@@ -486,6 +495,7 @@ model AutomaticProductRule {
   scopeType         AutomaticProductRuleScopeType
   filterVersion     Int                           @default(1)
   canonicalFilterKey String?
+
   conditions        Json
   actions           Json
   applyMode         String
@@ -509,6 +519,7 @@ model AutomaticProductRule {
   @@index([shop, status])
   @@index([shop, nextRunAt])
   @@index([shop, canonicalFilterKey])
+
   @@index([shop, triggerType])
   @@index([shop, priority, status])
   @@index([shop, createdAt])
@@ -632,6 +643,7 @@ model ScheduledExport {
   endAt             DateTime?
   filterVersion     Int                   @default(1)
   canonicalFilterKey String?
+
   filterParams      Json
   fields            String[]
   filename          String
@@ -650,6 +662,7 @@ model ScheduledExport {
   @@index([shop, status])
   @@index([shop, nextRunAt])
   @@index([shop, canonicalFilterKey])
+
   @@index([nextRunAt])
 }
 
@@ -683,6 +696,7 @@ model ExportJob {
   filterQuery         String             @default("{}")
   filterVersion       Int?
   canonicalFilterKey  String?
+
   executionState      String             @default("planned")
   targetSnapshotCount Int                @default(0)
   targetMirrorBatchId String?
@@ -707,6 +721,7 @@ model ExportJob {
   @@index([shop])
   @@index([shop, executionState])
   @@index([shop, canonicalFilterKey])
+
   @@index([status])
   @@index([scheduledExportId])
   @@index([scheduledExportRunId])

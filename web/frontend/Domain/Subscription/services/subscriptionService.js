@@ -1,5 +1,3 @@
-import { authenticatedFetch } from "../../../hooks/useAuthenticatedFetch";
-
 export const subscriptionService = {
     /**
      * Get available subscription plans
@@ -7,7 +5,7 @@ export const subscriptionService = {
      */
     async getSubscriptionPlans() {
       try {
-        const response = await authenticatedFetch('/api/subscription/get-plans');
+        const response = await fetch('/api/subscription/get-plans');
   
         if (!response.ok) {
           throw new Error(`Failed to fetch plans: ${response.statusText}`);
@@ -26,7 +24,7 @@ export const subscriptionService = {
      * @param {Object} plan - Plan to subscribe to
      * @returns {Promise<Object>} Subscription result with confirmation URL
      */
-     async createSubscription(plan, fetchFn = authenticatedFetch) {
+     async createSubscription(plan, fetchFn = fetch) {
     // ✅ Only send what the backend needs
     const response = await fetchFn('/api/subscription/create-subscription', {
       method: 'POST',

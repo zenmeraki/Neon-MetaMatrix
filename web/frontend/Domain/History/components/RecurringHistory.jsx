@@ -17,7 +17,6 @@ import {
 } from "@shopify/polaris";
 import { CalendarIcon } from "@shopify/polaris-icons";
 import { useTranslation } from "react-i18next";
-import { authenticatedFetch } from "../../../hooks/useAuthenticatedFetch";
 
 export default function RecurringHistory() {
   const { t } = useTranslation();
@@ -38,7 +37,7 @@ export default function RecurringHistory() {
     setLoading(true);
     setError("");
     try {
-      const response = await authenticatedFetch("/api/recurring-edits");
+      const response = await fetch("/api/recurring-edits");
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Failed to fetch recurring edits");
       setRecurringEdits(data?.edits || []);
@@ -58,7 +57,7 @@ export default function RecurringHistory() {
   const handleToggleStatus = async (id, currentStatus) => {
     try {
       const newStatus = !currentStatus;
-      const response = await authenticatedFetch(`/api/recurring-edits/${id}`, {
+      const response = await fetch(`/api/recurring-edits/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ active: newStatus }),
@@ -88,7 +87,7 @@ export default function RecurringHistory() {
   // === API: Cancel Edit ===
   const handleCancelEdit = async (id) => {
     try {
-      const response = await authenticatedFetch(`/api/recurring-edits/${id}`, { method: "DELETE" });
+      const response = await fetch(`/api/recurring-edits/${id}`, { method: "DELETE" });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Failed to cancel recurring edit");
 

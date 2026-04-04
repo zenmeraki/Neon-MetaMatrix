@@ -1,5 +1,3 @@
-import { authenticatedFetch } from "../../../hooks/useAuthenticatedFetch";
-
 export const historyService = {
   controller: null, // Store the controller for cancellation
 
@@ -17,7 +15,7 @@ export const historyService = {
         queryParams.append("cursor", cursor);
       }
 
-      const response = await authenticatedFetch(
+      const response = await fetch(
         `/api/history/get-shop-edithistory?${queryParams.toString()}`,
         {
           method: "GET",
@@ -63,7 +61,7 @@ export const historyService = {
       //   queryParams.append("cursor", cursor);
       // }
 
-      const response = await authenticatedFetch(
+      const response = await fetch(
         `/api/products/get-recurring-edits?${queryParams.toString()}`,
         {
           method: "GET",
@@ -103,7 +101,7 @@ export const historyService = {
       // if (filters.type) queryParams.append('type', filters.type);
       // if (filters.search) queryParams.append('search', filters.search);
 
-      const response = await authenticatedFetch(
+      const response = await fetch(
         `/api/history/get-shop-exporthistory?${queryParams.toString()}`,
         {
           method: "GET",
@@ -136,7 +134,7 @@ export const historyService = {
 
   async downloadExportedData(id, fileName = "exported_data") {
     try {
-      const response = await authenticatedFetch(`/api/products/download-export/${id}`, {
+      const response = await fetch(`/api/products/download-export/${id}`, {
         method: "GET",
       });
 
@@ -154,7 +152,7 @@ export const historyService = {
       // Trigger download
       const a = document.createElement("a");
       a.href = url;
-      a.download = /\.csv$/i.test(fileName) ? fileName : `${fileName}.csv`;
+      a.download = `${fileName}.csv`;
       a.click();
 
       // Cleanup

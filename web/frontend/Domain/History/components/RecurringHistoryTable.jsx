@@ -14,7 +14,6 @@ import {
 } from "@shopify/polaris";
 import { useTranslation } from "react-i18next";
 import RecurringEditViewModal from "./RecurringEditView";
-import { authenticatedFetch } from "../../../hooks/useAuthenticatedFetch";
 
 /**
  * Component for displaying the recurring history table (Polaris v13)
@@ -26,6 +25,7 @@ const RecurringHistoryTable = memo(
     isLoadingMore,
     hasMore,
     onLoadMore,
+    onRefresh,
     emptyStateMessage = "No recurring edits found.",
   }) => {
     const [open, setOpen] = useState(false);
@@ -86,7 +86,7 @@ const RecurringHistoryTable = memo(
 
       try {
         setOpen(true);
-        const response = await authenticatedFetch(
+        const response = await fetch(
           `/api/products/get-recurring-edit/${id}?lang=${i18n.language}`
         );
         const data = await response.json();
@@ -108,7 +108,7 @@ const RecurringHistoryTable = memo(
         normalizedCurrentStatus === "active" ? "Inactive" : "Active";
 
       try {
-        const response = await authenticatedFetch(`/api/products/update-recurring-edit/${id}/toggle`, {
+        const response = await fetch(`/api/products/update-recurring-edit/${id}/toggle`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ status: newStatus }),
@@ -146,7 +146,7 @@ const RecurringHistoryTable = memo(
 
       setDeleteLoading(true);
       try {
-        const response = await authenticatedFetch(
+        const response = await fetch(
           `/api/products/delete-recurring-edit/${deleteRecurringItem.id}`,
           {
             method: "DELETE",
@@ -336,6 +336,7 @@ const RecurringHistoryTable = memo(
           isLoading={isLoadingDetails}
           open={open}
           onClose={() => setOpen(false)}
+          onUpdated={onRefresh}
         />
 
         <Modal

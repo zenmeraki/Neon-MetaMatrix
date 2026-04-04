@@ -21,7 +21,6 @@ import { useTranslation } from "react-i18next";
 import { getFieldDefinition, InputType, FieldType } from "../constants";
 import { useFieldValidation } from "../hooks/useFiledValidation";
 import { getValueValidationRules } from "../../../../utils/valueValidation";
-import { authenticatedFetch } from "../../../../hooks/useAuthenticatedFetch";
 
 const ValueInput = ({
   selectedField,
@@ -100,7 +99,7 @@ const ValueInput = ({
           )}`
           : config.apiEndpoint;
 
-        const res = await authenticatedFetch(url);
+        const res = await fetch(url);
         const json = await res.json();
 
         if (!res.ok) throw new Error(json.message || "Failed to fetch options");
@@ -126,7 +125,7 @@ const ValueInput = ({
   // Fetch locations
   const fetchLocations = async () => {
     try {
-      const res = await authenticatedFetch("/api/location/get-all");
+      const res = await fetch("/api/location/get-all");
       const json = await res.json();
 
       if (!res.ok) throw new Error(json.message || "Failed to fetch locations");

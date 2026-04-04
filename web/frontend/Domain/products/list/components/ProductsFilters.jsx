@@ -13,7 +13,6 @@ import {
 
 import { getAllFilters } from "../constants";
 import { t } from "i18next";
-import { authenticatedFetch } from "../../../../hooks/useAuthenticatedFetch";
 
 const VALUE_OPTION_OPERATORS = new Set([
   "contains",
@@ -154,7 +153,7 @@ const ProductsFilters = memo(function ProductsFilters({
     }));
 
     try {
-      const res = await authenticatedFetch(
+      const res = await fetch(
         `${filter.api}?search=${encodeURIComponent(query)}&isNameOnly=true`,
       );
 

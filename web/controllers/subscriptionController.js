@@ -5,41 +5,6 @@ import shopify from "../shopify.js";
 
 import { prisma } from "../config/database.js";
 
-function normalizeAppUrl(rawUrl) {
-  if (!rawUrl) return null;
-
-  const withProtocol = /^https?:\/\//i.test(rawUrl) ? rawUrl : `https://${rawUrl}`;
-
-  try {
-    return new URL(withProtocol).origin;
-  } catch {
-    return null;
-  }
-}
-
-function getBillingReturnUrl(requestedReturnUrl) {
-  const appOrigin =
-    normalizeAppUrl(process.env.SHOPIFY_APP_URL) ||
-    normalizeAppUrl(process.env.HOST);
-
-  if (!appOrigin) {
-    return null;
-  }
-
-  if (requestedReturnUrl) {
-    try {
-      const candidate = new URL(requestedReturnUrl);
-      if (candidate.origin === appOrigin) {
-        return candidate.toString();
-      }
-    } catch {
-      // Fall through to the default pricing route.
-    }
-  }
-
-  return `${appOrigin}/pricing`;
-}
-
 
 export const getPlansController = async (req, res) => {
   try {
@@ -96,19 +61,11 @@ export const createSubscriptionController = async (req, res) => {
     }
 
     const plan = PLANS[planKey];
-    const billingReturnUrl = getBillingReturnUrl(returnUrl);
 
     if (!plan) {
       return res.status(400).json({
         success: false,
         message: "Invalid plan selected",
-      });
-    }
-
-    if (!plan.isFree && !billingReturnUrl) {
-      return res.status(500).json({
-        success: false,
-        message: "Billing return URL is not configured",
       });
     }
 
@@ -234,10 +191,9 @@ export const createSubscriptionController = async (req, res) => {
         $returnUrl: URL!
         $trialDays: Int!
         $price: Decimal!
-        $test: Boolean!
       ) {
         appSubscriptionCreate(
-          test: $test
+                test:true
           name: $name
           returnUrl: $returnUrl
           trialDays: $trialDays
@@ -262,17 +218,19 @@ export const createSubscriptionController = async (req, res) => {
         }
       }
     `;
+const returnUrlToUse = `https://${session.shop}/admin/apps/${process.env.SHOPIFY_API_KEY}/pricing`;
+console.log("[BILLING] returnUrl:", returnUrlToUse);
+console.log("[BILLING] session.shop:", session.shop);
+console.log("[BILLING] SHOPIFY_API_KEY:", process.env.SHOPIFY_API_KEY);
     const result = await client.query({
       data: {
         query: mutation,
         variables: {
           name: plan.name,
-          returnUrl: billingReturnUrl,
+          returnUrl: returnUrlToUse,
+          // returnUrl: returnUrl || `${process.env.SHOPIFY_APP_URL}/api/subscription/callback?shop=${session.shop}`,
           trialDays: plan.trialDays,
           price: plan.price.toString(),
-          test:
-            process.env.SHOPIFY_BILLING_TEST === "true" ||
-            process.env.NODE_ENV !== "production",
         },
       },
     });
@@ -290,7 +248,9 @@ export const createSubscriptionController = async (req, res) => {
     const existingSub = await prisma.subscription.findFirst({
       where: { shop: session.shop },
       orderBy: { createdAt: "desc" },
+
     });
+
 
     if (existingSub) {
       await prisma.subscription.update({
@@ -299,13 +259,14 @@ export const createSubscriptionController = async (req, res) => {
           pendingSubscriptionId: data.appSubscription.id,
           pendingPlanKey: planKey,
           pendingPlanName: plan.name,
+          // DON'T update subscriptionId, status, planKey - keep existing active subscription!
         },
       });
     } else {
       await prisma.subscription.create({
         data: {
           shop: session.shop,
-          status: "PENDING",
+          status: "PENDING", // or "FREE", but you previously default to FREE in schema
           pendingSubscriptionId: data.appSubscription.id,
           pendingPlanKey: planKey,
           pendingPlanName: plan.name,

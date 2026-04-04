@@ -15,7 +15,6 @@ import {
   Text,
 } from "@shopify/polaris";
 import { ArrowDownIcon } from "@shopify/polaris-icons";
-import { authenticatedFetch } from "../../../hooks/useAuthenticatedFetch";
 
 function getNormalizedExportType(item) {
   return String(item?.rawType || item?.type || "").trim().toLowerCase();
@@ -83,7 +82,7 @@ const ExportTable = ({ selectedType = "Manual export", onExportSuccess, onExport
         }
         setHistoryError(null);
 
-        const res = await authenticatedFetch("/api/history/get-shop-exporthistory?");
+        const res = await fetch("/api/history/get-shop-exporthistory?");
         const data = await res.json();
 
         if (!res.ok || !data.success) {
@@ -120,7 +119,7 @@ const ExportTable = ({ selectedType = "Manual export", onExportSuccess, onExport
 
     const interval = setInterval(async () => {
       try {
-        const res = await authenticatedFetch("/api/history/get-shop-exporthistory?");
+        const res = await fetch("/api/history/get-shop-exporthistory?");
         const data = await res.json();
         if (res.ok && data.success) {
           setHistories(data.data || []);

@@ -2,7 +2,6 @@
 import shopify from "../shopify.js";
 
 import { prisma } from "../config/database.js";
-import { buildStoreShopWhere } from "./shopIdentifier.js";
 
 
 // Legacy reference (kept as a comment for context)
@@ -21,7 +20,7 @@ import { buildStoreShopWhere } from "./shopIdentifier.js";
 export const getSession = async (shop) => {
   try {
     const store = await prisma.store.findUnique({
-      where: buildStoreShopWhere(shop),
+      where: { shopUrl: shop },
       select: {
         shopUrl: true,
         accessToken: true,

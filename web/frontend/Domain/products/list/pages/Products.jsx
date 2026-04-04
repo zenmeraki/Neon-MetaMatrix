@@ -15,7 +15,6 @@ import { useMemo, useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { t } from "i18next";
-import { useAuthenticatedFetch } from "../../../../hooks/useAuthenticatedFetch";
 
 import ProductsFilters from "../components/ProductsFilters";
 import ProductsTable from "../components/ProductsTable";
@@ -37,7 +36,6 @@ import {
 export default function ProductsPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const fetchWithAuth = useAuthenticatedFetch();
 
   const products = useSelector(selectProducts);
   const filterState = useSelector(selectFilters);
@@ -46,15 +44,14 @@ export default function ProductsPage() {
   const page = useSelector(selectPage);
   const search = useSelector(selectSearch);
 
-  const { loading, error, hasFetched, isStaleData, fetchProducts } = useProducts();
+  const { loading, error, hasFetched, fetchProducts } = useProducts();
 
   const [syncStatus, setSyncStatus] = useState(null);
   const [syncStatusLoading, setSyncStatusLoading] = useState(true);
 
   const fetchSyncStatus = useCallback(async () => {
     try {
-      const response = await fetchWithAuth("/api/sync/sync-status");
-      if (!response) return;
+      const response = await fetch("/api/sync/sync-status");
       const result = await response.json();
 
       if (response.ok && result?.syncStatus) {
@@ -65,7 +62,7 @@ export default function ProductsPage() {
     } finally {
       setSyncStatusLoading(false);
     }
-  }, [fetchWithAuth]);
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -242,17 +239,9 @@ export default function ProductsPage() {
           </Card>
         </Layout.Section>
 
-        {error && !products.length && (
+        {error && (
           <Layout.Section>
             <Banner tone="critical" title="Error loading products">
-              <Text>{error}</Text>
-            </Banner>
-          </Layout.Section>
-        )}
-
-        {error && isStaleData && products.length > 0 && (
-          <Layout.Section>
-            <Banner tone="warning" title="Products refresh delayed">
               <Text>{error}</Text>
             </Banner>
           </Layout.Section>

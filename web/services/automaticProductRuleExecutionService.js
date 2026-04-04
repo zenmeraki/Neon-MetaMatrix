@@ -26,8 +26,6 @@ import {
   acquireExclusiveShopWork,
   releaseExclusiveShopWork,
 } from "./shopWorkLeaseService.js";
-import { persistEditHistoryTargetingMetadata } from "./historyTargetingMetadataService.js";
-import { buildQueueExecutionPayload } from "../utils/executionIdentity.js";
 
 export const AUTOMATIC_PRODUCT_RULE_EXECUTION_QUEUE =
   process.env.AUTOMATIC_PRODUCT_RULE_EXECUTION_QUEUE || "automatic-product-rule-execution";
@@ -572,16 +570,12 @@ export async function executeAutomaticProductRuleRun(runId, shopFromJob = null) 
         return { skipped: true, reason: "history_already_failed" };
       }
 
-      await addbulkEditJob(
-        buildQueueExecutionPayload(
-          {
-            historyId: run.editHistoryId,
-            shop: rule.shop,
-            source: "automatic_rule_resume",
-          },
-          history,
-        ),
-      );
+      await addbulkEditJob({
+        historyId: run.editHistoryId,
+        shop: rule.shop,
+        source: "automatic_rule_resume",
+        executionId: history.executionIdentity || history.id,
+      });
       return {
         queued: true,
         runId: run.id,
@@ -618,16 +612,12 @@ export async function executeAutomaticProductRuleRun(runId, shopFromJob = null) 
         return { skipped: true, reason: "history_recovered_failed" };
       }
 
-      await addbulkEditJob(
-        buildQueueExecutionPayload(
-          {
-            historyId: existingHistory.id,
-            shop: rule.shop,
-            source: "automatic_rule_recovery",
-          },
-          existingHistory,
-        ),
-      );
+      await addbulkEditJob({
+        historyId: existingHistory.id,
+        shop: rule.shop,
+        source: "automatic_rule_recovery",
+        executionId: existingHistory.executionIdentity || existingHistory.id,
+      });
       return {
         queued: true,
         runId: run.id,
@@ -720,17 +710,9 @@ export async function executeAutomaticProductRuleRun(runId, shopFromJob = null) 
         },
       });
 
-      await persistEditHistoryTargetingMetadata({
-        historyId: editHistory.id,
-        filterParams: Array.isArray(rule.conditions) ? rule.conditions : [],
-      });
-
       editHistoryId = editHistory.id;
       editHistoryExecutionIdentity = editHistory.executionIdentity;
-      const frozenCount = await bulkService.freezeEditHistoryTargets(
-        editHistory.id,
-        rule.shop,
-      );
+      const frozenCount = await bulkService.freezeEditHistoryTargets(editHistory.id);
       await prisma.editHistory.update({
         where: { id: editHistory.id },
         data: {
@@ -763,19 +745,12 @@ export async function executeAutomaticProductRuleRun(runId, shopFromJob = null) 
         affectedCount: productIds.length,
       });
 
-      await addbulkEditJob(
-        buildQueueExecutionPayload(
-          {
-            historyId: editHistoryId,
-            shop: rule.shop,
-            source: "automatic_rule",
-          },
-          {
-            id: editHistoryId,
-            executionIdentity: editHistoryExecutionIdentity,
-          },
-        ),
-      );
+      await addbulkEditJob({
+        historyId: editHistoryId,
+        shop: rule.shop,
+        source: "automatic_rule",
+        executionId: editHistoryExecutionIdentity || editHistoryId,
+      });
     } catch (error) {
       await failHistoryAndRun({
         rule,

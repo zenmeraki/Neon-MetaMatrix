@@ -125,7 +125,6 @@ export async function findDistinctCollectionTitles({
 
 export async function findDistinctProductTagValues({
   shop,
-  mirrorBatchId = null,
   search = "",
   take = 20,
 }) {
@@ -133,15 +132,11 @@ export async function findDistinctProductTagValues({
     search.trim().length > 0
       ? Prisma.sql`AND tag ILIKE ${`%${search.trim()}%`}`
       : Prisma.empty;
-  const mirrorClause = mirrorBatchId
-    ? Prisma.sql`AND "mirrorBatchId" = ${mirrorBatchId}`
-    : Prisma.empty;
 
   return prisma.$queryRaw`
     SELECT DISTINCT tag AS value
     FROM "Product", UNNEST("tags") AS tag
     WHERE "shop" = ${shop}
-      ${mirrorClause}
       AND tag IS NOT NULL
       AND BTRIM(tag) <> ''
       ${searchClause}

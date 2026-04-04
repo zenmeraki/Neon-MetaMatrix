@@ -13,7 +13,7 @@ import {
 } from "@shopify/polaris";
 import AlertUndo from "../../products/edit/components/AlertUndo";
 import { useNavigate } from "react-router-dom";
-import { authenticatedFetch } from "../../../hooks/useAuthenticatedFetch";
+import useProductSyncStatus from "../../../hooks/useProductSyncStatus";
 
 function getPrimaryStatusSummary(item) {
   if (item?.primaryStatus) {
@@ -71,6 +71,7 @@ const HistoryTable = memo(
     const [undoHistoryItem, setUndoHistoryItem] = useState(null);
     const [localHistories, setLocalHistories] = useState(histories);
     const navigate = useNavigate();
+    const { isSyncInProgress } = useProductSyncStatus();
 
     const handleCloseUndo = useCallback(() => {
       setShowUndoModal(false);
@@ -110,7 +111,7 @@ const HistoryTable = memo(
       if (!undoHistoryItem?.id) return;
       setUndoLoading(true);
       try {
-        const response = await authenticatedFetch(`/api/products/undo-edit/${undoHistoryItem.id}`, {
+        const response = await fetch(`/api/products/undo-edit/${undoHistoryItem.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
         });
@@ -164,7 +165,7 @@ const HistoryTable = memo(
         try {
           const updates = await Promise.all(
             activeHistoryIds.map((id) =>
-              authenticatedFetch(`/api/history/get-edit-history-details/${id}`)
+              fetch(`/api/history/get-edit-history-details/${id}`)
                 .then((response) => (response.ok ? response.json() : null))
                 .then((json) => json?.data || null),
             ),
@@ -217,6 +218,7 @@ const HistoryTable = memo(
       const primaryStatus = getPrimaryStatusSummary(item);
       const undoStatus = getUndoStatusSummary(item);
       const isProcessing = isActiveStatus(primaryStatus) || isActiveStatus(undoStatus);
+      const undoDisabled = !isUndoable || isProcessing || isSyncInProgress;
       const progressLabel =
         item?.progressSummary?.label ||
         `${item.processedCount} / ${item.totalItems || item.processedCount}`;
@@ -258,7 +260,7 @@ const HistoryTable = memo(
             size="slim"
             tone={isUndoable ? "critical" : undefined}
             onClick={() => isUndoable && handleUndo(item)}
-            disabled={!isUndoable || isProcessing}
+            disabled={undoDisabled}
           >
             Undo
           </Button>
@@ -277,6 +279,11 @@ const HistoryTable = memo(
               <Text tone="subdued" variant="bodySm">
                 Review edit runs, undo completed changes, and inspect history details.
               </Text>
+              {isSyncInProgress ? (
+                <Text tone="subdued" variant="bodySm">
+                  Undo is temporarily unavailable while product sync is in progress.
+                </Text>
+              ) : null}
             </BlockStack>
             <Text tone="subdued" variant="bodySm">
               {localHistories.length} items

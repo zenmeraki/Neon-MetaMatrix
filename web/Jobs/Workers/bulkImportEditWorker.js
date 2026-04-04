@@ -20,16 +20,9 @@ import {
   appendExecutionError,
   buildExecutionError,
 } from "../../services/bulkEditExecutionStateService.js";
-import {
-  RetryableWorkerError,
-  assertShopActiveForWorker,
-  isRetryableWorkerError,
-  isSkippableWorkerError,
-} from "../../services/workerSafetyService.js";
 
 const QUEUE_NAME = process.env.IMPORT_EDIT_QUEUE || "importEdit";
 const WORKER_NAME = "bulkImportEditWorker";
-const STALE_DISPATCH_MS = 20 * 60 * 1000;
 
 const normalizeBoolean = (value) =>
   value === true || value === "TRUE" || value === "true";
@@ -108,189 +101,20 @@ async function claimImportHistory(historyId) {
   return claimImportHistoryForShop(historyId, null);
 }
 
-function normalizeBatchState(value) {
-  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
-}
-
-function isStaleDispatch(batch) {
-  const startedAt = batch?.dispatchStartedAt;
-  if (!startedAt) {
-    return false;
-  }
-
-  const startedTs = new Date(startedAt).getTime();
-  if (Number.isNaN(startedTs)) {
-    return false;
-  }
-
-  return Date.now() - startedTs > STALE_DISPATCH_MS;
-}
-
 async function claimImportHistoryForShop(historyId, shop) {
-  const history = await prisma.editHistory.findUnique({
-    where: { id: historyId },
-    select: {
-      id: true,
-      shop: true,
-      status: true,
-      executionState: true,
-      bulkOperationId: true,
-      batch: true,
-      error: true,
-    },
-  });
-
-  if (!history) {
-    throw new Error("History document not found");
-  }
-
-  if (shop && history.shop !== shop) {
-    throw new Error("Cross-shop import execution blocked");
-  }
-
-  if (
-    history.executionState === BULK_EDIT_EXECUTION_STATES.AWAITING_SHOPIFY &&
-    history.bulkOperationId
-  ) {
-    return { state: "awaiting_shopify", history };
-  }
-
-  if (
-    ["completed", "cancelled", "partial"].includes(history.status) ||
-    history.executionState === BULK_EDIT_EXECUTION_STATES.COMPLETED
-  ) {
-    return { state: "terminal", history };
-  }
-
-  const batch = normalizeBatchState(history.batch);
-  if (
-    history.status === "processing" &&
-    history.executionState === BULK_EDIT_EXECUTION_STATES.DISPATCHING &&
-    !history.bulkOperationId
-  ) {
-    if (isStaleDispatch(batch)) {
-      await prisma.editHistory.updateMany({
-        where: {
-          id: historyId,
-          ...(shop ? { shop } : {}),
-          bulkOperationId: null,
-          executionState: BULK_EDIT_EXECUTION_STATES.DISPATCHING,
-        },
-        data: {
-          status: "failed",
-          executionState: BULK_EDIT_EXECUTION_STATES.FAILED,
-          error: appendExecutionError(
-            history.error,
-            buildExecutionError({
-              code: "import_dispatch_stalled",
-              stage: "dispatch",
-              message: "Import dispatch stalled before Shopify confirmed the mutation",
-              retryable: false,
-              details: {
-                dispatchStartedAt: batch.dispatchStartedAt || null,
-                dispatchJobId: batch.dispatchJobId || null,
-                dispatchAttempt: batch.dispatchAttempt || null,
-              },
-            }),
-          ),
-        },
-      });
-
-      return { state: "stale_dispatch_failed", history };
-    }
-
-    throw new RetryableWorkerError(
-      "Import dispatch is already in progress",
-      "import_dispatch_in_progress",
-    );
-  }
-
   const result = await prisma.editHistory.updateMany({
     where: {
       id: historyId,
       ...(shop ? { shop } : {}),
-      status: { in: ["pending", "failed"] },
-      bulkOperationId: null,
-      executionState: {
-        in: [
-          BULK_EDIT_EXECUTION_STATES.PLANNED,
-          BULK_EDIT_EXECUTION_STATES.QUEUED,
-          BULK_EDIT_EXECUTION_STATES.FAILED,
-        ],
-      },
+      status: "pending",
     },
     data: {
       status: "processing",
-      executionState: BULK_EDIT_EXECUTION_STATES.QUEUED,
-    },
-  });
-
-  return { state: result.count === 1 ? "claimed" : "already_claimed", history };
-}
-
-async function reserveImportDispatch({
-  historyId,
-  shop,
-  batchId,
-  executionId,
-  attempt,
-  jobId,
-  totalRows,
-  targetCount,
-  changeCount,
-}) {
-  const history = await prisma.editHistory.findUnique({
-    where: { id: historyId },
-    select: {
-      batch: true,
-      bulkOperationId: true,
-    },
-  });
-
-  if (history?.bulkOperationId) {
-    throw new RetryableWorkerError(
-      "Import batch already dispatched to Shopify",
-      "import_bulk_operation_already_started",
-    );
-  }
-
-  const batch = normalizeBatchState(history?.batch);
-  const updated = await prisma.editHistory.updateMany({
-    where: {
-      id: historyId,
-      shop,
-      status: "processing",
-      bulkOperationId: null,
-      executionState: {
-        in: [
-          BULK_EDIT_EXECUTION_STATES.QUEUED,
-          BULK_EDIT_EXECUTION_STATES.DISPATCHING,
-        ],
-      },
-    },
-    data: {
       executionState: BULK_EDIT_EXECUTION_STATES.DISPATCHING,
-      processingBatchId: batchId,
-      batch: {
-        ...batch,
-        currentBatchId: batchId,
-        dispatchStartedAt: new Date().toISOString(),
-        dispatchJobId: jobId,
-        dispatchAttempt: attempt,
-        dispatchExecutionId: executionId,
-        totalRows,
-        currentBatchTargetCount: targetCount,
-        currentBatchCount: changeCount,
-      },
     },
   });
 
-  if (!updated.count) {
-    throw new RetryableWorkerError(
-      "Import dispatch reservation was lost",
-      "import_dispatch_claim_lost",
-    );
-  }
+  return result.count === 1;
 }
 
 function buildMappedProductRows(columnMappings, row, productMap) {
@@ -365,17 +189,38 @@ const bulkImportEditWorker = new Worker(
     const attempt = getJobAttempt(job);
 
     try {
-      await assertShopActiveForWorker(shop);
+      const history = await prisma.editHistory.findUnique({
+        where: { id: historyId },
+        select: {
+          id: true,
+          shop: true,
+          status: true,
+        },
+      });
 
-      const claim = await claimImportHistoryForShop(historyId, shop);
-      if (claim.state !== "claimed") {
+      if (!history) {
+        throw new Error("History document not found");
+      }
+
+      if (!shop || history.shop !== shop) {
+        throw new Error("Cross-shop import execution blocked");
+      }
+
+      if (history.status === "processing" && job.attemptsMade > 0) {
         return {
           skipped: true,
-          reason: claim.state,
+          reason: "already_processing",
         };
       }
 
-      const history = claim.history;
+      const claimed = await claimImportHistoryForShop(historyId, shop);
+      if (!claimed && history.status !== "processing") {
+        return {
+          skipped: true,
+          reason: "already_claimed",
+        };
+      }
+
       await clearKeyCaches(`${history.shop}:fetchHistories`);
 
       const productMap = new Map();
@@ -408,7 +253,7 @@ const bulkImportEditWorker = new Worker(
 
       const formattedProducts = [];
       const changeRecords = [];
-      const batchId = executionId || `import:${historyId}`;
+      const batchId = String(job.id);
 
       for (const { productSet } of productMap.values()) {
         const existingProduct = existingById[productSet.id];
@@ -486,30 +331,10 @@ const bulkImportEditWorker = new Worker(
       }
 
       if (changeRecords.length) {
-        await prisma.changeRecord.deleteMany({
-          where: {
-            editHistoryId: historyId,
-            shop: history.shop,
-            batchId,
-          },
-        });
-
         await prisma.changeRecord.createMany({
           data: changeRecords,
         });
       }
-
-      await reserveImportDispatch({
-        historyId,
-        shop: history.shop,
-        batchId,
-        executionId,
-        attempt,
-        jobId: String(job.id),
-        totalRows,
-        targetCount: formattedProducts.length,
-        changeCount: changeRecords.length,
-      });
 
       const session = await getSession(history.shop);
       const service = new ProductBulkService(session);
@@ -570,28 +395,26 @@ const bulkImportEditWorker = new Worker(
 
       await removeLocalFile(filePath);
 
-      if (!isRetryableWorkerError(error)) {
-        await prisma.editHistory.updateMany({
-          where: { id: historyId, ...(shop ? { shop } : {}) },
-          data: {
-            status: "failed",
-            executionState: BULK_EDIT_EXECUTION_STATES.FAILED,
-            error: appendExecutionError(
-              null,
-              buildExecutionError({
-                code: "bulk_import_worker_failure",
-                stage: "queue_execution",
-                message: error.message,
-                retryable: false,
-                details: {
-                  stack: error.stack || null,
-                  failedAt: new Date().toISOString(),
-                },
-              }),
-            ),
-          },
-        });
-      }
+      await prisma.editHistory.updateMany({
+        where: { id: historyId, ...(shop ? { shop } : {}) },
+        data: {
+          status: "failed",
+          executionState: BULK_EDIT_EXECUTION_STATES.FAILED,
+          error: appendExecutionError(
+            null,
+            buildExecutionError({
+              code: "bulk_import_worker_failure",
+              stage: "queue_execution",
+              message: error.message,
+              retryable: false,
+              details: {
+                stack: error.stack || null,
+                failedAt: new Date().toISOString(),
+              },
+            }),
+          ),
+        },
+      });
 
       await logWorkerError({
         shop,
@@ -606,13 +429,6 @@ const bulkImportEditWorker = new Worker(
           attempt,
         },
       });
-
-      if (isSkippableWorkerError(error)) {
-        return {
-          skipped: true,
-          reason: error.code,
-        };
-      }
 
       throw error;
     }

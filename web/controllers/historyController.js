@@ -7,11 +7,6 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { logApiError } from "../utils/errorLogUtils.js";
 import { NotFoundError } from "../utils/errorUtils.js";
 import { prisma } from "../config/database.js";
-import { normalizeHistoryIdentifier } from "../utils/historyIdentifier.js";
-import {
-  getRecurringEditById as getRecurringEditByIdService,
-  listRecurringEdits as listRecurringEditsService,
-} from "../services/recurringEditService.js";
 
 // ─────────────────────────────────────────────────────────────
 // Export histories
@@ -47,11 +42,7 @@ export const getAllExportHistories = asyncHandler(async (req, res) => {
 
 export const getExportHistoryDetails = async (req, res) => {
   const session = res.locals.shopify?.session;
-  const id = normalizeHistoryIdentifier(
-    req.params?.id,
-    req.query?.id,
-    req.query?.exportJobId,
-  );
+  const id = req.params.id;
 
   try {
     if (!session) {
@@ -122,11 +113,11 @@ export const getAllEditHistories = asyncHandler(async (req, res) => {
 
 export const getHistoryDetails = async (req, res) => {
   const session = res.locals.shopify?.session;
-  const id = normalizeHistoryIdentifier(
-    req.params?.id,
-    req.query?.id,
-    req.query?.historyId,
-  );
+  const id =
+    req.params?.id ||
+    req.query?.id ||
+    req.query?.historyId ||
+    null;
   const { lang } = req.query;
 
   try {
@@ -134,7 +125,7 @@ export const getHistoryDetails = async (req, res) => {
       return res.status(403).json(errorResponse("Session expired"));
     }
 
-    if (!id) {
+    if (!id || id === "undefined" || id === "null") {
       return res.status(400).json(errorResponse("History id is required"));
     }
 
@@ -162,11 +153,11 @@ export const getHistoryDetails = async (req, res) => {
 
 export const getHistoryChanges = async (req, res) => {
   const session = res.locals.shopify?.session;
-  const id = normalizeHistoryIdentifier(
-    req.params?.id,
-    req.query?.id,
-    req.query?.historyId,
-  );
+  const id =
+    req.params?.id ||
+    req.query?.id ||
+    req.query?.historyId ||
+    null;
   const { page = 1, limit = 10 } = req.query;
 
   try {
@@ -174,7 +165,7 @@ export const getHistoryChanges = async (req, res) => {
       return res.status(403).json(errorResponse("Session expired"));
     }
 
-    if (!id) {
+    if (!id || id === "undefined" || id === "null") {
       return res.status(400).json(errorResponse("History id is required"));
     }
 
@@ -282,42 +273,55 @@ export const getImportHistoryDetails = asyncHandler(async (req, res) => {
 // ─────────────────────────────────────────────────────────────
 
 export const getRecurringEdits = async (req, res) => {
-  let session;
-
   try {
-    session = res.locals.shopify?.session;
-    const { shop } = session || {};
+    const { shop } = res.locals.shopify.session;
     if (!shop) {
       return res.status(400).json({ message: "Shop is required" });
     }
 
-    const datas = await listRecurringEditsService({ shop });
+    if (!prisma.recurringEdit) {
+      return res.status(501).json({ message: "Recurring edit is not migrated to Prisma yet" });
+    }
+
+    const datas = await prisma.recurringEdit.findMany({
+      where: { shop },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        frequency: true,
+        dayOfMonthToRun: true,
+        daysOfWeekToRun: true,
+        isCurrentlyRunning: true,
+        createdAt: true,
+      },
+    });
 
     return res.status(200).json({
       data: datas,
       message: "recurring edit fetched successfully",
     });
   } catch (err) {
-    await logApiError({
-      shop: session?.shop,
-      err,
-      req,
-      source: "historyController.getRecurringEdits",
-    });
+    console.error("getRecurringEdits error:", err);
     return res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
 export const getRecurringEditById = async (req, res) => {
-  let session;
-
   try {
-    session = res.locals.shopify?.session;
-    const { shop } = session || {};
+    const { shop } = res.locals.shopify.session;
     const { id } = req.params;
-    const job = await getRecurringEditByIdService({
-      shop,
-      recurringEditId: id,
+
+    if (!prisma.recurringEdit) {
+      return res.status(501).json({ message: "Recurring edit is not migrated to Prisma yet" });
+    }
+
+    const job = await prisma.recurringEdit.findFirst({
+      where: {
+        id,
+        shop,
+      },
     });
 
     if (!job) {
@@ -328,13 +332,7 @@ export const getRecurringEditById = async (req, res) => {
       .status(200)
       .json({ data: job, message: "Job fetched successfully" });
   } catch (err) {
-    await logApiError({
-      shop: session?.shop,
-      err,
-      req,
-      source: "historyController.getRecurringEditById",
-    });
-    const statusCode = err?.message === "Recurring edit not found" ? 404 : 500;
-    return res.status(statusCode).json({ message: err?.message || "Internal Server Error" });
+    console.error("getRecurringEditById error:", err);
+    return res.status(500).json({ message: "Internal Server Error" });
   }
 };

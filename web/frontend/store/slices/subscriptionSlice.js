@@ -24,7 +24,7 @@ export const createSubscription = createAsyncThunk(
   "subscription/createSubscription",
   async ({ plan, fetchFn }, { rejectWithValue }) => {
     try {
-      const response = await subscriptionService.createSubscription(plan, fetchFn);
+      const response = await subscriptionService.createSubscription(plan. fetchFn);
       return response;
     } catch (error) {
       return rejectWithValue(error.message || "Failed to create subscription");
