@@ -20,34 +20,17 @@ import {
 } from "@shopify/polaris";
 import { useTranslation } from "react-i18next";
 
+function normalizeTimeInput(value) {
+  if (!value) {
+    return "12:00";
+  }
+
+  const match = String(value).match(/^(\d{2}):(\d{2})/);
+  return match ? `${match[1]}:${match[2]}` : "12:00";
+}
+
 const RecurringEditModal = ({ open, onClose, data, isLoading, error, onUpdated }) => {
   const { t } = useTranslation();
-
-  // Generate time slots every 15 minutes
-  const generateTimeSlots = () => {
-    const slots = [];
-    for (let h = 0; h < 24; h++) {
-      for (let m = 0; m < 60; m += 15) {
-        const hh = String(h).padStart(2, "0");
-        const mm = String(m).padStart(2, "0");
-        const time24 = `${hh}:${mm}`;
-
-        // Convert to 12-hour format for display
-        let displayHour = h;
-        const ampm = h >= 12 ? "PM" : "AM";
-        if (h === 0) displayHour = 12;
-        else if (h > 12) displayHour = h - 12;
-
-        const displayTime = `${displayHour}:${mm} ${ampm}`;
-
-        slots.push({
-          label: displayTime,
-          value: time24,
-        });
-      }
-    }
-    return slots;
-  };
 
   // Form state
   const [formData, setFormData] = useState({
@@ -94,8 +77,6 @@ const RecurringEditModal = ({ open, onClose, data, isLoading, error, onUpdated }
     "Friday",
     "Saturday",
   ];
-
-  const timeSlotOptions = generateTimeSlots();
 
   // Generate day of month options (1-31)
   const dayOfMonthOptions = Array.from({ length: 31 }, (_, i) => ({
@@ -197,7 +178,7 @@ const RecurringEditModal = ({ open, onClose, data, isLoading, error, onUpdated }
         title: data.title || "",
         frequency: data.frequency || "Daily",
         status: data.status || "Active",
-        timeToRun: data.timeToRun || "12:00",
+        timeToRun: normalizeTimeInput(data.timeToRun),
         timezone: data.timezone || "Asia/Kolkata",
         dayOfMonthToRun: data.dayOfMonthToRun || 1,
         daysOfWeekToRun: data.daysOfWeekToRun || [],
@@ -299,7 +280,7 @@ const RecurringEditModal = ({ open, onClose, data, isLoading, error, onUpdated }
 
       // Add conditional fields based on frequency
       if (["Daily", "Weekly", "Monthly"].includes(formData.frequency)) {
-        requestBody.timeToRun = formData.timeToRun;
+        requestBody.timeToRun = normalizeTimeInput(formData.timeToRun);
       }
 
       if (formData.frequency === "Monthly") {
@@ -381,13 +362,17 @@ const RecurringEditModal = ({ open, onClose, data, isLoading, error, onUpdated }
     if (["Daily", "Weekly", "Monthly"].includes(frequency)) {
       return (
         <BlockStack gap="400">
-          <Select
+          <TextField
             label="Time to Run"
-            options={timeSlotOptions}
+            type="time"
             value={formData.timeToRun}
-            onChange={(value) => handleFieldChange("timeToRun", value)}
-            disabled={isSubmitting}
+            onChange={(value) =>
+              handleFieldChange("timeToRun", normalizeTimeInput(value))
+            }
+            autoComplete="off"
             error={validationErrors.timeToRun}
+            disabled={isSubmitting}
+            helpText="Choose the exact time this recurring edit should run."
             requiredIndicator
           />
 

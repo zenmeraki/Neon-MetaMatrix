@@ -518,5 +518,19 @@ export async function finalizeScheduledExportRunFromExportJob({
         }),
   });
 
+  logger.info("Scheduled export run finalized", {
+    scheduledExportId: exportJob.scheduledExportId,
+    runId: exportJob.scheduledExportRunId,
+    exportJobId,
+    status: normalizedStatus,
+    completedAt,
+    totalItems: exportJob.totalItems ?? null,
+    fileUrl: normalizedStatus === "SUCCESS" ? exportJob.fileUrl : null,
+    errorMessage:
+      normalizedStatus === "FAILED"
+        ? errorMessage || exportJob.error || "Scheduled export run failed"
+        : null,
+  });
+
   return normalizedStatus;
 }

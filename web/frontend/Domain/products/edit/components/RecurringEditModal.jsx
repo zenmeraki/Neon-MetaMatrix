@@ -58,6 +58,15 @@ function buildIsoFromDateAndTime(dateValue, timeValue) {
   return new Date(`${dateValue}T${timeValue}:00`).toISOString();
 }
 
+function normalizeTimeInput(value) {
+  if (!value) {
+    return "12:00";
+  }
+
+  const match = String(value).match(/^(\d{2}):(\d{2})/);
+  return match ? `${match[1]}:${match[2]}` : "12:00";
+}
+
 function RecurringEditModal({
   show,
   onHide,
@@ -204,7 +213,7 @@ function RecurringEditModal({
       };
 
       if (requiresTime) {
-        payload.timeToRun = timeToRun;
+        payload.timeToRun = normalizeTimeInput(timeToRun);
       }
 
       if (needsWeekdaySelection) {
@@ -383,7 +392,7 @@ function RecurringEditModal({
                   label="Time to Run"
                   type="time"
                   value={timeToRun}
-                  onChange={setTimeToRun}
+                  onChange={(value) => setTimeToRun(normalizeTimeInput(value))}
                   helpText="Choose the exact time this recurring edit should run."
                 />
               )}
