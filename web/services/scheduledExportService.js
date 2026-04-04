@@ -6,6 +6,7 @@ import {
   computeScheduledExportNextRunAt,
 } from "./scheduledExportScheduleService.js";
 import logger from "../utils/loggerUtils.js";
+import { clearKeyCaches } from "../utils/cacheUtils.js";
 
 function normalizeStatus(rawStatus, fallback = "ACTIVE") {
   if (!rawStatus) return fallback;
@@ -218,6 +219,8 @@ export async function createScheduledExport({ shop, body, subscription }) {
     nextRunAt: created.nextRunAt,
   });
 
+  await clearKeyCaches(`${shop}:fetchExportHistories:`);
+
   return getScheduledExportHydrated(created.id, shop);
 }
 
@@ -315,6 +318,8 @@ export async function updateScheduledExport({
     isDeleted: false,
   });
 
+  await clearKeyCaches(`${shop}:fetchExportHistories:`);
+
   return getScheduledExportHydrated(existing.id, shop);
 }
 
@@ -352,6 +357,8 @@ export async function toggleScheduledExportStatus({
     nextRunAt,
   });
 
+  await clearKeyCaches(`${shop}:fetchExportHistories:`);
+
   return getScheduledExportHydrated(existing.id, shop);
 }
 
@@ -367,6 +374,8 @@ export async function deleteScheduledExport({ shop, scheduledExportId }) {
     nextRunAt: null,
     endAt: existing.endAt || new Date(),
   });
+
+  await clearKeyCaches(`${shop}:fetchExportHistories:`);
 
   return {
     id: existing.id,

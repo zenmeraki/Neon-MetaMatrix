@@ -4,9 +4,40 @@ import { fieldMappings } from "../../utils/productExportUtils.js";
 import { graphqlProductsAllFieldQuery } from "../../graphql/product.js";
 import CacheService from "../../utils/cacheService.js";
 import { EXPORT_TYPES } from "../../Config/constants.js";
-import logger from "../../utils/loggerUtils.js";
-import { getCache, setCache } from "../../utils/cacheUtils.js";
+import { setCache } from "../../utils/cacheUtils.js";
 import { prisma } from "../../config/database.js";
+
+function formatScheduleDetail(dateValue) {
+  if (!dateValue) return "Waiting for the first scheduled run";
+
+  const scheduledDate = new Date(dateValue);
+  if (Number.isNaN(scheduledDate.getTime())) {
+    return "Waiting for the first scheduled run";
+  }
+
+  return `Next run: ${scheduledDate.toISOString()}`;
+}
+
+function mapScheduledExportStatus(status) {
+  switch (status) {
+    case "FAILED":
+      return "failed";
+    case "ACTIVE":
+      return "pending";
+    default:
+      return "processing";
+  }
+}
+
+function getHistorySortDate(history) {
+  return new Date(
+    history.completedAt ||
+      history.startedAt ||
+      history.createdAt ||
+      history.nextRunAt ||
+      0,
+  ).getTime();
+}
 
 export class ProductExportService {
   constructor(session) {
@@ -39,7 +70,7 @@ export class ProductExportService {
 
   async fetchProducts({ queryFilter = null, count = 0 }) {
     const cacheData = await CacheService.get(
-      `${this.session.shop}:${queryFilter}:export`
+      `${this.session.shop}:${queryFilter}:export`,
     );
 
     if (cacheData) {
@@ -67,19 +98,14 @@ export class ProductExportService {
         allProducts.push(...edges);
         hasNextPage = response.body.data.products.pageInfo.hasNextPage;
         endCursor = response.body.data.products.pageInfo.endCursor;
-        // Safety check - if we've fetched all products or reached the count, stop
         if (allProducts.length >= count) {
           break;
         }
-      } catch (error) {
+      } catch (_error) {
         break;
       }
     }
-    await setCache(
-      `${this.session.shop}:${queryFilter}:export`,
-      allProducts,
-      300
-    );
+    await setCache(`${this.session.shop}:${queryFilter}:export`, allProducts, 300);
     return allProducts;
   }
 
@@ -87,13 +113,13 @@ export class ProductExportService {
     if (activePlan === "Basic (Monthly)") {
       if (count > 50) {
         throw new Error(
-          "You are a basic plan user, you can only export 50 products at a time"
+          "You are a basic plan user, you can only export 50 products at a time",
         );
       }
     } else if (activePlan === "Advanced (Monthly)") {
       if (count > 150) {
         throw new Error(
-          "You are a pro plan user, you can only export 100 products at a time"
+          "You are a pro plan user, you can only export 100 products at a time",
         );
       }
     }
@@ -108,7 +134,7 @@ export class ProductExportService {
           acc && acc[key] !== undefined && acc[key] !== null
             ? acc[key]
             : defaultValue,
-        obj
+        obj,
       );
 
     const safeSplitPop = (val) => (val ? val.toString().split("/").pop() : "");
@@ -132,7 +158,6 @@ export class ProductExportService {
               value = index === 0 ? getNestedValue(product, path) : "";
             }
 
-            // Special cases
             if (column === "Weight") {
               const weight = variant?.inventoryItem?.measurement?.weight;
               value = weight
@@ -140,8 +165,9 @@ export class ProductExportService {
                 : "Not Specified";
             }
 
-            if (column === "ProductID")
+            if (column === "ProductID") {
               value = index === 0 ? safeSplitPop(product.id) : "";
+            }
             if (column === "VariantID") value = safeSplitPop(value);
 
             row[column] =
@@ -173,44 +199,80 @@ export class ProductExportService {
   }
 
   async getAllExportHistories(lang) {
-    const cacheKey = `${this.session.shop}:fetchExportHistories:${lang}`;
+    const [histories, scheduledExports] = await Promise.all([
+      prisma.exportJob.findMany({
+        where: { shop: this.session.shop },
+        orderBy: { createdAt: "desc" },
+        take: 25,
+      }),
+      prisma.scheduledExport.findMany({
+        where: {
+          shop: this.session.shop,
+          isDeleted: false,
+        },
+        orderBy: { createdAt: "desc" },
+        take: 25,
+      }),
+    ]);
 
-    const cacheHistories = await getCache(cacheKey);
-    if (cacheHistories) return cacheHistories;
+    const exportJobScheduledIds = new Set(
+      histories.map((history) => history.scheduledExportId).filter(Boolean),
+    );
 
-    // ✅ CONVERTED TO PRISMA
-    const histories = await prisma.exportJob.findMany({
-      where: { shop: this.session.shop },
-      orderBy: { createdAt: 'desc' },
-      take: 10,
-    });
-
-    const formatedHistory = histories.map((history) => ({
+    const formattedHistories = histories.map((history) => ({
       ...history,
       rawType: history.type || "",
       type: EXPORT_TYPES[history.type]?.[lang] || history.type || "",
     }));
 
-    await setCache(cacheKey, formatedHistory, 300);
-    return formatedHistory;
+    const pendingScheduledHistories = scheduledExports
+      .filter((scheduledExport) => !exportJobScheduledIds.has(scheduledExport.id))
+      .map((scheduledExport) => ({
+        id: `scheduled-export:${scheduledExport.id}`,
+        scheduledExportId: scheduledExport.id,
+        shop: scheduledExport.shop,
+        filename: scheduledExport.filename,
+        fields: scheduledExport.fields,
+        status: mapScheduledExportStatus(scheduledExport.status),
+        type: EXPORT_TYPES["Scheduled export"]?.[lang] || "Scheduled export",
+        rawType: "Scheduled export",
+        isScheduled: true,
+        createdAt: scheduledExport.createdAt,
+        updatedAt: scheduledExport.updatedAt,
+        nextRunAt: scheduledExport.nextRunAt,
+        completedAt: null,
+        fileUrl: null,
+        progressPercent: 0,
+        progressSummary: {
+          percent: 0,
+          label: formatScheduleDetail(scheduledExport.nextRunAt),
+        },
+        supportStatus: {
+          failureStage: formatScheduleDetail(scheduledExport.nextRunAt),
+        },
+      }));
+
+    return [...formattedHistories, ...pendingScheduledHistories]
+      .sort((left, right) => getHistorySortDate(right) - getHistorySortDate(left))
+      .slice(0, 10);
   }
 
   async getExportHistoryDetails(id) {
-  if (!id || id === "undefined" || id === "null") {
-    throw new Error("Invalid export history ID");
+    if (!id || id === "undefined" || id === "null") {
+      throw new Error("Invalid export history ID");
+    }
+
+    const history = await prisma.exportJob.findFirst({
+      where: {
+        id,
+        shop: this.session.shop,
+      },
+    });
+
+    if (!history) {
+      throw new Error("export history not found");
+    }
+
+    return history;
   }
-
-  const history = await prisma.exportJob.findFirst({
-    where: {
-      id,
-      shop: this.session.shop,
-    },
-  });
-
-  if (!history) {
-    throw new Error("export history not found");
-  }
-
-  return history;
-}
 }

@@ -66,6 +66,23 @@ function buildDeferredResult(reason, runId, recurringEditId = null) {
   };
 }
 
+async function deferRecurringEditRun(
+  runId,
+  shop,
+  reason,
+  recurringEditId = null,
+  delay = 60_000,
+) {
+  await enqueueRecurringEditExecutionJob({
+    runId,
+    shop,
+    delay,
+    jobId: `${runId}:retry:${Date.now()}`,
+  });
+
+  return buildDeferredResult(reason, runId, recurringEditId);
+}
+
 function buildRecurringEditHistoryBody(recurringEdit) {
   const [rule] = Array.isArray(recurringEdit.rules) ? recurringEdit.rules : [];
   if (!rule) {
@@ -126,12 +143,18 @@ async function markRunSkipped(run, recurringEdit, reason) {
   return reason;
 }
 
-export async function enqueueRecurringEditExecutionJob({ runId, shop }) {
+export async function enqueueRecurringEditExecutionJob({
+  runId,
+  shop,
+  delay = 0,
+  jobId = runId,
+}) {
   return recurringEditExecutionQueue.add(
     "recurring-edit-execution",
     { runId, shop },
     {
-      jobId: runId,
+      jobId,
+      delay,
       removeOnComplete: 100,
       removeOnFail: 100,
       attempts: 6,
@@ -280,7 +303,12 @@ export async function executeRecurringEditRun(runId, shopFromJob = null) {
   const executionLockKey = `recurring-edit-shop:${recurringEdit.shop}`;
   const hasShopLock = await tryAdvisoryLock(prisma, executionLockKey, false);
   if (!hasShopLock) {
-    return buildDeferredResult("shop_execution_locked", run.id, recurringEdit.id);
+    return deferRecurringEditRun(
+      run.id,
+      recurringEdit.shop,
+      "shop_execution_locked",
+      recurringEdit.id,
+    );
   }
 
   let exclusiveShopLockKey = null;
@@ -309,7 +337,12 @@ export async function executeRecurringEditRun(runId, shopFromJob = null) {
     });
 
     if (!exclusiveLock.acquired) {
-      return buildDeferredResult("shop_work_conflict", run.id, currentRecurringEdit.id);
+      return deferRecurringEditRun(
+        run.id,
+        currentRecurringEdit.shop,
+        "shop_work_conflict",
+        currentRecurringEdit.id,
+      );
     }
 
     exclusiveShopLockKey = exclusiveLock.lockKey;
@@ -335,7 +368,21 @@ export async function executeRecurringEditRun(runId, shopFromJob = null) {
 
     const { status } = await getCurrentBulkOperationStatus(session);
     if (status === "RUNNING") {
-      return buildDeferredResult("shopify_bulk_busy", run.id, currentRecurringEdit.id);
+      await recurringEditRunRepository.updateByIdForStatuses(
+        run.id,
+        ["PROCESSING"],
+        {
+          status: "PENDING",
+          startedAt: null,
+        },
+      );
+
+      return deferRecurringEditRun(
+        run.id,
+        currentRecurringEdit.shop,
+        "shopify_bulk_busy",
+        currentRecurringEdit.id,
+      );
     }
 
     const service = new ProductBulkService(session);

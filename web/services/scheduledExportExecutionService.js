@@ -16,6 +16,7 @@ import {
   freezeTargetSnapshot,
   resolveCanonicalProductTarget,
 } from "./productService/productTargetingService.js";
+import { clearKeyCaches } from "../utils/cacheUtils.js";
 import {
   acquireExclusiveShopWork,
   releaseExclusiveShopWork,
@@ -77,6 +78,10 @@ async function markRunFailed(run, scheduledExport, errorMessage) {
     lastFailureReason: errorMessage,
   });
 
+  if (scheduledExport?.shop) {
+    await clearKeyCaches(`${scheduledExport.shop}:fetchExportHistories:`).catch(() => {});
+  }
+
   return errorMessage;
 }
 
@@ -93,6 +98,10 @@ async function markRunSkipped(run, scheduledExport, reason) {
     runCount: { increment: 1 },
     lastRunAt: new Date(),
   });
+
+  if (scheduledExport?.shop) {
+    await clearKeyCaches(`${scheduledExport.shop}:fetchExportHistories:`).catch(() => {});
+  }
 
   return reason;
 }
@@ -406,6 +415,8 @@ export async function executeScheduledExportRun(runId, shopFromJob = null) {
         executionState: EXPORT_EXECUTION_STATES.QUEUED,
       },
     });
+
+    await clearKeyCaches(`${exportJob.shop}:fetchExportHistories:`).catch(() => {});
 
     await addbulkExportJob({
       exportJobId: exportJob.id,
