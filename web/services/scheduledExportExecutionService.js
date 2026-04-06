@@ -164,7 +164,7 @@ async function releaseShopLock(key) {
   if (key) await connection.del(key).catch(() => { });
 }
 export async function scheduleDueScheduledExportRuns({ limit = 100 } = {}) {
-  console.log("⏰ Scheduled export scheduler triggered");
+  // console.log("⏰ Scheduled export scheduler triggered");
   const hasSchedulerLock = await acquireSchedulerLock();
   if (!hasSchedulerLock) {
     return { scheduled: 0, skipped: 0, reason: "scheduler_locked" };
@@ -178,7 +178,7 @@ export async function scheduleDueScheduledExportRuns({ limit = 100 } = {}) {
       );
     }, 30_000);
     const now = new Date();
-    console.log("🕒 Current time:", now.toISOString());
+    // console.log("🕒 Current time:", now.toISOString());
 const debugAll = await prisma.scheduledExport.findMany({
   select: {
     id: true,
@@ -188,20 +188,20 @@ const debugAll = await prisma.scheduledExport.findMany({
   },
 });
 
-console.log("🧪 DEBUG scheduled exports:");
-for (const row of debugAll) {
-  console.log({
-    id: row.id,
-    nextRunAt: row.nextRunAt?.toISOString(),
-    status: row.status,
-    isDeleted: row.isDeleted,
-    now: now.toISOString(),
-    isDue: row.nextRunAt <= now,
-  });
-}
+// console.log("🧪 DEBUG scheduled exports:");
+// for (const row of debugAll) {
+//   console.log({
+//     id: row.id,
+//     nextRunAt: row.nextRunAt?.toISOString(),
+//     status: row.status,
+//     isDeleted: row.isDeleted,
+//     now: now.toISOString(),
+//     isDue: row.nextRunAt <= now,
+//   });
+// }
 
     const dueIds = await scheduledExportRepository.findDueScheduledExportIds(now, limit);
-    console.log("📦 Due Scheduled Exports:", dueIds);
+    // console.log("📦 Due Scheduled Exports:", dueIds);
 
     let scheduled = 0;
     let skipped = 0;
