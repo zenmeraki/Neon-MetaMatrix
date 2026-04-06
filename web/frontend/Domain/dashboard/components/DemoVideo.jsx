@@ -1,4 +1,3 @@
-// web/frontend/domains/dashboard/components/DemoVideo.jsx
 import React, { useState } from "react";
 import {
   Card,
@@ -9,13 +8,11 @@ import {
   Box,
   Spinner,
   Icon,
+  Badge,
 } from "@shopify/polaris";
 import { PlayIcon } from "@shopify/polaris-icons";
 import { useTranslation } from "react-i18next";
 
-/**
- * Demo video component (Polaris 13 design + simplified logic)
- */
 const DemoVideo = () => {
   const { t } = useTranslation();
   const [videoLoaded, setVideoLoaded] = useState(false);
@@ -26,122 +23,242 @@ const DemoVideo = () => {
   return (
     <Box width="100%">
       {!showVideo ? (
-        <Card>
-          <Box padding="800">
-            <BlockStack gap="500" inlineAlign="center">
-              {/* Thumbnail placeholder */}
-              <Box
-                background="bg-surface-secondary"
-                borderRadius="300"
-                padding="600"
-                minHeight="200px"
-                width="100%"
-              >
-                <InlineStack align="center" blockAlign="center">
-                  <Box background="bg-fill-info" borderRadius="100" padding="400">
-                    <Icon source={PlayIcon} tone="info" />
+        <Card roundedAbove="sm">
+          <Box
+            borderRadius="300"
+            overflowX="hidden"
+            overflowY="hidden"
+            background="bg-surface"
+          >
+            <Box
+              padding="0"
+              style={{
+                background:
+                  "linear-gradient(180deg, #f6f6f7 0%, #ffffff 45%, #f6f6f7 100%)",
+              }}
+            >
+              <Box padding="800">
+                <BlockStack gap="700" inlineAlign="center">
+                  <InlineStack align="center">
+                    <Badge tone="info">{t("demoVideo", "Demo Video")}</Badge>
+                  </InlineStack>
+
+                  <Box width="100%" maxWidth="760px">
+                    <Box
+                      borderRadius="300"
+                      padding="300"
+                      background="bg-surface"
+                      shadow="400"
+                      borderWidth="025"
+                      borderColor="border-secondary"
+                      borderStyle="solid"
+                    >
+                      <Box
+                        borderRadius="300"
+                        minHeight="280px"
+                        position="relative"
+                        overflowX="hidden"
+                        overflowY="hidden"
+                        style={{
+                          background:
+                            "linear-gradient(135deg, #111827 0%, #1f2937 55%, #374151 100%)",
+                        }}
+                      >
+                        <Box
+                          style={{
+                            position: "absolute",
+                            top: "-40px",
+                            right: "-20px",
+                            width: "180px",
+                            height: "180px",
+                            background:
+                              "radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 70%)",
+                            pointerEvents: "none",
+                          }}
+                        />
+                        <Box
+                          style={{
+                            position: "absolute",
+                            bottom: "-50px",
+                            left: "-20px",
+                            width: "220px",
+                            height: "220px",
+                            background:
+                              "radial-gradient(circle, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0) 72%)",
+                            pointerEvents: "none",
+                          }}
+                        />
+
+                        <Box
+                          style={{
+                            minHeight: "280px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            position: "relative",
+                            zIndex: 2,
+                          }}
+                        >
+                          <BlockStack gap="400" inlineAlign="center">
+                            <Box
+                              background="bg-fill-brand"
+                              borderRadius="full"
+                              padding="500"
+                              shadow="500"
+                            >
+                              <Icon source={PlayIcon} tone="base" />
+                            </Box>
+
+                            <BlockStack gap="100" inlineAlign="center">
+                              <Text variant="headingSm" as="p" tone="text-inverse">
+                                {t("watchDemo", "Watch Demo")}
+                              </Text>
+
+                              <Text variant="bodySm" as="p" tone="subdued">
+                                {t(
+                                  "watchDemoSubtext",
+                                  "See the product flow in a quick guided walkthrough."
+                                )}
+                              </Text>
+                            </BlockStack>
+                          </BlockStack>
+                        </Box>
+                      </Box>
+                    </Box>
                   </Box>
-                </InlineStack>
-              </Box>
 
-              {/* Content */}
-              <BlockStack gap="300" inlineAlign="center">
-                <Text variant="headingSm" as="h3" alignment="center">
-                  {t("watchDemoIntro", )}
-                </Text>
-                <Text variant="bodyMd" tone="subdued" alignment="center">
-                  {t("watchDemoSubtext", )}
-                </Text>
-              </BlockStack>
+                  <BlockStack gap="300" inlineAlign="center">
+                    <Text variant="headingXl" as="h2" alignment="center">
+                      {t("watchDemoIntro")}
+                    </Text>
 
-              {/* CTA button */}
-              <Box paddingBlockStart="400">
-                <Button
-                  variant="primary"
-                  size="large"
-                  icon={PlayIcon}
-                  onClick={handleShowVideo}
-                >
-                  {t("watchDemo" )}
-                </Button>
+                    <Box maxWidth="580px">
+                      <Text variant="bodyLg" tone="subdued" alignment="center" as="p">
+                        {t("watchDemoSubtext")}
+                      </Text>
+                    </Box>
+                  </BlockStack>
+
+                  <InlineStack align="center" gap="300">
+                    <Box paddingBlockStart="400">
+                      <Button
+                        variant="primary"
+                        size="large"
+                        icon={PlayIcon}
+                        onClick={handleShowVideo}
+                      >
+                        {t("watchDemo")}
+                      </Button>
+                    </Box>
+                  </InlineStack>
+                </BlockStack>
               </Box>
-            </BlockStack>
+            </Box>
           </Box>
         </Card>
       ) : (
-        <Card>
-          <Box padding="400">
-            <BlockStack gap="400">
-              <BlockStack gap="200">
-                <Text variant="headingSm" as="h3">
-                  {t("demoVideo")}
-                </Text>
-               
-              </BlockStack>
+        <Card roundedAbove="sm">
+          <Box padding="500">
+            <BlockStack gap="500">
+              <InlineStack align="space-between" blockAlign="center">
+                <BlockStack gap="100">
+                  <InlineStack gap="200" blockAlign="center">
+                    <Text variant="headingMd" as="h3">
+                      {t("demoVideo")}
+                    </Text>
+                    <Badge tone="success">{t("playing", "Playing")}</Badge>
+                  </InlineStack>
 
-              {/* Video container */}
-              <Box
-                background="bg-surface-secondary"
-                borderRadius="200"
-                padding="200"
-                position="relative"
-              >
-                {!videoLoaded && (
-                  <Box minHeight="450px" padding="800">
-                    <InlineStack align="center" blockAlign="center">
-                      <BlockStack gap="300" inlineAlign="center">
-                        <Spinner size="large" />
-                        <Text variant="bodyMd" tone="subdued">
-                          {t("loadingVideo", "Loading video...")}
-                        </Text>
-                      </BlockStack>
-                    </InlineStack>
-                  </Box>
-                )}
+                  <Text variant="bodySm" tone="subdued" as="p">
+                    {t(
+                      "watchDemoSubtext",
+                      "See the workflow in action through a guided demo."
+                    )}
+                  </Text>
+                </BlockStack>
 
-                <Box
-                  style={{
-                    display: videoLoaded ? "block" : "none",
-                    aspectRatio: "16/9",
-                    width: "100%",
-                    maxWidth: "700px",
-                    margin: "0 auto",
-                  }}
-                >
-                  <iframe
-                    width="100%"
-                    height="100%"
-                    src="https://www.youtube.com/embed/014uZYpNdMY?si=TWzKvsDA0TnE_gXe"
-                    title={t("metamatrixDemoVideo", "Metamatrix Demo Video")}
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    referrerPolicy="strict-origin-when-cross-origin"
-                    allowFullScreen
-                    onLoad={() => setVideoLoaded(true)}
-                    style={{
-                      borderRadius: "8px",
-                      border: "none",
-                    }}
-                  />
-                </Box>
-              </Box>
-
-              {/* Actions */}
-              <InlineStack align="space-between">
                 <Button variant="plain" onClick={() => setShowVideo(false)}>
                   {t("close", "Close Video")}
                 </Button>
-                <InlineStack gap="200">
-                  <Button variant="plain">{t("share", "Share")}</Button>
-                  <Button
-                    variant="plain"
-                    url="https://www.youtube.com/watch?v=014uZYpNdMY"
-                    external
-                  >
-                    {t("watchOnYoutube")}
-                  </Button>
-                </InlineStack>
               </InlineStack>
+
+              <Box
+                borderRadius="300"
+                padding="300"
+                background="bg-surface-secondary"
+                borderWidth="025"
+                borderColor="border-secondary"
+                borderStyle="solid"
+              >
+                <Box
+                  position="relative"
+                  borderRadius="300"
+                  overflowX="hidden"
+                  overflowY="hidden"
+                  background="bg-surface"
+                  style={{
+                    boxShadow: "0 10px 30px rgba(0,0,0,0.06)",
+                  }}
+                >
+                  {!videoLoaded && (
+                    <Box minHeight="450px" padding="800">
+                      <InlineStack align="center" blockAlign="center">
+                        <BlockStack gap="300" inlineAlign="center">
+                          <Spinner size="large" />
+                          <Text variant="bodyMd" tone="subdued">
+                            {t("loadingVideo", "Loading video...")}
+                          </Text>
+                        </BlockStack>
+                      </InlineStack>
+                    </Box>
+                  )}
+
+                  <Box
+                    style={{
+                      display: videoLoaded ? "block" : "none",
+                      aspectRatio: "16 / 9",
+                      width: "100%",
+                    }}
+                  >
+                    <iframe
+                      width="100%"
+                      height="100%"
+                      src="https://www.youtube.com/embed/014uZYpNdMY?si=TWzKvsDA0TnE_gXe"
+                      title={t("metamatrixDemoVideo", "Metamatrix Demo Video")}
+                      frameBorder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      referrerPolicy="strict-origin-when-cross-origin"
+                      allowFullScreen
+                      onLoad={() => setVideoLoaded(true)}
+                      style={{
+                        border: "none",
+                        display: "block",
+                        width: "100%",
+                        aspectRatio: "16 / 9",
+                      }}
+                    />
+                  </Box>
+                </Box>
+              </Box>
+
+              <Box paddingBlockStart="100" borderColor="border-secondary">
+                <InlineStack align="space-between" blockAlign="center">
+                  <Text variant="bodySm" tone="subdued" as="p">
+                    {t("metamatrixDemoVideo", "Metamatrix Demo Video")}
+                  </Text>
+
+                  <InlineStack gap="200">
+                    <Button variant="plain">{t("share", "Share")}</Button>
+                    <Button
+                      variant="secondary"
+                      url="https://www.youtube.com/watch?v=014uZYpNdMY"
+                      external
+                    >
+                      {t("watchOnYoutube")}
+                    </Button>
+                  </InlineStack>
+                </InlineStack>
+              </Box>
             </BlockStack>
           </Box>
         </Card>

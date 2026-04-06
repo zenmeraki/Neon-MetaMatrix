@@ -12,6 +12,7 @@ import {
   SkeletonBodyText,
   Text,
   Toast,
+  Divider,
 } from "@shopify/polaris";
 import { RefreshIcon, ArrowLeftIcon } from "@shopify/polaris-icons";
 import { useNavigate } from "react-router-dom";
@@ -138,38 +139,44 @@ export default function DataSyncPage() {
   const syncCards = useMemo(
     () =>
       rows.map((item) => (
-        <Card key={item.name}>
-          <InlineStack align="space-between" blockAlign="center" wrap gap="400">
-            <BlockStack gap="100">
-              <Text as="h3" variant="headingSm">
-                {item.name}
-              </Text>
-              {dataSources ? (
-                <Text variant="bodySm" tone="subdued">
-                  {t("lastSync")}: {getDate(item.name)}
+        <Card key={item.name} roundedAbove="sm">
+          <Box padding="500">
+            <InlineStack align="space-between" blockAlign="center" wrap gap="400">
+              <BlockStack gap="150">
+                <Text as="h3" variant="headingMd">
+                  {item.name}
                 </Text>
-              ) : (
-                <SkeletonBodyText lines={1} />
-              )}
-            </BlockStack>
 
-            <InlineStack gap="200" blockAlign="center">
-              {dataSources ? (
-                <Badge tone={getStatus(item.name) === "Synced" ? "success" : "attention"}>
-                  {getStatus(item.name)}
-                </Badge>
-              ) : null}
-              <Button
-                icon={RefreshIcon}
-                variant="secondary"
-                loading={syncingItem === item.name}
-                disabled={isAnySyncRunning || Boolean(syncingItem)}
-                onClick={() => handleRefresh(item)}
-              >
-                Refresh
-              </Button>
+                {dataSources ? (
+                  <Text variant="bodyMd" tone="subdued">
+                    {t("lastSync")}: {getDate(item.name)}
+                  </Text>
+                ) : (
+                  <SkeletonBodyText lines={1} />
+                )}
+              </BlockStack>
+
+              <InlineStack gap="300" blockAlign="center">
+                {dataSources ? (
+                  <Badge
+                    tone={getStatus(item.name) === "Synced" ? "success" : "attention"}
+                  >
+                    {getStatus(item.name)}
+                  </Badge>
+                ) : null}
+
+                <Button
+                  icon={RefreshIcon}
+                  variant="primary"
+                  loading={syncingItem === item.name}
+                  disabled={isAnySyncRunning || Boolean(syncingItem)}
+                  onClick={() => handleRefresh(item)}
+                >
+                  {t("refreshButton",)}
+                </Button>
+              </InlineStack>
             </InlineStack>
-          </InlineStack>
+          </Box>
         </Card>
       )),
     [dataSources, getDate, getStatus, isAnySyncRunning, syncingItem, t],
@@ -187,56 +194,105 @@ export default function DataSyncPage() {
     >
       <Layout>
         <Layout.Section>
-          <BlockStack gap="400">
-            <Card>
-              <InlineStack align="space-between" blockAlign="center" wrap gap="400">
-                <BlockStack gap="100">
-                  <Text as="h2" variant="headingMd">
-                    Catalog sync status
-                  </Text>
-                  <Text as="p" tone="subdued" variant="bodyMd">
-                    Refresh mirrored catalog data when you need targeting, previews, and exports to reflect the latest Shopify state.
-                  </Text>
+          <BlockStack gap="500">
+            <Card roundedAbove="sm">
+              <Box
+                padding="700"
+                borderRadius="300"
+                overflowX="hidden"
+                overflowY="hidden"
+                style={{
+                  background:
+                    "linear-gradient(180deg, #ffffff 0%, #f8f8f8 55%, #f3f4f6 100%)",
+                }}
+              >
+                <BlockStack gap="400">
+                  <InlineStack align="space-between" blockAlign="start" wrap gap="400">
+                    <BlockStack gap="150">
+                      <Text as="h2" variant="headingLg">
+                        {t("syncHeroTitle",)}
+                      </Text>
+                      <Box maxWidth="720px">
+                        <Text as="p" tone="subdued" variant="bodyMd">
+                          {t("syncHeroText",)}
+                        </Text>
+                      </Box>
+                    </BlockStack>
+
+                    <Badge tone={summaryTone}>
+                      {isAnySyncRunning || waitingForSync
+                        ? t("syncBadgeInProgress",)
+                        : t("syncBadgeReady",)}
+                    </Badge>
+                  </InlineStack>
+
+                  <Box
+                    padding="400"
+                    borderRadius="300"
+                    background="bg-surface"
+                    borderWidth="025"
+                    borderStyle="solid"
+                    borderColor="border-secondary"
+                  >
+                    <InlineStack align="space-between" blockAlign="center" wrap gap="400">
+                      <BlockStack gap="100">
+                        <Text as="h3" variant="headingSm">
+                          {t("syncGuidanceTitle",)}
+                        </Text>
+                        <Text as="p" tone="subdued" variant="bodyMd">
+                          {t("syncGuidanceText",)}
+                        </Text>
+                      </BlockStack>
+
+                      <Badge tone="info">
+                        {t("syncWorkflowBadge",)}
+                      </Badge>
+                    </InlineStack>
+                  </Box>
                 </BlockStack>
-                <Badge tone={summaryTone}>
-                  {isAnySyncRunning || waitingForSync ? "Sync in progress" : "Mirror ready"}
-                </Badge>
-              </InlineStack>
+              </Box>
             </Card>
 
             {(waitingForSync || isAnySyncRunning) && (
               <Banner tone="warning">
-                A sync is running in the background. Keep this page open to monitor status updates.
+                {t("syncRunningBanner",)}
               </Banner>
             )}
 
-            {syncCards}
+            <BlockStack gap="300">{syncCards}</BlockStack>
           </BlockStack>
         </Layout.Section>
 
         <Layout.Section variant="oneThird">
-          <Card>
-            <BlockStack gap="300">
-              <Text as="h3" variant="headingSm">
-                Sync guidance
-              </Text>
-              <Text as="p" tone="subdued" variant="bodyMd">
-                Start one sync at a time to avoid unnecessary queue pressure and keep the mirror state predictable.
-              </Text>
-              <Box
-                background="bg-surface-secondary"
-                padding="300"
-                borderRadius="300"
-                borderWidth="1"
-                borderColor="border"
-              >
-                <BlockStack gap="200">
-                  <Text as="p" variant="bodyMd">
-                    Product sync refreshes the mirrored catalog used for filtering, previews, exports, and edit planning.
-                  </Text>
-                </BlockStack>
-              </Box>
-            </BlockStack>
+          <Card roundedAbove="sm">
+            <Box padding="500">
+              <BlockStack gap="300">
+                <Text as="h3" variant="headingMd">
+                  {t("mirrorDetailsTitle",)}
+                </Text>
+
+                <Text as="p" tone="subdued" variant="bodyMd">
+                  {t("mirrorDetailsText",)}
+                </Text>
+
+                <Divider />
+
+                <Box
+                  background="bg-surface-secondary"
+                  padding="400"
+                  borderRadius="300"
+                  borderWidth="025"
+                  borderStyle="solid"
+                  borderColor="border-secondary"
+                >
+                  <BlockStack gap="200">
+                    <Text as="p" variant="bodyMd">
+                      {t("syncRefreshHint",)}
+                    </Text>
+                  </BlockStack>
+                </Box>
+              </BlockStack>
+            </Box>
           </Card>
         </Layout.Section>
       </Layout>

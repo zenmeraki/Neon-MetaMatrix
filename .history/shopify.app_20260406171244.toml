@@ -1,0 +1,56 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "20f31d269398d5f23df95d0450e772e9"
+web_directories = [ "web", "web/frontend" ]
+name = "test-app"
+application_url = "https://architectural-corn-bug-partner.trycloudflare.com"
+embedded = true
+handle = "test-app-11537"
+
+[build]
+automatically_update_urls_on_dev = true
+
+[webhooks]
+api_version = "2025-04"
+
+  [[webhooks.subscriptions]]
+  uri = "/api/webhooks"
+  compliance_topics = [ "customers/redact", "customers/data_request", "shop/redact" ]
+
+  [[webhooks.subscriptions]]
+  uri = "/api/webhooks"
+  topics = [
+    "app/uninstalled",
+    "shop/update",
+    "bulk_operations/finish",
+    "products/create",
+    "products/update",
+    "products/delete",
+    "collections/create",
+    "collections/update",
+    "collections/delete",
+    "inventory_levels/update",
+    "inventory_levels/connect",
+    "inventory_levels/disconnect",
+    "inventory_items/create",
+    "inventory_items/update",
+    "inventory_items/delete"
+  ]
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "read_inventory,read_locations,read_products,write_products,read_metaobjects"
+optional_scopes = [ ]
+use_legacy_install_flow = false
+
+[auth]
+redirect_urls = [
+  "https://architectural-corn-bug-partner.trycloudflare.com/auth/callback",
+  "https://architectural-corn-bug-partner.trycloudflare.com/auth/shopify/callback",
+  "https://architectural-corn-bug-partner.trycloudflare.com/api/auth/callback"
+]
+
+[app_proxy]
+url = "https://automatic-learners-excluded-decorative.trycloudflare.com/storefront/subscription"
+subpath = "proxy"
+prefix = "apps"

@@ -70,7 +70,9 @@ export default function ProductsTable({
         <EmptyState
           heading="No products matched these filters"
         >
-          <p>Try removing a filter or broadening your search to find products again.</p>
+          <p>
+            {t("filteredProductsEmptyText",)}
+          </p>
         </EmptyState>
       </Box>
     );
@@ -89,17 +91,19 @@ export default function ProductsTable({
       <Box padding="400" borderBlockEndWidth="1" borderColor="border">
         <InlineStack align="space-between" blockAlign="center" wrap>
           <BlockStack gap="100">
-            <Text as="h3" variant="headingSm">
-              Filtered products
-            </Text>
-            <Text tone="subdued" variant="bodySm">
-              Page {pagination?.page} of {pagination?.totalPages} · {pagination?.total?.toLocaleString()} products
-            </Text>
+            <Box paddingInlineStart="600">
+              <Text as="h3" variant="headingSm">
+                {t("exportFilteredProductsTitle",)}
+              </Text>
+              <Text tone="subdued" variant="bodySm">
+                Page {pagination?.page} of {pagination?.totalPages} · {pagination?.total?.toLocaleString()} products
+              </Text>
+            </Box>
           </BlockStack>
         </InlineStack>
       </Box>
 
-      <Box overflowX="auto">
+      <Box overflowX="auto" paddingInlineStart="600">
         <DataTable
           columnContentTypes={["text", "text", "numeric", "text", "text"]}
           headings={[
@@ -116,7 +120,7 @@ export default function ProductsTable({
       <Box padding="400" borderBlockStartWidth="1" borderColor="border">
         <InlineStack align="space-between" blockAlign="center">
           <Text tone="subdued" variant="bodySm">
-            Use these results as the source for edits, previews, and exports.
+            {t("exportFilteredProductsText",)}
           </Text>
           <Pagination
             hasPrevious={pagination?.hasPrevPage}

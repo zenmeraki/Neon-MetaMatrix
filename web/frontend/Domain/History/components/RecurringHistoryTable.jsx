@@ -289,7 +289,7 @@ const RecurringHistoryTable = memo(
     });
 
     return (
-      <Box>
+      <Box paddingInlineStart="800">
         <DataTable
           columnContentTypes={[
             "text", // Title
@@ -306,7 +306,7 @@ const RecurringHistoryTable = memo(
             t("statusLabel"),
             t("frequency"),
             t("runs"),
-            // t("nextRun"),
+            // t("nextRun"),Fr
             // t("user"),
             t("created"),
             t("actions"),

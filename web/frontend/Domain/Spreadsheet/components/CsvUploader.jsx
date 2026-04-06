@@ -1,7 +1,10 @@
 import { DropZone, Icon, Text, Box, InlineStack, Button } from "@shopify/polaris";
 import { UploadIcon, FileIcon } from "@shopify/polaris-icons";
+import { useTranslation } from "react-i18next";
 
 export default function CsvUploader({ file, onDrop, onRemove }) {
+    const { t } = useTranslation();
+
     return (
         <DropZone allowMultiple={false} onDrop={onDrop} accept=".csv" type="file">
 
@@ -9,7 +12,9 @@ export default function CsvUploader({ file, onDrop, onRemove }) {
                 <Box padding="600">
                     <Text alignment="center">
                         <Icon source={UploadIcon} />
-                        Drag & drop CSV file or click to upload
+                        {t("spreadsheetDropzone", {
+                            defaultValue: "Drag & drop CSV file or click to upload",
+                        })}
                     </Text>
                 </Box>
             )}
@@ -23,7 +28,7 @@ export default function CsvUploader({ file, onDrop, onRemove }) {
                         </InlineStack>
 
                         <Button plain onClick={onRemove}>
-                            Remove
+                            {t("spreadsheetRemove", { defaultValue: "Remove" })}
                         </Button>
                     </InlineStack>
                 </Box>

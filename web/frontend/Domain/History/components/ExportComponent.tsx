@@ -1,6 +1,6 @@
 // web/frontend/Domain/History/components/ExportComponent.tsx
 import React from "react";
-import { BlockStack, Card, Tabs, Text } from "@shopify/polaris";
+import { BlockStack, Card, Tabs, Text, Box } from "@shopify/polaris";
 import ExportTable from "./ExportTable";
 import { useToast } from "./useToast";
 import { useTranslation } from "react-i18next";
@@ -13,11 +13,11 @@ const ExportComponent: React.FC = () => {
     () => [
       {
         id: "manual-exports",
-        content: t("ManualExport", { defaultValue: "Manual Export" }),
+        content: t("ManualExport"),
       },
       {
         id: "scheduled-exports",
-        content: t("ScheduledExport", { defaultValue: "Scheduled Export" }),
+        content: t("ScheduledExport"),
       },
     ],
     [t],
@@ -34,9 +34,7 @@ const ExportComponent: React.FC = () => {
   // Success handler
   const handleExportSuccess = React.useCallback(() => {
     triggerToast({
-      content: t("exportSuccess", {
-        defaultValue: "Export completed successfully.",
-      }),
+      content: t("exportSuccess"),
     });
   }, [triggerToast, t]);
 
@@ -45,19 +43,23 @@ const ExportComponent: React.FC = () => {
     (errorMessage: string) => {
       triggerToast({ content: errorMessage, isError: true });
     },
-    [triggerToast]
+    [triggerToast],
   );
 
   return (
     <BlockStack gap="400">
       <Card>
         <BlockStack gap="200">
-          <Text as="h2" variant="headingMd">
-            {t("exportHistory", { defaultValue: "Export History" })}
+          <Box paddingInlineStart="600">
+          <Text as="h2" variant="headingLg">
+            {t("exportHistory")}
           </Text>
+          <Box paddingBlockStart="200">
           <Text as="p" tone="subdued" variant="bodyMd">
-            Track generated files, monitor progress, and download completed exports.
+            {t("exportOverviewText")}
           </Text>
+          </Box>
+          </Box>
           <Tabs tabs={tabs} selected={selectedTab} onSelect={setSelectedTab} />
         </BlockStack>
       </Card>

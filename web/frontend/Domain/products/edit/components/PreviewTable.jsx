@@ -186,7 +186,7 @@ const PreviewTable = ({
   return (
     <BlockStack gap="400">
       <Card padding="0">
-        <Box overflowX="auto" width="100%">
+        <Box overflowX="auto" width="100%" paddingInlineStart="800" paddingBlockStart="400">
           <DataTable
             columnContentTypes={columnContentTypes}
             headings={headings}

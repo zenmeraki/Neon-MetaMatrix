@@ -1,23 +1,19 @@
-export const productFields = [
-    { label: "Ignore this field", value: "" },
-
-    { label: "Product ID", value: "id" },
-    { label: "Variant ID", value: "variant_id" },
-
-    { label: "Title", value: "title" },
-    { label: "Description", value: "description" },
-    { label: "Vendor", value: "vendor" },
-    { label: "Product Type", value: "productType" },
-    { label: "Handle", value: "handle" },
-    { label: "Status", value: "status" },
-    { label: "Tags", value: "tags" },
-
-    { label: "SEO Meta Title", value: "metaTitle" },
-    { label: "SEO Meta Description", value: "metaDescription" },
-
-    { label: "Price", value: "price" },
-    { label: "Compare At Price", value: "compareAtPrice" },
-    { label: "SKU", value: "sku" },
-    { label: "Barcode", value: "barcode" },
-    { label: "Taxable", value: "taxable" },
+export const getProductFields = (t) => [
+    { label: t("spreadsheetIgnoreField", { defaultValue: "Ignore this field" }), value: "" },
+    { label: t("spreadsheetProductId", { defaultValue: "Product ID" }), value: "id" },
+    { label: t("spreadsheetVariantId", { defaultValue: "Variant ID" }), value: "variant_id" },
+    { label: t("Title", { defaultValue: "Title" }), value: "title" },
+    { label: t("Description", { defaultValue: "Description" }), value: "description" },
+    { label: t("Vendor", { defaultValue: "Vendor" }), value: "vendor" },
+    { label: t("ProductType", { defaultValue: "Product Type" }), value: "productType" },
+    { label: t("Handle", { defaultValue: "Handle" }), value: "handle" },
+    { label: t("Status", { defaultValue: "Status" }), value: "status" },
+    { label: t("Tags", { defaultValue: "Tags" }), value: "tags" },
+    { label: t("spreadsheetSeoMetaTitle", { defaultValue: "SEO Meta Title" }), value: "metaTitle" },
+    { label: t("spreadsheetSeoMetaDescription", { defaultValue: "SEO Meta Description" }), value: "metaDescription" },
+    { label: t("Price", { defaultValue: "Price" }), value: "price" },
+    { label: t("spreadsheetCompareAtPrice", { defaultValue: "Compare At Price" }), value: "compareAtPrice" },
+    { label: t("SKU", { defaultValue: "SKU" }), value: "sku" },
+    { label: t("Barcode", { defaultValue: "Barcode" }), value: "barcode" },
+    { label: t("spreadsheetTaxable", { defaultValue: "Taxable" }), value: "taxable" },
 ];

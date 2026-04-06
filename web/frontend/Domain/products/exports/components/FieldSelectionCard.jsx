@@ -10,6 +10,8 @@ import {
   Text,
 } from "@shopify/polaris";
 
+import { useTranslation } from "react-i18next";
+
 export default function FieldSelectionCard({
   productFields,
   variantFields,
@@ -19,6 +21,7 @@ export default function FieldSelectionCard({
   allFields,
   loading,
 }) {
+  const { t } = useTranslation();
   const toggleField = (value) => {
     setSelectedFields((prev) =>
       prev.includes(value) ? prev.filter((field) => field !== value) : [...prev, value],
@@ -72,10 +75,11 @@ export default function FieldSelectionCard({
         <InlineStack align="space-between" blockAlign="start">
           <BlockStack gap="100">
             <Text variant="headingSm" as="h3">
-              Field selection
+              {t("exportFieldSelectionTitle",)}
             </Text>
+
             <Text tone="subdued" as="p" variant="bodyMd">
-              Choose the product, variant, and SEO columns to include in this export.
+              {t("exportFieldSelectionText",)}
             </Text>
           </BlockStack>
 
@@ -88,11 +92,20 @@ export default function FieldSelectionCard({
         </InlineStack>
 
         <Divider />
-        {renderSection("Product fields", productFields)}
+        {renderSection(
+          t("exportProductFieldsTitle",),
+          productFields
+        )}
         <Divider />
-        {renderSection("Variant fields", variantFields)}
+        {renderSection(
+          t("exportVariantFieldsTitle",),
+          variantFields
+        )}
         <Divider />
-        {renderSection("SEO fields", seoFields)}
+        {renderSection(
+          t("exportSeoFieldsTitle",),
+          seoFields
+        )}
       </BlockStack>
     </Card>
   );
