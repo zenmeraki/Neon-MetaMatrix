@@ -25,12 +25,12 @@ import {
 const router = express.Router();
 const historyRateLimiter = rateLimit({
   windowMs: +process.env.HISTORY_RATE_LIMIT_WINDOW_MS || 60_000,
-  max: +process.env.HISTORY_RATE_LIMIT_MAX || 30,
+  max: +process.env.HISTORY_RATE_LIMIT_MAX || 60,
   handler: (_, res) => res.status(429).json({ error: "Too Many Requests" }),
 });
 const importHistoryRateLimiter = rateLimit({
   windowMs: +process.env.HISTORY_RATE_LIMIT_WINDOW_MS || 60_000, // 1 min
-  max: +process.env.HISTORY_RATE_LIMIT_MAX || 30, // 30 requests per window
+  max: +process.env.HISTORY_RATE_LIMIT_MAX || 60,
   handler: (_, res) => res.status(429).json({ error: "Too Many Requests" }),
 });
 router.get(

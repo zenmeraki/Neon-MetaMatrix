@@ -110,27 +110,31 @@ const ExportTable = ({ selectedType = "Manual export", onExportSuccess, onExport
     };
   }, []);
 
-  useEffect(() => {
-    const hasActiveHistory = histories.some(
-      (item) => getPrimaryStatus(item).isTerminal !== true,
-    );
+useEffect(() => {
+  const hasActiveHistory = histories.some(
+    (item) => getPrimaryStatus(item).isTerminal !== true,
+  );
 
-    if (!hasActiveHistory) return undefined;
+  // ✅ Always poll for scheduled exports, or when there are active items
+  const shouldPoll =
+    String(selectedType).toLowerCase().includes("scheduled") || hasActiveHistory;
 
-    const interval = setInterval(async () => {
-      try {
-        const res = await fetch("/api/history/get-shop-exporthistory?");
-        const data = await res.json();
-        if (res.ok && data.success) {
-          setHistories(data.data || []);
-        }
-      } catch {
-        // Keep polling silent while a run is active.
+  if (!shouldPoll) return undefined;
+
+  const interval = setInterval(async () => {
+    try {
+      const res = await fetch("/api/history/get-shop-exporthistory?");
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setHistories(data.data || []);
       }
-    }, 4000);
+    } catch {
+      // silent
+    }
+  }, 4000);
 
-    return () => clearInterval(interval);
-  }, [histories]);
+  return () => clearInterval(interval);
+}, [histories, selectedType]); // ✅ add selectedType to deps
 
   const filteredHistories = useMemo(() => {
     const normalizedSelectedType = String(selectedType).trim().toLowerCase();

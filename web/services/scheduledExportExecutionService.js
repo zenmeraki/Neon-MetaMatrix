@@ -109,7 +109,7 @@ export async function enqueueScheduledExportExecutionJob({
     {
       jobId,
       delay,
-      removeOnComplete: 100,
+      removeOnComplete: true,
       removeOnFail: 100,
       attempts: 6,
       backoff: {
@@ -125,7 +125,7 @@ async function deferScheduledExportRun(runId, shop, reason, delay = 60_000) {
     runId,
     shop,
     delay,
-    jobId: `${runId}:retry:${Date.now()}`,
+    jobId: `${runId}:retry`
   });
 
   return {
@@ -135,27 +135,80 @@ async function deferScheduledExportRun(runId, shop, reason, delay = 60_000) {
     runId,
   };
 }
+const SCHEDULER_LOCK_TTL_MS = 55_000;
+const SCHEDULER_LOCK_KEY = "lock:scheduled-export-scheduler";
 
+async function acquireSchedulerLock() {
+  const result = await connection.set(
+    SCHEDULER_LOCK_KEY,
+    process.pid,
+    "NX",
+    "PX",
+    SCHEDULER_LOCK_TTL_MS
+  );
+  return result === "OK";
+}
+
+async function releaseSchedulerLock() {
+  await connection.del(SCHEDULER_LOCK_KEY);
+}
+const SHOP_LOCK_TTL_MS = 120_000;
+const SHOP_LOCK_RENEW_INTERVAL_MS = 60_000;
+async function acquireShopLock(shop) {
+  const key = `lock:scheduled-export-shop:${shop}`;
+  const result = await connection.set(key, process.pid, "NX", "PX", SHOP_LOCK_TTL_MS);
+  return { acquired: result === "OK", key };
+}
+
+async function releaseShopLock(key) {
+  if (key) await connection.del(key).catch(() => { });
+}
 export async function scheduleDueScheduledExportRuns({ limit = 100 } = {}) {
-  const schedulerLockKey = "scheduled-export-scheduler";
-  const hasSchedulerLock = await tryAdvisoryLock(prisma, schedulerLockKey, false);
-
+  console.log("⏰ Scheduled export scheduler triggered");
+  const hasSchedulerLock = await acquireSchedulerLock();
   if (!hasSchedulerLock) {
-    return {
-      scheduled: 0,
-      skipped: 0,
-      reason: "scheduler_locked",
-    };
+    return { scheduled: 0, skipped: 0, reason: "scheduler_locked" };
   }
-
+  let renewInterval;
   try {
+    renewInterval = setInterval(async () => {
+      await connection.pexpire(
+        SCHEDULER_LOCK_KEY,
+        SCHEDULER_LOCK_TTL_MS
+      );
+    }, 30_000);
     const now = new Date();
+    console.log("🕒 Current time:", now.toISOString());
+const debugAll = await prisma.scheduledExport.findMany({
+  select: {
+    id: true,
+    nextRunAt: true,
+    status: true,
+    isDeleted: true,
+  },
+});
+
+console.log("🧪 DEBUG scheduled exports:");
+for (const row of debugAll) {
+  console.log({
+    id: row.id,
+    nextRunAt: row.nextRunAt?.toISOString(),
+    status: row.status,
+    isDeleted: row.isDeleted,
+    now: now.toISOString(),
+    isDue: row.nextRunAt <= now,
+  });
+}
+
     const dueIds = await scheduledExportRepository.findDueScheduledExportIds(now, limit);
+    console.log("📦 Due Scheduled Exports:", dueIds);
+
     let scheduled = 0;
     let skipped = 0;
 
     for (const { id } of dueIds) {
       try {
+        console.log("🔁 Processing scheduledExportId:", id);
         const reservation = await prisma.$transaction(async (tx) => {
           const locked = await tryAdvisoryLock(tx, `scheduled-export:${id}`, true);
           if (!locked) {
@@ -246,7 +299,8 @@ export async function scheduleDueScheduledExportRuns({ limit = 100 } = {}) {
       scanned: dueIds.length,
     };
   } finally {
-    await unlockAdvisoryLock(prisma, schedulerLockKey).catch(() => {});
+    clearInterval(renewInterval);
+    await releaseSchedulerLock();
   }
 }
 
@@ -279,16 +333,30 @@ export async function executeScheduledExportRun(runId, shopFromJob = null) {
     return { skipped: true, reason: "plan_ineligible" };
   }
 
-  const executionLockKey = `scheduled-export-shop:${scheduledExport.shop}`;
-  const hasShopLock = await tryAdvisoryLock(prisma, executionLockKey, false);
-  if (!hasShopLock) {
+  // ✅ Redis lock instead of pg_advisory_lock
+  const shopLock = await acquireShopLock(scheduledExport.shop);
+  if (!shopLock.acquired) {
     return deferScheduledExportRun(
       run.id,
       scheduledExport.shop,
       "shop_execution_locked",
     );
   }
-
+  let shopRenewInterval = null;
+shopRenewInterval = setInterval(async () => {
+  try {
+    await connection.pexpire(
+      shopLock.key,
+      SHOP_LOCK_TTL_MS
+    );
+  } catch (err) {
+    logger.error("Failed to renew shop lock", {
+      shop: scheduledExport.shop,
+      runId: run.id,
+      error: err.message,
+    });
+  }
+}, SHOP_LOCK_RENEW_INTERVAL_MS);
   let exclusiveShopLockKey = null;
 
   try {
@@ -428,7 +496,7 @@ export async function executeScheduledExportRun(runId, shopFromJob = null) {
       exportJobId: exportJob.id,
     };
   } catch (error) {
-    await markRunFailed(run, scheduledExport, error.message || "Scheduled export execution failed").catch(() => {});
+    await markRunFailed(run, scheduledExport, error.message || "Scheduled export execution failed").catch(() => { });
     await logWorkerError({
       shop: scheduledExport.shop,
       err: error,
@@ -436,9 +504,14 @@ export async function executeScheduledExportRun(runId, shopFromJob = null) {
     });
     throw error;
   } finally {
-    await releaseExclusiveShopWork(exclusiveShopLockKey);
-    await unlockAdvisoryLock(prisma, executionLockKey).catch(() => {});
+  if (shopRenewInterval) {
+    clearInterval(shopRenewInterval);
   }
+
+  await releaseExclusiveShopWork(exclusiveShopLockKey);
+
+  await releaseShopLock(shopLock.key);
+}
 }
 
 export async function finalizeScheduledExportRunFromExportJob({
@@ -457,6 +530,8 @@ export async function finalizeScheduledExportRunFromExportJob({
       completedAt: true,
       status: true,
       error: true,
+      shop: true,
+      filename: true,
     },
   });
 
@@ -487,24 +562,54 @@ export async function finalizeScheduledExportRunFromExportJob({
       durationMs: exportJob.durationMs ?? null,
     },
   );
+  // ✅ Check if ExportHistory already exists before creating
+  const existingHistory = await prisma.exportHistory.findFirst({
+    where: { scheduledTask: exportJob.scheduledExportRunId },
+    select: { id: true },
+  });
 
-  if (!transition.count) {
-    return run.status;
+  if (!existingHistory) {
+    await prisma.exportHistory.create({
+      data: {
+        shop: exportJob.shop,
+        filename: exportJob.filename || "export.csv",
+        filters: {},
+        status: normalizedStatus === "SUCCESS" ? "completed" : "failed",
+        duration: String(exportJob.durationMs ?? 0),
+        totalItems: exportJob.totalItems ?? 0,
+        exportTime: completedAt,
+        type: "Scheduled export",
+        scheduledTask: exportJob.scheduledExportRunId ?? null,
+        exportedData: normalizedStatus === "SUCCESS" ? (exportJob.fileUrl ?? null) : null,
+        errorMessage: normalizedStatus === "FAILED"
+          ? (errorMessage || exportJob.error || null)
+          : null,
+      },
+    }).catch((err) => {
+      logger.error("Failed to create ExportHistory for scheduled export", {
+        exportJobId,
+        error: err.message,
+      });
+    });
   }
 
+
+  if (!transition.count) {
+    return run.status; // now safe to exit after history is written
+  }
   await scheduledExportRepository.updateById(exportJob.scheduledExportId, {
     runCount: { increment: 1 },
     lastRunAt: completedAt,
     ...(normalizedStatus === "SUCCESS"
       ? {
-          lastSuccessAt: completedAt,
-          lastFailureReason: null,
-        }
+        lastSuccessAt: completedAt,
+        lastFailureReason: null,
+      }
       : {
-          lastFailureAt: completedAt,
-          lastFailureReason:
-            errorMessage || exportJob.error || "Scheduled export run failed",
-        }),
+        lastFailureAt: completedAt,
+        lastFailureReason:
+          errorMessage || exportJob.error || "Scheduled export run failed",
+      }),
   });
 
   return normalizedStatus;

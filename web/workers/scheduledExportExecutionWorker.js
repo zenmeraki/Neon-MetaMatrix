@@ -15,11 +15,26 @@ const scheduledExportExecutionWorker = new Worker(
   SCHEDULED_EXPORT_EXECUTION_QUEUE,
   async (job) => {
     const { runId, shop } = job.data || {};
+     logger.info("Scheduled export execution worker started", {
+      jobId: job?.id,
+      shop,
+      runId,
+    });
     if (!runId || !shop) {
       throw new Error("scheduled export execution job requires runId and shop");
     }
 
-    return executeScheduledExportRun(runId, shop);
+    const result = await executeScheduledExportRun(runId, shop);
+
+    // ✅ Add this
+    logger.info("Scheduled export execution completed", {
+      worker: "scheduledExportExecutionWorker",
+      jobId: job?.id,
+      shop,
+      runId,
+    });
+
+    return result;
   },
   {
     connection,
@@ -27,6 +42,15 @@ const scheduledExportExecutionWorker = new Worker(
   },
 );
 
+scheduledExportExecutionWorker.on("completed", (job) => {
+  logger.info("Scheduled export execution worker completed", {
+    worker: "scheduledExportExecutionWorker",
+    queue: SCHEDULED_EXPORT_EXECUTION_QUEUE,
+    jobId: job?.id,
+    shop: job?.data?.shop,
+    runId: job?.data?.runId,
+  });
+});
 scheduledExportExecutionWorker.on("failed", async (job, error) => {
   logger.error("Scheduled export execution worker failed", {
     worker: "scheduledExportExecutionWorker",

@@ -474,9 +474,16 @@ const bulkExportWorker = new Worker(
       }
 
       await finalizeScheduledExportRunFromExportJob({
-        exportJobId,
-        status: "SUCCESS",
-      }).catch(() => {});
+  exportJobId,
+  status: "SUCCESS",
+}).catch((err) => {
+  logger.error("Failed to finalize scheduled export run", {
+    exportJobId,
+    shop,
+    error: err.message,
+    stack: err.stack,
+  });
+});
 
       await clearKeyCaches(`${shop}:fetchExportHistories:`);
 
@@ -523,10 +530,16 @@ const bulkExportWorker = new Worker(
         await markExportFailure(exportJobId, shop, error, attempt, source, executionId);
 
         await finalizeScheduledExportRunFromExportJob({
-          exportJobId,
-          status: "FAILED",
-          errorMessage: error.message,
-        }).catch(() => {});
+  exportJobId,
+  status: "FAILED",
+  errorMessage: error.message,
+}).catch((err) => {
+  logger.error("Failed to finalize scheduled export run on failure", {
+    exportJobId,
+    shop,
+    error: err.message,
+  });
+});
 
         await recordMirrorAnomaly({
           shop,

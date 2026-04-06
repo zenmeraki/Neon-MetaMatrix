@@ -7,6 +7,7 @@ import {
 } from "./scheduledExportScheduleService.js";
 import logger from "../utils/loggerUtils.js";
 
+
 function normalizeStatus(rawStatus, fallback = "ACTIVE") {
   if (!rawStatus) return fallback;
 
@@ -180,7 +181,6 @@ export async function createScheduledExport({ shop, body, subscription }) {
   const status = normalizeStatus(body.status, "ACTIVE");
   const scheduleInput = buildScheduledExportScheduleInput({
     ...body,
-    scheduleType: "ONE_TIME",
   });
   const title = String(body.title || "").trim() || filename.replace(/\.csv$/i, "");
   const nextRunAt =
@@ -192,8 +192,9 @@ export async function createScheduledExport({ shop, body, subscription }) {
       : null;
 
   if (status === "ACTIVE" && !nextRunAt) {
-    throw new Error("Scheduled export time must be in the future");
-  }
+  console.error("❌ nextRunAt is NULL during creation");
+  throw new Error("Scheduled export time must be in the future");
+}
 
   const created = await scheduledExportRepository.create({
     shop,
@@ -211,6 +212,11 @@ export async function createScheduledExport({ shop, body, subscription }) {
     filename,
     nextRunAt,
   });
+console.log("🧪 Creating scheduled export:", {
+  status,
+  nextRunAt,
+  now: new Date().toISOString(),
+});
 
   logger.info("Scheduled export created", {
     shop,
@@ -258,7 +264,6 @@ export async function updateScheduledExport({
   const scheduleInput = buildScheduledExportScheduleInput(
     {
       ...body,
-      scheduleType: "ONE_TIME",
       timezone: body.timezone ?? existing.timezone ?? "UTC",
       startAt: body.startAt ?? existing.startAt,
       endAt: body.endAt ?? existing.endAt,
