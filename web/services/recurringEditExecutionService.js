@@ -24,6 +24,7 @@ const recurringEditExecutionQueue = new Queue(RECURRING_EDIT_EXECUTION_QUEUE, {
   connection,
 });
 
+// ✅ Keep advisory lock only for transactional use inside prisma.$transaction
 async function tryAdvisoryLock(client, lockKey, transactional = true) {
   if (transactional) {
     const rows = await client.$queryRaw`
@@ -38,10 +39,33 @@ async function tryAdvisoryLock(client, lockKey, transactional = true) {
   return Boolean(rows?.[0]?.locked);
 }
 
-async function unlockAdvisoryLock(client, lockKey) {
-  await client.$queryRaw`
-    SELECT pg_advisory_unlock(hashtext(${lockKey}))
-  `;
+// ✅ Redis locks for scheduler and shop — replaces pg_advisory_lock session locks
+const SCHEDULER_LOCK_KEY = "lock:recurring-edit-scheduler";
+const SCHEDULER_LOCK_TTL_MS = 55_000;
+
+async function acquireSchedulerLock() {
+  const result = await connection.set(
+    SCHEDULER_LOCK_KEY,
+    process.pid,
+    "NX",
+    "PX",
+    SCHEDULER_LOCK_TTL_MS,
+  );
+  return result === "OK";
+}
+
+async function releaseSchedulerLock() {
+  await connection.del(SCHEDULER_LOCK_KEY).catch(() => {});
+}
+
+async function acquireShopLock(shop) {
+  const key = `lock:recurring-edit-shop:${shop}`;
+  const result = await connection.set(key, process.pid, "NX", "PX", 120_000);
+  return { acquired: result === "OK", key };
+}
+
+async function releaseShopLock(key) {
+  if (key) await connection.del(key).catch(() => {});
 }
 
 function buildExecutionKey(recurringEditId, scheduledFor) {
@@ -90,14 +114,10 @@ async function markRunFailed(run, recurringEdit, errorMessage) {
   const transition = await recurringEditRunRepository.markProcessingFinished(
     run.id,
     "FAILED",
-    {
-      errorMessage,
-    },
+    { errorMessage },
   );
 
-  if (!transition.count) {
-    return null;
-  }
+  if (!transition.count) return null;
 
   await recurringEditRepository.updateById(recurringEdit.id, {
     runCount: { increment: 1 },
@@ -114,9 +134,7 @@ async function markRunSkipped(run, recurringEdit, reason) {
     errorMessage: reason,
   });
 
-  if (!transition.count) {
-    return null;
-  }
+  if (!transition.count) return null;
 
   await recurringEditRepository.updateById(recurringEdit.id, {
     runCount: { increment: 1 },
@@ -144,15 +162,10 @@ export async function enqueueRecurringEditExecutionJob({ runId, shop }) {
 }
 
 export async function scheduleDueRecurringEditRuns({ limit = 100 } = {}) {
-  const schedulerLockKey = "recurring-edit-scheduler";
-  const hasSchedulerLock = await tryAdvisoryLock(prisma, schedulerLockKey, false);
-
+  // ✅ Redis lock instead of pg_advisory_lock
+  const hasSchedulerLock = await acquireSchedulerLock();
   if (!hasSchedulerLock) {
-    return {
-      scheduled: 0,
-      skipped: 0,
-      reason: "scheduler_locked",
-    };
+    return { scheduled: 0, skipped: 0, reason: "scheduler_locked" };
   }
 
   try {
@@ -165,9 +178,7 @@ export async function scheduleDueRecurringEditRuns({ limit = 100 } = {}) {
       try {
         const reservation = await prisma.$transaction(async (tx) => {
           const locked = await tryAdvisoryLock(tx, `recurring-edit:${id}`, true);
-          if (!locked) {
-            return null;
-          }
+          if (!locked) return null;
 
           const recurringEdit = await recurringEditRepository.findById(id, tx);
           if (
@@ -186,10 +197,7 @@ export async function scheduleDueRecurringEditRuns({ limit = 100 } = {}) {
           );
 
           if (existingRun) {
-            return {
-              runId: existingRun.id,
-              shop: recurringEdit.shop,
-            };
+            return { runId: existingRun.id, shop: recurringEdit.shop };
           }
 
           const run = await recurringEditRunRepository.create(
@@ -248,21 +256,15 @@ export async function scheduleDueRecurringEditRuns({ limit = 100 } = {}) {
       }
     }
 
-    return {
-      scheduled,
-      skipped,
-      scanned: dueIds.length,
-    };
+    return { scheduled, skipped, scanned: dueIds.length };
   } finally {
-    await unlockAdvisoryLock(prisma, schedulerLockKey).catch(() => {});
+    await releaseSchedulerLock(); // ✅ always releases
   }
 }
 
 export async function executeRecurringEditRun(runId, shopFromJob = null) {
   let run = await recurringEditRunRepository.findByIdWithRecurringEdit(runId);
-  if (!run) {
-    return { skipped: true, reason: "run_not_found" };
-  }
+  if (!run) return { skipped: true, reason: "run_not_found" };
 
   if (isTerminalRunStatus(run.status)) {
     return { skipped: true, reason: "run_already_completed" };
@@ -277,9 +279,9 @@ export async function executeRecurringEditRun(runId, shopFromJob = null) {
     return { skipped: true, reason: "recurring_edit_inactive" };
   }
 
-  const executionLockKey = `recurring-edit-shop:${recurringEdit.shop}`;
-  const hasShopLock = await tryAdvisoryLock(prisma, executionLockKey, false);
-  if (!hasShopLock) {
+  // ✅ Redis lock instead of pg_advisory_lock
+  const shopLock = await acquireShopLock(recurringEdit.shop);
+  if (!shopLock.acquired) {
     return buildDeferredResult("shop_execution_locked", run.id, recurringEdit.id);
   }
 
@@ -408,7 +410,7 @@ export async function executeRecurringEditRun(runId, shopFromJob = null) {
     throw error;
   } finally {
     await releaseExclusiveShopWork(exclusiveShopLockKey);
-    await unlockAdvisoryLock(prisma, executionLockKey).catch(() => {});
+    await releaseShopLock(shopLock.key); // ✅ Redis release
   }
 }
 
@@ -460,10 +462,7 @@ export async function finalizeRecurringRunFromHistory({
     runCount: { increment: 1 },
     lastRunAt: completedAt,
     ...(normalizedStatus === "SUCCESS"
-      ? {
-          lastSuccessAt: completedAt,
-          lastFailureReason: null,
-        }
+      ? { lastSuccessAt: completedAt, lastFailureReason: null }
       : {
           lastFailureAt: completedAt,
           lastFailureReason: errorMessage || "Recurring run failed",

@@ -6,9 +6,13 @@ const POLL_INTERVAL_MS = 60_000;
 async function runSchedulerTick() {
   try {
     const result = await scheduleDueRecurringEditRuns();
-    if (result?.scheduled || result?.skipped) {
-      logger.info("Recurring edit scheduler tick completed", result);
-    }
+    logger.info("Recurring edit scheduler tick", {
+      scheduled: result?.scheduled ?? 0,
+      skipped: result?.skipped ?? 0,
+      scanned: result?.scanned ?? 0,
+      reason: result?.reason ?? null,
+      timestamp: new Date().toISOString(),
+    });
   } catch (error) {
     logger.error("Recurring edit scheduler tick failed", {
       error: error.message,

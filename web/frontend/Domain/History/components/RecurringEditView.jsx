@@ -381,16 +381,16 @@ const RecurringEditModal = ({ open, onClose, data, isLoading, error, onUpdated }
     if (["Daily", "Weekly", "Monthly"].includes(frequency)) {
       return (
         <BlockStack gap="400">
-          <Select
-            label="Time to Run"
-            options={timeSlotOptions}
-            value={formData.timeToRun}
-            onChange={(value) => handleFieldChange("timeToRun", value)}
-            disabled={isSubmitting}
-            error={validationErrors.timeToRun}
-            requiredIndicator
-          />
-
+         <TextField
+  label="Time to Run"
+  type="time"  // ← native browser time picker, allows any HH:MM
+  value={formData.timeToRun}
+  onChange={(value) => handleFieldChange("timeToRun", value)}
+  disabled={isSubmitting}
+  error={validationErrors.timeToRun}
+  requiredIndicator
+  helpText="Enter the time you want this edit to run"
+/>
           {frequency === "Weekly" && (
             <BlockStack gap="200">
               <Text variant="bodyMd" as="p" fontWeight="semibold">

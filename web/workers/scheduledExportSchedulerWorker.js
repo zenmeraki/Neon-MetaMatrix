@@ -10,13 +10,13 @@ async function runSchedulerTick() {
     const result = await scheduleDueScheduledExportRuns();
     // console.log("📊 Scheduler result:", result);
 
-    logger.info("Scheduled export scheduler tick", {
-      scheduled: result?.scheduled ?? 0,
-      skipped: result?.skipped ?? 0,
-      scanned: result?.scanned ?? 0,
-      reason: result?.reason ?? null, // ← this will show "scheduler_locked" if stuck
-      timestamp: new Date().toISOString(),
-    });
+    // logger.info("Scheduled export scheduler tick", {
+    //   scheduled: result?.scheduled ?? 0,
+    //   skipped: result?.skipped ?? 0,
+    //   scanned: result?.scanned ?? 0,
+    //   reason: result?.reason ?? null, // ← this will show "scheduler_locked" if stuck
+    //   timestamp: new Date().toISOString(),
+    // });
 
   } catch (error) {
     logger.error("Scheduled export scheduler tick failed", {
