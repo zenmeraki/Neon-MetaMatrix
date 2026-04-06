@@ -644,11 +644,12 @@ export default function EditDetails() {
               </Box>
             ) : tableRows.length > 0 ? (
               <>
+              <Box paddingInlineStart="60">
                 <DataTable
                   columnContentTypes={["text", "text", "text"]}
                   headings={["Product", "Field", "Change"]}
                   rows={tableRows}
-                />
+                /></Box>
 
                 {totalPages > 1 ? (
                   <Box padding="400">

@@ -172,7 +172,7 @@ export default function DataSyncPage() {
                   disabled={isAnySyncRunning || Boolean(syncingItem)}
                   onClick={() => handleRefresh(item)}
                 >
-                  Refresh
+                  {t("refreshButton",)}
                 </Button>
               </InlineStack>
             </InlineStack>
@@ -210,20 +210,19 @@ export default function DataSyncPage() {
                   <InlineStack align="space-between" blockAlign="start" wrap gap="400">
                     <BlockStack gap="150">
                       <Text as="h2" variant="headingLg">
-                        Catalog sync status
+                        {t("syncHeroTitle",)}
                       </Text>
                       <Box maxWidth="720px">
                         <Text as="p" tone="subdued" variant="bodyMd">
-                          Refresh mirrored catalog data when you need targeting,
-                          previews, and exports to reflect the latest Shopify state.
+                          {t("syncHeroText",)}
                         </Text>
                       </Box>
                     </BlockStack>
 
                     <Badge tone={summaryTone}>
                       {isAnySyncRunning || waitingForSync
-                        ? "Sync in progress"
-                        : "Mirror ready"}
+                        ? t("syncBadgeInProgress",)
+                        : t("syncBadgeReady",)}
                     </Badge>
                   </InlineStack>
 
@@ -238,15 +237,16 @@ export default function DataSyncPage() {
                     <InlineStack align="space-between" blockAlign="center" wrap gap="400">
                       <BlockStack gap="100">
                         <Text as="h3" variant="headingSm">
-                          Sync guidance
+                          {t("syncGuidanceTitle",)}
                         </Text>
                         <Text as="p" tone="subdued" variant="bodyMd">
-                          Start one sync at a time to avoid unnecessary queue pressure
-                          and keep the mirror state predictable.
+                          {t("syncGuidanceText",)}
                         </Text>
                       </BlockStack>
 
-                      <Badge tone="info">Mirror workflow</Badge>
+                      <Badge tone="info">
+                        {t("syncWorkflowBadge",)}
+                      </Badge>
                     </InlineStack>
                   </Box>
                 </BlockStack>
@@ -255,8 +255,7 @@ export default function DataSyncPage() {
 
             {(waitingForSync || isAnySyncRunning) && (
               <Banner tone="warning">
-                A sync is running in the background. Keep this page open to monitor
-                status updates.
+                {t("syncRunningBanner",)}
               </Banner>
             )}
 
@@ -269,12 +268,11 @@ export default function DataSyncPage() {
             <Box padding="500">
               <BlockStack gap="300">
                 <Text as="h3" variant="headingMd">
-                  Mirror details
+                  {t("mirrorDetailsTitle",)}
                 </Text>
 
                 <Text as="p" tone="subdued" variant="bodyMd">
-                  Product sync refreshes the mirrored catalog used for filtering,
-                  previews, exports, and edit planning.
+                  {t("mirrorDetailsText",)}
                 </Text>
 
                 <Divider />
@@ -289,8 +287,7 @@ export default function DataSyncPage() {
                 >
                   <BlockStack gap="200">
                     <Text as="p" variant="bodyMd">
-                      Run a refresh whenever catalog changes in Shopify need to appear
-                      in your app workspace before the next planned operation.
+                      {t("syncRefreshHint",)}
                     </Text>
                   </BlockStack>
                 </Box>

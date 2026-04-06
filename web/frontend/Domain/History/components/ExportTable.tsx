@@ -15,9 +15,12 @@ import {
   Text,
 } from "@shopify/polaris";
 import { ArrowDownIcon } from "@shopify/polaris-icons";
+import { useTranslation } from "react-i18next";
 
 function getNormalizedExportType(item) {
-  return String(item?.rawType || item?.type || "").trim().toLowerCase();
+  return String(item?.rawType || item?.type || "")
+    .trim()
+    .toLowerCase();
 }
 
 function getPrimaryStatus(item) {
@@ -26,16 +29,36 @@ function getPrimaryStatus(item) {
   ).toLowerCase();
 
   if (statusKey === "completed") {
-    return { key: "completed", label: "Completed", tone: "success", isTerminal: true };
+    return {
+      key: "completed",
+      label: "Completed",
+      tone: "success",
+      isTerminal: true,
+    };
   }
   if (statusKey === "failed") {
-    return { key: "failed", label: "Failed", tone: "critical", isTerminal: true };
+    return {
+      key: "failed",
+      label: "Failed",
+      tone: "critical",
+      isTerminal: true,
+    };
   }
   if (statusKey === "processing") {
-    return { key: "processing", label: "Processing", tone: "info", isTerminal: false };
+    return {
+      key: "processing",
+      label: "Processing",
+      tone: "info",
+      isTerminal: false,
+    };
   }
 
-  return { key: "pending", label: "Pending", tone: "attention", isTerminal: false };
+  return {
+    key: "pending",
+    label: "Pending",
+    tone: "attention",
+    isTerminal: false,
+  };
 }
 
 function getProgressValue(item, primaryStatus) {
@@ -52,9 +75,7 @@ function getProgressValue(item, primaryStatus) {
   }
 
   const processedCount = Number(item?.processedCount ?? 0);
-  const totalItems = Number(
-    item?.targetSnapshotCount ?? item?.totalItems ?? 0,
-  );
+  const totalItems = Number(item?.targetSnapshotCount ?? item?.totalItems ?? 0);
 
   if (totalItems > 0) {
     return Math.max(
@@ -66,7 +87,12 @@ function getProgressValue(item, primaryStatus) {
   return 0;
 }
 
-const ExportTable = ({ selectedType = "Manual export", onExportSuccess, onExportError }) => {
+const ExportTable = ({
+  selectedType = "Manual export",
+  onExportSuccess,
+  onExportError,
+}) => {
+  const { t } = useTranslation();
   const [histories, setHistories] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [historyError, setHistoryError] = useState(null);
@@ -117,7 +143,6 @@ const ExportTable = ({ selectedType = "Manual export", onExportSuccess, onExport
 
     if (!hasActiveHistory) return undefined;
 
-    
     const interval = setInterval(async () => {
       try {
         const res = await fetch("/api/history/get-shop-exporthistory?");
@@ -204,9 +229,11 @@ const ExportTable = ({ selectedType = "Manual export", onExportSuccess, onExport
         const primaryStatus = getPrimaryStatus(item);
         const filename = item.filename || "Untitled export";
         const isDownloading = downloadingItems.has(id);
-        const isDownloadable = primaryStatus.key === "completed" && Boolean(item.fileUrl);
+        const isDownloadable =
+          primaryStatus.key === "completed" && Boolean(item.fileUrl);
         const progress = getProgressValue(item, primaryStatus);
-        const progressLabel = item?.progressSummary?.label || primaryStatus.label;
+        const progressLabel =
+          item?.progressSummary?.label || primaryStatus.label;
         const supportDetail =
           item?.supportStatus?.failureStage || primaryStatus.detail || null;
 
@@ -229,7 +256,13 @@ const ExportTable = ({ selectedType = "Manual export", onExportSuccess, onExport
                   <ProgressBar
                     progress={progress}
                     size="small"
-                    tone={primaryStatus.key === "failed" ? "critical" : primaryStatus.key === "partial" ? "warning" : "highlight"}
+                    tone={
+                      primaryStatus.key === "failed"
+                        ? "critical"
+                        : primaryStatus.key === "partial"
+                        ? "warning"
+                        : "highlight"
+                    }
                   />
                 </div>
                 <Text as="span" variant="bodySm" tone="subdued">
@@ -288,15 +321,17 @@ const ExportTable = ({ selectedType = "Manual export", onExportSuccess, onExport
   return (
     <Card padding="0">
       <BlockStack gap="0">
-        <Box padding="400" borderBlockEndWidth="1" borderColor="border">
+        <Box padding="400" borderBlockEndWidth="025" borderColor="border" paddingInlineStart="800" >
           <InlineStack align="space-between" blockAlign="center">
             <BlockStack gap="100">
-              <Text as="h3" variant="headingSm">
-                Generated exports
+              <Text as="h3" variant="headingLg">
+                {t("exportGeneratedTitle")}
               </Text>
-              <Text as="p" tone="subdued" variant="bodySm">
-                Download completed files and review recent export activity.
-              </Text>
+              <Box paddingBlockStart="200">
+                <Text as="p" tone="subdued" variant="bodySm">
+                  {t("exportGeneratedText")}
+                </Text>
+              </Box>
             </BlockStack>
             <Text as="span" tone="subdued" variant="bodySm">
               {filteredHistories.length} items
@@ -305,9 +340,11 @@ const ExportTable = ({ selectedType = "Manual export", onExportSuccess, onExport
         </Box>
 
         {historyError && (
-          <Box padding="400" borderBlockEndWidth="1" borderColor="border">
+          <Box padding="400" borderBlockEndWidth="025" borderColor="border">
             <Banner tone="critical">
-              <Text as="p">{historyError.message || "Failed to load export history."}</Text>
+              <Text as="p">
+                {historyError.message || "Failed to load export history."}
+              </Text>
             </Banner>
           </Box>
         )}
@@ -315,10 +352,11 @@ const ExportTable = ({ selectedType = "Manual export", onExportSuccess, onExport
         {filteredHistories.length === 0 ? (
           <Box padding="1200">
             <EmptyState heading="No exports yet">
-              <p>Completed export files will appear here once a CSV has been generated.</p>
+              <p>{t("exportEmptyText")}</p>
             </EmptyState>
           </Box>
         ) : (
+          <Box paddingInlineStart="600">
           <IndexTable
             resourceName={{ singular: "export", plural: "exports" }}
             itemCount={filteredHistories.length}
@@ -333,7 +371,7 @@ const ExportTable = ({ selectedType = "Manual export", onExportSuccess, onExport
             ]}
           >
             {historyRowMarkup}
-          </IndexTable>
+          </IndexTable></Box>
         )}
       </BlockStack>
     </Card>

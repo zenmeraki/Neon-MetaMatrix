@@ -8,6 +8,8 @@ import {
 } from "../../../../store/slices/productSlice";
 import { allFields } from "../constants";
 
+import { useTranslation } from "react-i18next";
+
 import ExportSettingsCard from "../components/ExportSettingsCard";
 import FieldSelectionCard from "../components/FieldSelectionCard";
 import InfoCard from "../components/InfoCard";
@@ -15,6 +17,7 @@ import ScheduledExportModal from "../components/ScheduledExportModal";
 
 export default function CsvExportPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const count = useSelector(selectProductCount);
   const filters = useSelector(selectFilters);
 
@@ -97,8 +100,9 @@ export default function CsvExportPage() {
 
   return (
     <Page
-      title="Export products to CSV"
-      subtitle="Download product and variant data for reporting or bulk editing"
+      title={t("exportPageTitle",)}
+      subtitle={t("exportPageSubtitle",)}
+
       primaryAction={{
         content: loading ? "Exporting..." : "Generate CSV",
         onAction: handleExport,
@@ -135,10 +139,11 @@ export default function CsvExportPage() {
           <InlineStack align="space-between" blockAlign="center" wrap gap="400">
             <BlockStack gap="100">
               <Text as="h2" variant="headingMd">
-                Export builder
+                {t("exportBuilderTitle",)}
               </Text>
+
               <Text as="p" tone="subdued" variant="bodyMd">
-                Configure the file, choose columns, and keep the current product scope intact.
+                {t("exportBuilderText",)}
               </Text>
             </BlockStack>
             <InlineStack gap="200">

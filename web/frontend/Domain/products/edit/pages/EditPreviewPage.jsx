@@ -180,7 +180,7 @@ export default function EditPreviewPage() {
     }
 
     if (editType?.inputType === InputType.SEARCH_REPLACE && !searchReplace.search) {
-      toast.error("Please enter a search value");
+      toast.error(t("bulkEditSearchReplaceSearchRequired",))
       return;
     }
 
@@ -259,7 +259,7 @@ export default function EditPreviewPage() {
           disabled: isSyncInProgress,
         },
         {
-          content: "Recurring Edit",
+          content: t("RecurringEdit"),
           onAction: () => setModalState((current) => ({ ...current, recurringEdit: true })),
           disabled: isSyncInProgress,
         },
@@ -270,7 +270,7 @@ export default function EditPreviewPage() {
           <Layout.Section>
             <Banner tone="info" title="Sync in progress">
               <p>
-                Product sync is still running. Edit, schedule, and recurring actions are temporarily disabled until the mirror is ready.
+                {t("bulkEditSyncBlockingMessage",)}
               </p>
             </Banner>
           </Layout.Section>
@@ -298,10 +298,11 @@ export default function EditPreviewPage() {
               <BlockStack gap="400">
                 <BlockStack gap="100">
                   <Text as="h2" variant="headingMd">
-                    Edit setup
+                    {t("bulkEditSetupTitle",)}
                   </Text>
+
                   <Text as="p" variant="bodySm" tone="subdued">
-                    Choose a field, set the transformation, and review the exact preview before you run anything.
+                    {t("bulkEditSetupText",)}
                   </Text>
                 </BlockStack>
 
@@ -343,19 +344,19 @@ export default function EditPreviewPage() {
             <Box padding="500">
               <BlockStack gap="300">
                 <Text as="h3" variant="headingMd">
-                  Preview summary
+                  {t("bulkEditPreviewSummaryTitle",)}
                 </Text>
                 <InlineStack gap="200" blockAlign="center">
                   <Badge tone={count > 0 ? "info" : "attention"}>{count || 0}</Badge>
                   <Text as="span" variant="bodySm" tone="subdued">
-                    Matching products
+                    {t("bulkEditMatchingProductsLabel",)}
                   </Text>
                 </InlineStack>
                 <Text as="p" variant="bodySm" tone="subdued">
                   {summaryText}
                 </Text>
                 <Text as="p" variant="bodySm" tone="subdued">
-                  The preview refreshes from your current filter set and uses the same targeting basis as the edit run.
+                  {t("bulkEditPreviewSummaryText",)}
                 </Text>
               </BlockStack>
             </Box>

@@ -65,14 +65,13 @@ export default function HistoryPage() {
                 <BlockStack gap="150">
                   <InlineStack gap="200" blockAlign="center" wrap>
                     <Text as="h1" variant="headingLg">
-                      {t("history")}
+                      {t("historyNext")}
                     </Text>
                     <Badge tone="info">{activeTabLabel}</Badge>
                   </InlineStack>
 
                   <Text as="p" variant="bodyMd" tone="subdued">
-                    Review edit activity, export runs, and background work from one
-                    organized workspace.
+                    {t("historyOverviewText",)}
                   </Text>
                 </BlockStack>
               </InlineStack>

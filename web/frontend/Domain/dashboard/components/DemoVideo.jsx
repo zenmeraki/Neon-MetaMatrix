@@ -1,4 +1,3 @@
-// web/frontend/domains/dashboard/components/DemoVideo.jsx
 import React, { useState } from "react";
 import {
   Card,
@@ -13,14 +12,9 @@ import {
 } from "@shopify/polaris";
 import { PlayIcon } from "@shopify/polaris-icons";
 import { useTranslation } from "react-i18next";
-import { i18n as appI18n } from "../../../utils/i18nUtils";
 
-/**
- * Demo video component
- * UI redesign only — functionality unchanged
- */
 const DemoVideo = () => {
-  const { t } = useTranslation(undefined, { i18n: appI18n });
+  const { t } = useTranslation();
   const [videoLoaded, setVideoLoaded] = useState(false);
   const [showVideo, setShowVideo] = useState(false);
 
@@ -45,12 +39,10 @@ const DemoVideo = () => {
             >
               <Box padding="800">
                 <BlockStack gap="700" inlineAlign="center">
-                  {/* Top badge */}
                   <InlineStack align="center">
                     <Badge tone="info">{t("demoVideo", "Demo Video")}</Badge>
                   </InlineStack>
 
-                  {/* Main preview panel */}
                   <Box width="100%" maxWidth="760px">
                     <Box
                       borderRadius="300"
@@ -72,7 +64,6 @@ const DemoVideo = () => {
                             "linear-gradient(135deg, #111827 0%, #1f2937 55%, #374151 100%)",
                         }}
                       >
-                        {/* Decorative glow */}
                         <Box
                           style={{
                             position: "absolute",
@@ -98,7 +89,6 @@ const DemoVideo = () => {
                           }}
                         />
 
-                        {/* Center content */}
                         <Box
                           style={{
                             minHeight: "280px",
@@ -120,11 +110,10 @@ const DemoVideo = () => {
                             </Box>
 
                             <BlockStack gap="100" inlineAlign="center">
-                             
                               <Text variant="headingSm" as="p" tone="text-inverse">
                                 {t("watchDemo", "Watch Demo")}
                               </Text>
-                              
+
                               <Text variant="bodySm" as="p" tone="subdued">
                                 {t(
                                   "watchDemoSubtext",
@@ -138,7 +127,6 @@ const DemoVideo = () => {
                     </Box>
                   </Box>
 
-                  {/* Text */}
                   <BlockStack gap="300" inlineAlign="center">
                     <Text variant="headingXl" as="h2" alignment="center">
                       {t("watchDemoIntro")}
@@ -151,17 +139,16 @@ const DemoVideo = () => {
                     </Box>
                   </BlockStack>
 
-                  {/* CTA */}
                   <InlineStack align="center" gap="300">
-                     <Box paddingBlockStart="400">
-                    <Button
-                      variant="primary"
-                      size="large"
-                      icon={PlayIcon}
-                      onClick={handleShowVideo}
-                    >
-                      {t("watchDemo")}
-                    </Button>
+                    <Box paddingBlockStart="400">
+                      <Button
+                        variant="primary"
+                        size="large"
+                        icon={PlayIcon}
+                        onClick={handleShowVideo}
+                      >
+                        {t("watchDemo")}
+                      </Button>
                     </Box>
                   </InlineStack>
                 </BlockStack>
@@ -173,7 +160,6 @@ const DemoVideo = () => {
         <Card roundedAbove="sm">
           <Box padding="500">
             <BlockStack gap="500">
-              {/* Header */}
               <InlineStack align="space-between" blockAlign="center">
                 <BlockStack gap="100">
                   <InlineStack gap="200" blockAlign="center">
@@ -196,7 +182,6 @@ const DemoVideo = () => {
                 </Button>
               </InlineStack>
 
-              {/* Video frame */}
               <Box
                 borderRadius="300"
                 padding="300"
@@ -256,20 +241,14 @@ const DemoVideo = () => {
                 </Box>
               </Box>
 
-              {/* Footer actions */}
-              <Box
-                paddingBlockStart="100"
-                borderColor="border-secondary"
-              >
+              <Box paddingBlockStart="100" borderColor="border-secondary">
                 <InlineStack align="space-between" blockAlign="center">
                   <Text variant="bodySm" tone="subdued" as="p">
                     {t("metamatrixDemoVideo", "Metamatrix Demo Video")}
                   </Text>
 
                   <InlineStack gap="200">
-                    <Button variant="plain">
-                      {t("share", "Share")}
-                    </Button>
+                    <Button variant="plain">{t("share", "Share")}</Button>
                     <Button
                       variant="secondary"
                       url="https://www.youtube.com/watch?v=014uZYpNdMY"

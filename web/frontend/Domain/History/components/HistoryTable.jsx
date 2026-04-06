@@ -14,6 +14,7 @@ import {
   Divider,
 } from "@shopify/polaris";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import AlertUndo from "../../products/edit/components/AlertUndo";
 import useProductSyncStatus from "../../../hooks/useProductSyncStatus";
@@ -24,6 +25,7 @@ function getPrimaryStatusSummary(item) {
   }
 
   const status = String(item?.status || "pending").toLowerCase();
+  
 
   if (status === "completed") {
     return {
@@ -110,6 +112,7 @@ const HistoryTable = memo(function HistoryTable({
   emptyStateMessage = "No history items found.",
 }) {
   const navigate = useNavigate();
+    const { t } = useTranslation();
   const { isSyncInProgress } = useProductSyncStatus();
 
   const [showUndoModal, setShowUndoModal] = useState(false);
@@ -174,20 +177,20 @@ const HistoryTable = memo(function HistoryTable({
         prev.map((history) =>
           history.id === undoHistoryItem.id
             ? {
-                ...history,
-                undo: {
-                  ...history.undo,
-                  status: "processing",
-                  state: "queued",
-                  startedAt: new Date().toISOString(),
-                },
-                undoStatusSummary: {
-                  key: "undo_queued",
-                  label: "Undo queued",
-                  tone: "attention",
-                  isTerminal: false,
-                },
-              }
+              ...history,
+              undo: {
+                ...history.undo,
+                status: "processing",
+                state: "queued",
+                startedAt: new Date().toISOString(),
+              },
+              undoStatusSummary: {
+                key: "undo_queued",
+                label: "Undo queued",
+                tone: "attention",
+                isTerminal: false,
+              },
+            }
             : history,
         ),
       );
@@ -328,7 +331,7 @@ const HistoryTable = memo(function HistoryTable({
 
         <InlineStack key={`actions-${id}`} gap="200" wrap={false}>
           <Button size="slim" onClick={() => navigate(`/editDetails/${id}`)}>
-            View
+            {t("historyViewButton",)}
           </Button>
           <Button
             size="slim"
@@ -340,7 +343,7 @@ const HistoryTable = memo(function HistoryTable({
             }}
             disabled={undoDisabled}
           >
-            Undo
+            {t("historyUndoButton",)}
           </Button>
         </InlineStack>,
       ];
@@ -389,15 +392,16 @@ const HistoryTable = memo(function HistoryTable({
               <Box paddingInlineStart="500">
                 <BlockStack gap="100">
                   <Text as="h3" variant="headingMd">
-                    Edit activity
+                    {t("historyEditActivityTitle",)}
                   </Text>
+
                   <Text tone="subdued" variant="bodySm">
-                    Review edit runs, inspect details, and undo completed changes from a
-                    cleaner workspace.
+                    {t("historyEditActivityText",)}
                   </Text>
+
                   {isSyncInProgress ? (
                     <Text tone="subdued" variant="bodySm">
-                      Undo is temporarily unavailable while product sync is in progress.
+                      {t("historyUndoDisabledSync",)}
                     </Text>
                   ) : null}
                 </BlockStack>
@@ -420,7 +424,7 @@ const HistoryTable = memo(function HistoryTable({
               paddingInlineStart="800"
             >
               <Text tone="subdued" variant="bodySm" as="p">
-                Live statuses refresh automatically for active jobs.
+                {t("historyLiveStatusHint",)}
               </Text>
             </Box>
 
@@ -447,10 +451,11 @@ const HistoryTable = memo(function HistoryTable({
           <Box padding="400">
             <InlineStack align="space-between" blockAlign="center" wrap gap="300">
               <Text tone="subdued" variant="bodySm">
-                Load additional history without leaving the current view.
+                {t("historyLoadMoreHint",)}
               </Text>
+
               <Button loading={isLoadingMore} onClick={onLoadMore}>
-                Load more
+                {t("historyLoadMoreButton",)}
               </Button>
             </InlineStack>
           </Box>

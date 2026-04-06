@@ -13,9 +13,11 @@ export default function App() {
   const { t, i18n } = useTranslation();
 
   useEffect(() => {
-    const savedLang = localStorage.getItem("appLanguage");
-    i18n.changeLanguage(savedLang || "en");
-  }, [i18n]);
+  const savedLang = localStorage.getItem("appLanguage");
+  if (savedLang && savedLang !== i18n.language) {
+    i18n.changeLanguage(savedLang);
+  }
+}, []);
 
   return (
     <PolarisProvider>

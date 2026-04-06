@@ -87,7 +87,6 @@ export const MetamatrixCardGroup = () => {
           <Text variant="headingLg" as="h2">
             {t("learnMore")}
           </Text>
-        
         </BlockStack>
       </InlineStack>
 

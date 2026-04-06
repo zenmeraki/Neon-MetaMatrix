@@ -45,15 +45,16 @@ const HistoryFilters = memo<HistoryFiltersProps>(
               <BlockStack gap="100">
                 <InlineStack gap="200" blockAlign="center" wrap>
                   <Text as="h3" variant="headingMd">
-                    Activity filters
+                    {t("historyFiltersTitle")}
                   </Text>
-                  <Badge tone="new">Workspace</Badge>
-                </InlineStack>
 
-                <Text as="p" variant="bodySm" tone="subdued">
-                  Search recent activity, switch between history types, and
-                  export the current view.
-                </Text>
+                  <Badge tone="new">{t("historyFiltersBadge")}</Badge>
+                </InlineStack>
+                <Box paddingBlockStart="100">
+                  <Text as="p" variant="bodySm" tone="subdued">
+                    {t("historyFiltersText")}
+                  </Text>
+                </Box>
               </BlockStack>
             </InlineStack>
 
@@ -89,9 +90,12 @@ const HistoryFilters = memo<HistoryFiltersProps>(
               </div>
 
               <InlineStack gap="200" wrap>
-                <Button onClick={onSaveView}>Save view</Button>
+                <Button onClick={onSaveView}>
+                  {t("historySaveViewButton")}
+                </Button>
+
                 <Button variant="primary" onClick={onExport}>
-                  Export
+                  {t("historyExportButton")}
                 </Button>
               </InlineStack>
             </InlineStack>

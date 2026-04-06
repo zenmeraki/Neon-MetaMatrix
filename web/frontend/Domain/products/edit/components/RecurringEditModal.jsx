@@ -14,6 +14,8 @@ import {
   Toast,
 } from "@shopify/polaris";
 
+import { useTranslation } from "react-i18next";
+
 const TIMEZONE_OPTIONS = [
   { label: "Asia/Kolkata (IST)", value: "Asia/Kolkata" },
   { label: "UTC", value: "UTC" },
@@ -71,6 +73,7 @@ function RecurringEditModal({
   filters,
   supportValue,
 }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const dayOfMonthOptions = useMemo(
     () =>
@@ -310,16 +313,16 @@ function RecurringEditModal({
       <Modal
         open={show}
         onClose={handleClose}
-        title="Create Recurring Edit"
+        title={t("recurringEditModalTitle",)}
         primaryAction={{
-          content: "Save recurring edit",
+          content: t("recurringEditSaveButton",),
           onAction: handleSubmit,
           loading: submitting,
           disabled: submitting,
         }}
         secondaryActions={[
           {
-            content: "Cancel",
+            content: t("commonCancelButton",),
             onAction: handleClose,
           },
         ]}
@@ -380,18 +383,18 @@ function RecurringEditModal({
 
               {requiresTime && (
                 <TextField
-                  label="Time to Run"
+                  label={t("recurringEditTimeLabel",)}
                   type="time"
                   value={timeToRun}
                   onChange={setTimeToRun}
-                  helpText="Choose the exact time this recurring edit should run."
+                  helpText={t("recurringEditTimeHelpText",)}
                 />
               )}
 
               {needsWeekdaySelection && (
                 <BlockStack gap="200">
                   <Text as="p" variant="bodyMd" fontWeight="semibold">
-                    Days of Week
+                    {t("recurringEditDaysOfWeekLabel",)}
                   </Text>
                   <InlineStack gap="300" wrap>
                     {DAYS_OF_WEEK.map((day) => (
@@ -408,16 +411,16 @@ function RecurringEditModal({
 
               {needsDayOfMonthSelection && (
                 <Select
-                  label="Day of Month"
+                  label={t("recurringEditDayOfMonthLabel",)}
                   options={dayOfMonthOptions}
                   value={dayOfMonthToRun}
                   onChange={setDayOfMonthToRun}
-                  helpText="Edits scheduled on days 29-31 may skip shorter months."
+                  helpText={t("recurringEditDayOfMonthHelpText",)}
                 />
               )}
 
               <Checkbox
-                label="Start on a specific date"
+                label={t("recurringEditStartSpecificDateLabel",)}
                 checked={hasStartAt}
                 onChange={(checked) => setHasStartAt(checked)}
               />
@@ -425,14 +428,14 @@ function RecurringEditModal({
               {hasStartAt && (
                 <FormLayout.Group>
                   <TextField
-                    label="Start Date"
+                    label={t("recurringEditStartDateLabel",)}
                     type="date"
                     value={startDate}
                     onChange={setStartDate}
                     min={getCurrentDateInputValue()}
                   />
                   <TextField
-                    label="Start Time"
+                    label={t("recurringEditStartTimeLabel",)}
                     type="time"
                     value={startTime}
                     onChange={setStartTime}
@@ -441,7 +444,7 @@ function RecurringEditModal({
               )}
 
               <Checkbox
-                label="Stop after a specific date"
+                label={t("recurringEditStopAfterDateLabel",)}
                 checked={hasEndAt}
                 onChange={(checked) => setHasEndAt(checked)}
               />
@@ -449,14 +452,14 @@ function RecurringEditModal({
               {hasEndAt && (
                 <FormLayout.Group>
                   <TextField
-                    label="End Date"
+                    label={t("recurringEditEndDateLabel",)}
                     type="date"
                     value={endDate}
                     onChange={setEndDate}
                     min={startDate || getCurrentDateInputValue()}
                   />
                   <TextField
-                    label="End Time"
+                    label={t("recurringEditEndTimeLabel",)}
                     type="time"
                     value={endTime}
                     onChange={setEndTime}

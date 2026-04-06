@@ -44,11 +44,7 @@ export default function Spreadsheet() {
     const handleUpload = async () => {
         try {
             if (!file) {
-                throw new Error(
-                    t("spreadsheetNoFileSelected", {
-                        defaultValue: "No file selected",
-                    })
-                );
+                throw new Error(t("spreadsheetNoFileSelected"));
             }
 
             setUploading(true);
@@ -66,29 +62,22 @@ export default function Spreadsheet() {
             try {
                 result = await res.json();
             } catch {
-                throw new Error(
-                    t("spreadsheetInvalidServerResponse", {
-                        defaultValue: "Invalid server response",
-                    })
-                );
+                throw new Error(t("spreadsheetInvalidServerResponse"));
+
             }
 
             if (!res.ok) {
                 throw new Error(
-                    result?.message ||
-                    t("spreadsheetUploadFailed", {
-                        defaultValue: "Upload failed",
-                    })
+                    result?.message || t("spreadsheetUploadFailed")
                 );
+
             }
 
             setStatus({
                 type: "success",
                 message:
                     result?.message ||
-                    t("spreadsheetImportQueued", {
-                        defaultValue: "Import queued successfully",
-                    }),
+                    t("spreadsheetImportQueued"),
             });
 
             setFile(null);
@@ -102,9 +91,7 @@ export default function Spreadsheet() {
                 type: "error",
                 message:
                     err.message ||
-                    t("spreadsheetSomethingWentWrong", {
-                        defaultValue: "Something went wrong",
-                    }),
+                    t("spreadsheetSomethingWentWrong"),
             });
             return false;
         } finally {
@@ -114,13 +101,8 @@ export default function Spreadsheet() {
 
     return (
         <Page
-            title={t("spreadsheetImportTitle", {
-                defaultValue: "Import Products",
-            })}
-            subtitle={t("spreadsheetImportSubtitle", {
-                defaultValue:
-                    "Upload a CSV, review the mapping, and queue your product import safely.",
-            })}
+            title={t("spreadsheetImportTitle")}
+            subtitle={t("spreadsheetImportSubtitle")}
             fullWidth
         >
             {uploading && <Loading />}
@@ -141,25 +123,18 @@ export default function Spreadsheet() {
                         <BlockStack gap="400">
                             <BlockStack gap="200">
                                 <InlineStack align="space-between" blockAlign="center">
-                                    <Text as="h2" variant="heading2xl">
-                                        {t("spreadsheetImportTitle", {
-                                            defaultValue: "Import Products",
-                                        })}
+                                    <Text as="h1" variant="headingLg">
+                                        {t("spreadsheetImportNextTitle")}
                                     </Text>
 
                                     <Badge tone="info">
-                                        {t("spreadsheetBadge", {
-                                            defaultValue: "CSV Import",
-                                        })}
+                                        {t("spreadsheetBadge")}
                                     </Badge>
                                 </InlineStack>
 
                                 <Box maxWidth="720px">
                                     <Text as="p" variant="bodyLg" tone="subdued">
-                                        {t("spreadsheetIntroText", {
-                                            defaultValue:
-                                                "Upload your CSV file, review the detected columns, and confirm the import before products are queued for processing.",
-                                        })}
+                                        {t("spreadsheetIntroText")}
                                     </Text>
                                 </Box>
                             </BlockStack>
@@ -174,49 +149,33 @@ export default function Spreadsheet() {
                             >
                                 <BlockStack gap="250">
                                     <InlineStack align="space-between" blockAlign="center">
-                                        <Text as="h3" variant="headingSm">
-                                            {t("spreadsheetWarningTitle", {
-                                                defaultValue: "Important before importing CSV",
-                                            })}
+                                        <Text as="h5" variant="headingLg">
+                                            {t("spreadsheetWarningTitle")}
                                         </Text>
 
                                         <Badge tone="attention">
-                                            {t("spreadsheetReviewBadge", {
-                                                defaultValue: "Review carefully",
-                                            })}
+                                            {t("spreadsheetReviewBadge")}
                                         </Badge>
                                     </InlineStack>
 
                                     <List type="bullet">
-                                        <List.Item>
-                                            {t("spreadsheetWarningFileType", {
-                                                defaultValue: "The uploaded file must be a .csv file.",
-                                            })}
-                                        </List.Item>
-                                        <List.Item>
-                                            {t("spreadsheetWarningProductId", {
-                                                defaultValue:
-                                                    "The first column should contain the Product ID.",
-                                            })}
-                                        </List.Item>
-                                        <List.Item>
-                                            {t("spreadsheetWarningVariantId", {
-                                                defaultValue:
-                                                    "The second column should contain the Variant ID.",
-                                            })}
-                                        </List.Item>
-                                        <List.Item>
-                                            {t("spreadsheetWarningEachRow", {
-                                                defaultValue:
-                                                    "Each row must contain the correct Product ID and Variant ID.",
-                                            })}
-                                        </List.Item>
-                                        <List.Item>
-                                            {t("spreadsheetWarningIncorrectIds", {
-                                                defaultValue:
-                                                    "Incorrect IDs may update the wrong products.",
-                                            })}
-                                        </List.Item>
+                                        <Box paddingBlockStart="300">
+                                            <List.Item>
+                                                {t("spreadsheetWarningFileType")}
+                                            </List.Item>
+                                            <List.Item>
+                                                {t("spreadsheetWarningProductId")}
+                                            </List.Item>
+                                            <List.Item>
+                                                {t("spreadsheetWarningVariantId")}
+                                            </List.Item>
+                                            <List.Item>
+                                                {t("spreadsheetWarningEachRow")}
+                                            </List.Item>
+                                            <List.Item>
+                                                {t("spreadsheetWarningIncorrectIds")}
+                                            </List.Item>
+                                        </Box>
                                     </List>
                                 </BlockStack>
                             </Box>
@@ -227,9 +186,7 @@ export default function Spreadsheet() {
                 {/* Uploading / status banners */}
                 {uploading && (
                     <Banner tone="info">
-                        {t("spreadsheetUploadingBanner", {
-                            defaultValue: "Importing products... Please wait.",
-                        })}
+                        {t("spreadsheetUploadingBanner")}
                     </Banner>
                 )}
 
@@ -242,15 +199,10 @@ export default function Spreadsheet() {
                             <Box padding="500">
                                 <BlockStack gap="150">
                                     <Text as="h3" variant="headingLg">
-                                        {t("spreadsheetUploadSectionTitle", {
-                                            defaultValue: "Upload your CSV",
-                                        })}
+                                        {t("spreadsheetUploadSectionTitle")}
                                     </Text>
                                     <Text as="p" variant="bodyMd" tone="subdued">
-                                        {t("spreadsheetUploadSectionText", {
-                                            defaultValue:
-                                                "Choose a CSV file to preview its rows and prepare your column mapping.",
-                                        })}
+                                        {t("spreadsheetUploadSectionText")}
                                     </Text>
                                 </BlockStack>
                             </Box>
@@ -276,15 +228,10 @@ export default function Spreadsheet() {
                             <Box padding="500">
                                 <BlockStack gap="150">
                                     <Text as="h3" variant="headingLg">
-                                        {t("spreadsheetPreviewSectionTitle", {
-                                            defaultValue: "Preview and map columns",
-                                        })}
+                                        {t("spreadsheetPreviewSectionTitle")}
                                     </Text>
                                     <Text as="p" variant="bodyMd" tone="subdued">
-                                        {t("spreadsheetPreviewSectionText", {
-                                            defaultValue:
-                                                "Review parsed rows and confirm each CSV column maps to the correct product field.",
-                                        })}
+                                        {t("spreadsheetPreviewSectionText")}
                                     </Text>
                                 </BlockStack>
                             </Box>
@@ -312,17 +259,15 @@ export default function Spreadsheet() {
                     <Box padding="500">
                         <InlineStack align="space-between" blockAlign="center">
                             <BlockStack gap="050">
-                                <Text as="p" variant="headingSm">
-                                    {t("spreadsheetReadyTitle", {
-                                        defaultValue: "Ready to import?",
-                                    })}
+                                <Text as="h4" variant="headingLg">
+                                    {t("spreadsheetReadyTitle")}
                                 </Text>
-                                <Text as="p" variant="bodySm" tone="subdued">
-                                    {t("spreadsheetReadyText", {
-                                        defaultValue:
-                                            "Confirm the file and mapping before queuing the import.",
-                                    })}
-                                </Text>
+                                <Box paddingBlockStart="150">
+                                    <Text as="p" variant="bodySm" tone="subdued">
+                                        {t("spreadsheetReadyText")}
+                                    </Text>
+                                </Box>
+
                             </BlockStack>
 
                             <Button
@@ -331,9 +276,7 @@ export default function Spreadsheet() {
                                 disabled={!file || uploading}
                                 loading={uploading}
                             >
-                                {t("spreadsheetImportButton", {
-                                    defaultValue: "Import Products",
-                                })}
+                                {t("spreadsheetImportButton")}
                             </Button>
                         </InlineStack>
                     </Box>
