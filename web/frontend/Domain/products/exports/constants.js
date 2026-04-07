@@ -10,6 +10,7 @@ export const fieldDefinitions = {
     collections: { label: "Collections", value: "collections", group: "product" },
     category: { label: "Category", value: "category", group: "product" },
 
+    
     // SEO
     metaTitle: { label: "SEO Meta Title", value: "metaTitle", group: "seo" },
     metaDescription: {

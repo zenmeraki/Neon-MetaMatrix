@@ -38,6 +38,7 @@ export const FIELD_CONFIGS = {
     isVariantLevel: false,
   },
 
+  
   metaTitle: {
     fieldName: "Meta Title",
     displayName: "Seo Meta Title",

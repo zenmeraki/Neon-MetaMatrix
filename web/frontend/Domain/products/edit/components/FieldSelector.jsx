@@ -10,11 +10,6 @@ const FieldSelector = ({ selectedField, onFieldChange }) => {
 
   const allFields = getAllFields();
 
-  /**
-   * Build sectioned options:
-   * - Product Fields
-   * - Variant Fields
-   */
   const options = useMemo(() => {
     const query = inputValue.toLowerCase();
 
@@ -33,25 +28,23 @@ const FieldSelector = ({ selectedField, onFieldChange }) => {
 
     const sections = [];
 
-
-
     if (productFields.length) {
       sections.push({
-        title: t("Product fields"),
+        title: t("productFields"),
         options: productFields,
       });
     }
 
     if (variantFields.length) {
       sections.push({
-        title: t("Variant fields"),
+        title: t("variantFields"),
         options: variantFields,
       });
     }
 
     if (dangerFields.length) {
       sections.push({
-        title: t("Danger zone"),
+        title: t("dangerZone"),
         options: dangerFields,
       });
     }
@@ -83,7 +76,7 @@ const FieldSelector = ({ selectedField, onFieldChange }) => {
 
   return (
     <Autocomplete
-      options={options} // 👈 sectioned options
+      options={options}
       selected={[selectedField?.value || ""]}
       onSelect={handleSelect}
       textField={textField}

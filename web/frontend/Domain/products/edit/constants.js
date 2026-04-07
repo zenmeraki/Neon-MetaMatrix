@@ -488,6 +488,7 @@ export const fieldDefinitions = {
       ActionTemplates.text.removeUpToWord(),
     ],
   },
+  
   metaTitle: {
     label: "Seo Meta Title",
     value: "metaTitle",
