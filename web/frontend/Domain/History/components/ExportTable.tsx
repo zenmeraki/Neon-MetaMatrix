@@ -355,7 +355,7 @@ useEffect(() => {
 
         {filteredHistories.length === 0 ? (
           <Box padding="1200">
-            <EmptyState heading="No exports yet">
+            <EmptyState heading={t("noExportsYet")}>
               <p>{t("exportEmptyText")}</p>
             </EmptyState>
           </Box>

@@ -95,9 +95,13 @@ export default function ProductsTable({
               <Text as="h3" variant="headingSm">
                 {t("exportFilteredProductsTitle",)}
               </Text>
-              <Text tone="subdued" variant="bodySm">
-                Page {pagination?.page} of {pagination?.totalPages} · {pagination?.total?.toLocaleString()} products
-              </Text>
+            <Text tone="subdued" variant="bodySm">
+  {t("paginationSummary", {
+    page: pagination?.page,
+    totalPages: pagination?.totalPages,
+    total: pagination?.total?.toLocaleString(),
+  })}
+</Text>
             </Box>
           </BlockStack>
         </InlineStack>

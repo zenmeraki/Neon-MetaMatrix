@@ -76,7 +76,7 @@ export default function ProductSyncPage({verifyStoreAccess}) {
           tone="success"
           icon={CheckCircleIcon}
         >
-          <p>Your products are now ready for bulk editing in Metamatrix.</p>
+         <p>{t("productsReadyForBulkEditing")}</p>
         </Banner>
       );
     }

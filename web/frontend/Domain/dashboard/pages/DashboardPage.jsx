@@ -181,7 +181,7 @@ export default function DashboardPage() {
                       </Text>
 
                       <Text as="p" variant="bodyMd" tone="subdued">
-                        Review activity, check store readiness, and jump back into the workflows merchants use most.
+                        {t("dashboardOverviewDescription")}
                       </Text>
                       <Box paddingBlockStart="400">
                         <InlineStack gap="500" wrap blockAlign="center">
@@ -219,11 +219,11 @@ export default function DashboardPage() {
                         <Box padding="350">
                           <BlockStack gap="150">
                             <Text as="h3" variant="headingMd">
-                              Language
+                              {t("language")}
                             </Text>
 
                             <Text as="p" variant="bodySm" tone="subdued">
-                              Choose dashboard language.
+                              {t("chooseDashboardLanguage")}
                             </Text>
 
                             <Select
@@ -256,10 +256,7 @@ export default function DashboardPage() {
                     onAction: () => navigate("/suggestionpage"),
                   }}
                 >
-                  <p>
-                    You can keep using the app at no cost for the current access
-                    window. If you need more time, we can extend it for you.
-                  </p>
+                 <p>{t("freeAccessMessage")}</p>
                 </Banner>
               )}
 
@@ -272,11 +269,7 @@ export default function DashboardPage() {
                     onAction: () => navigate("/refresh"),
                   }}
                 >
-                  <p>
-                    Your product mirror is updating in the background. You can
-                    continue using the app and refresh the sync page for live
-                    status.
-                  </p>
+                 <p>{t("productSyncMessage")}</p>
                 </Banner>
               )}
             </BlockStack>
@@ -311,46 +304,46 @@ export default function DashboardPage() {
               <BlockStack gap="400">
                 <BlockStack gap="100">
                   <Text as="h3" variant="headingLg">
-                    Quick actions
+                    {t("quickActions")}
                   </Text>
                   <Text as="p" variant="bodyMd" tone="subdued">
-                    Jump directly into the tasks merchants use most often.
+                    {t("quickActionsDescription")}
                   </Text>
                 </BlockStack>
 
                 <Grid>
                   <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3, xl: 3 }}>
                     <QuickActionCard
-                      title="Products"
-                      description="Browse your catalog and start working on product data."
-                      buttonText="Open products"
+                      title={t("products")}
+                      description={t("productsDescription")}
+                      buttonText={t("openProducts")}
                       onAction={() => navigate("/products")}
                     />
                   </Grid.Cell>
 
                   <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3, xl: 3 }}>
                     <QuickActionCard
-                      title="Bulk edit"
-                      description="Create and manage edits across products faster."
-                      buttonText="Create bulk edit"
+                      title={t("bulkEdit")}
+                      description={t("bulkEditDescription")}
+                      buttonText={t("createBulkEdit")}
                       onAction={() => navigate("/edit")}
                     />
                   </Grid.Cell>
 
                   <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3, xl: 3 }}>
                     <QuickActionCard
-                      title="Exports"
-                      description="Generate product exports for reporting or external workflows."
-                      buttonText="Create export"
+                      title={t("exports")}
+                      description={t("exportsDescription")}
+                      buttonText={t("createExport")}
                       onAction={() => navigate("/exportdata")}
                     />
                   </Grid.Cell>
 
                   <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3, xl: 3 }}>
                     <QuickActionCard
-                      title="Snippet studio"
-                      description="Open reusable product snippets and code utilities."
-                      buttonText="Open snippet studio"
+                      title={t("snippetStudio")}
+                      description={t("snippetStudioDescription")}
+                      buttonText={t("openSnippetStudio")}
                       onAction={() => navigate("/product-code-snippets")}
                     />
                   </Grid.Cell>
@@ -366,10 +359,10 @@ export default function DashboardPage() {
               <BlockStack gap="400">
                 <BlockStack gap="100">
                   <Text as="h3" variant="headingLg">
-                    Learn and optimize
+                    {t("learnAndOptimize")}
                   </Text>
                   <Text as="p" variant="bodyMd" tone="subdued">
-                    Best practices, guidance, and product education for faster execution.
+                    {t("learnAndOptimizeDescription")}
                   </Text>
                 </BlockStack>
 

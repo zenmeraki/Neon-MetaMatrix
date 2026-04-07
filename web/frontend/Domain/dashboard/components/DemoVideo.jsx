@@ -166,7 +166,7 @@ const DemoVideo = () => {
                     <Text variant="headingMd" as="h3">
                       {t("demoVideo")}
                     </Text>
-                    <Badge tone="success">{t("playing", "Playing")}</Badge>
+                  <Badge tone="success">{t("playing")}</Badge>
                   </InlineStack>
 
                   <Text variant="bodySm" tone="subdued" as="p">

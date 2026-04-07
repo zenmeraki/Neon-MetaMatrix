@@ -26,28 +26,28 @@ export const MetamatrixCardGroup = () => {
       title: t("tipsForBulkEditing"),
       description: t("bulkEditingTipDescription"),
       iconColor: "critical",
-      badge: "Guide",
+      badge: t("guide"),
     },
     {
       icon: ImportIcon,
       title: t("editWithSpreadsheet"),
       description: t("editWithSpreadsheetDescription"),
       iconColor: "critical",
-      badge: "Import",
+      badge: t("import"),
     },
     {
       icon: ExportIcon,
       title: t("exportProductData"),
       description: t("exportProductDataDescription"),
       iconColor: "critical",
-      badge: "Export",
+      badge: t("export"),
     },
     {
       icon: PageClockFilledIcon,
       title: t("metamatrixChangelog"),
       description: t("metamatrixChangelogDescription"),
       iconColor: "critical",
-      badge: "Updates",
+      badge: t("updates"),
     },
   ];
 

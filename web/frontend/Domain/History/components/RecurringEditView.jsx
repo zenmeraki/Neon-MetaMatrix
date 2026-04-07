@@ -381,16 +381,16 @@ const RecurringEditModal = ({ open, onClose, data, isLoading, error, onUpdated }
     if (["Daily", "Weekly", "Monthly"].includes(frequency)) {
       return (
         <BlockStack gap="400">
-         <TextField
-  label="Time to Run"
-  type="time"  // ← native browser time picker, allows any HH:MM
-  value={formData.timeToRun}
-  onChange={(value) => handleFieldChange("timeToRun", value)}
-  disabled={isSubmitting}
-  error={validationErrors.timeToRun}
-  requiredIndicator
-  helpText="Enter the time you want this edit to run"
-/>
+          <TextField
+            label="Time to Run"
+            type="time"  // ← native browser time picker, allows any HH:MM
+            value={formData.timeToRun}
+            onChange={(value) => handleFieldChange("timeToRun", value)}
+            disabled={isSubmitting}
+            error={validationErrors.timeToRun}
+            requiredIndicator
+            helpText="Enter the time you want this edit to run"
+          />
           {frequency === "Weekly" && (
             <BlockStack gap="200">
               <Text variant="bodyMd" as="p" fontWeight="semibold">
@@ -445,7 +445,7 @@ const RecurringEditModal = ({ open, onClose, data, isLoading, error, onUpdated }
         <Modal.Section>
           <Box padding="400" textAlign="center">
             <Text as="p" tone="subdued">
-              Loading recurring edit details...
+              {t("loadingRecurringEditDetails")}
             </Text>
           </Box>
         </Modal.Section>
@@ -700,8 +700,8 @@ const RecurringEditModal = ({ open, onClose, data, isLoading, error, onUpdated }
                           successRate >= 80
                             ? "success"
                             : successRate >= 50
-                            ? "warning"
-                            : "critical"
+                              ? "warning"
+                              : "critical"
                         }
                       >
                         {successRate}%
@@ -718,8 +718,8 @@ const RecurringEditModal = ({ open, onClose, data, isLoading, error, onUpdated }
                           successRate >= 80
                             ? "success"
                             : successRate >= 50
-                            ? "primary"
-                            : "critical"
+                              ? "primary"
+                              : "critical"
                         }
                       />
                     </Box>

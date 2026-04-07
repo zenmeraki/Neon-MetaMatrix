@@ -129,7 +129,7 @@ export default function DataSyncPage() {
         "Product Types": dataSources.isProductTypeSyncing,
         Collections: dataSources.isCollectionSyncing,
       };
-      return map[name] ? "Syncing" : "Synced";
+     return map[name] ? t("syncing") : t("synced");
     },
     [dataSources],
   );

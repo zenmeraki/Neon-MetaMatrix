@@ -282,12 +282,12 @@ const ProductsFilters = memo(function ProductsFilters({
 function InlineHeader() {
   return (
     <BlockStack gap="100">
-      <Text as="h3" variant="headingSm">
-        Filters
-      </Text>
-      <Text as="p" variant="bodySm" tone="subdued">
-        Search first, then add field-specific rules to narrow the target set.
-      </Text>
+     <Text as="h3" variant="headingSm">
+  {t("filters")}
+</Text>
+<Text as="p" variant="bodySm" tone="subdued">
+  {t("filtersDescription")}
+</Text>
     </BlockStack>
   );
 }

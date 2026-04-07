@@ -222,10 +222,10 @@ export default function ProductsPage() {
               <InlineStack align="space-between" blockAlign="center" gap="300" wrap>
                 <BlockStack gap="100">
                   <Text as="h2" variant="headingMd">
-                    Product targeting
+                    {t("productTargeting")}
                   </Text>
                   <Text as="p" variant="bodySm" tone="subdued">
-                    Build filters, review counts, and launch edits or exports without leaving the admin flow.
+                    {t("productTargetingDescription")}
                   </Text>
                 </BlockStack>
                 <InlineStack gap="200" blockAlign="center">
