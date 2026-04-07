@@ -95,13 +95,16 @@ export default function EditPreviewPage() {
   const fetchPreview = useCallback(async () => {
     if (!editType || !selectedField) return;
 
+    const validOps = selectedField.actions?.map((a) => a.value) || [];
+  if (!validOps.includes(editType.value)) return;
+
     if (
-      editType.inputType === InputType.SEARCH_REPLACE &&
-      !debouncedSearchReplace.search &&
-      !debouncedSearchReplace.replace
-    ) {
-      return;
-    }
+    editType.inputType === InputType.SEARCH_REPLACE &&
+    !debouncedSearchReplace.search &&
+    !debouncedSearchReplace.replace
+  ) {
+    return;
+  }
 
     setLoading(true);
 

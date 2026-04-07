@@ -263,7 +263,11 @@ const debugAll = await prisma.scheduledExport.findMany({
           );
 
           return { runId: run.id, shop: scheduledExport.shop };
-        });
+        },
+      {
+        timeout: 15_000,
+      }
+      );
 
         if (!reservation?.runId) {
           skipped += 1;
@@ -399,6 +403,12 @@ shopRenewInterval = setInterval(async () => {
     if (!claimed.count && run.status !== "PROCESSING") {
       return { skipped: true, reason: "run_not_claimed" };
     }
+     const target = await resolveCanonicalProductTarget({
+        shop: run.shop,
+        filterParams: run.scheduledExport.filterParams,
+        queryParams: { page: 1, limit: 20 },
+        sampleLimit: 20,
+      });
 
     const exportJob = await prisma.$transaction(async (tx) => {
       const locked = await tryAdvisoryLock(tx, `scheduled-export-run:${run.id}`, true);
@@ -417,12 +427,7 @@ shopRenewInterval = setInterval(async () => {
         });
       }
 
-      const target = await resolveCanonicalProductTarget({
-        shop: currentRun.shop,
-        filterParams: currentRun.scheduledExport.filterParams,
-        queryParams: { page: 1, limit: 20 },
-        sampleLimit: 20,
-      });
+     
 
       const createdExportJob = await tx.exportJob.create({
         data: {
@@ -450,7 +455,11 @@ shopRenewInterval = setInterval(async () => {
       );
 
       return createdExportJob;
-    });
+    },
+  {
+    timeout: 15_000,
+  }
+  );
 
     if (!exportJob?.id) {
       return {
