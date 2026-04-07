@@ -567,7 +567,7 @@ model ExportHistory {
   @@index([shop, isFavourite])
   @@index([shop, type])
   @@index([shop, exportTime])
-}
+}a
 
 model ScheduledExport {
   id                 String                @id @default(cuid())
