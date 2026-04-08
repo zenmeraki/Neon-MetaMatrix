@@ -5,6 +5,8 @@ import {
   createProductSyncHistory,
   insertProductMirrorBatch,
   markProductSyncStarted,
+  markSyncHistoryFailed,
+  setStoreSyncQueued,
   stageProductMirrorBatch,
   updateInitialSyncProgress,
 } from "./productSyncRepository.js";
@@ -28,7 +30,9 @@ export async function startBulkOperationToFetchProducts({
   const { bulkOperationId, responseBody } = await runProductBulkFetch({ session });
 
   await markProductSyncStarted({ shop: session.shop });
+  await setStoreSyncQueued({ shop: session.shop, isInitialSync });
   await clearProductSyncCache(session.shop);
+
   const syncHistory = await createProductSyncHistory({
     shop: session.shop,
     bulkOperationId,
@@ -53,7 +57,7 @@ export async function formatAndSyncProductsToDB({
 }) {
   let metaobjectLookup = new Map();
 
-  return new Promise((resolve, reject) => {
+  try {
     const PRODUCT_BATCH_SIZE = 1000;
 
     let productBatch = [];
@@ -104,138 +108,137 @@ export async function formatAndSyncProductsToDB({
       crlfDelay: Infinity,
     });
 
-    rl.on("line", (line) => {
-      if (!line.trim()) return;
+    for await (const line of rl) {
+      if (!line.trim()) continue;
 
+      let json;
       try {
-        const json = JSON.parse(line);
+        json = JSON.parse(line);
+      } catch (error) {
+        throw new Error(`Product sync JSONL parse error: ${error.message}`);
+      }
 
-        if (!json.__parentId && json.__typename === "Product") {
-          if (!productsMap.has(json.id)) {
-            const productMetafields = extractMetafields(json.metafields);
+      if (!json.__parentId && json.__typename === "Product") {
+        if (!productsMap.has(json.id)) {
+          const productMetafields = extractMetafields(json.metafields);
 
-            for (const metafield of productMetafields) {
-              for (const id of extractMetaobjectIds(metafield?.value)) {
-                referencedMetaobjectIds.add(id);
-              }
-            }
-
-            productsMap.set(json.id, {
-              ...json,
-              variants: extractVariants(json.variants),
-              metafields: productMetafields,
-              collections: extractCollections(json.collections),
-              options: Array.isArray(json.options) ? json.options : [],
-              featuredMedia: json.featuredMedia || null,
-            });
-          }
-          return;
-        }
-
-        const parent = productsMap.get(json.__parentId);
-        if (!parent) return;
-
-        switch (json.__typename) {
-          case "ProductVariant":
-            parent.variants.push({
-              id: json.id,
-              title: json.title,
-              sku: json.sku,
-              barcode: json.barcode,
-              price: json.price,
-              compareAtPrice: json.compareAtPrice,
-              inventoryQuantity: json.inventoryQuantity,
-              inventoryPolicy: json.inventoryPolicy,
-              taxable: json.taxable,
-              taxCode: json.taxCode,
-              position: json.position,
-              selectedOptions: Array.isArray(json.selectedOptions)
-                ? json.selectedOptions
-                : [],
-              inventoryItem: json.inventoryItem || null,
-            });
-            break;
-
-          case "Collection":
-            parent.collections.push({
-              id: json.id,
-              title: json.title,
-            });
-            break;
-
-          case "Metafield":
-            for (const id of extractMetaobjectIds(json.value)) {
+          for (const metafield of productMetafields) {
+            for (const id of extractMetaobjectIds(metafield?.value)) {
               referencedMetaobjectIds.add(id);
             }
+          }
 
-            parent.metafields.push({
-              namespace: json.namespace,
-              key: json.key,
-              type: json.type,
-              value: json.value,
-            });
-            break;
-
-          case "MediaImage":
-            parent.featuredMedia = json;
-            break;
-
-          default:
-            break;
+          productsMap.set(json.id, {
+            ...json,
+            variants: extractVariants(json.variants),
+            metafields: productMetafields,
+            collections: extractCollections(json.collections),
+            options: Array.isArray(json.options) ? json.options : [],
+            featuredMedia: json.featuredMedia || null,
+          });
         }
-      } catch (error) {
-        console.error("Product sync line parse error:", error.message);
+        continue;
       }
-    });
 
-    rl.on("close", async () => {
+      const parent = productsMap.get(json.__parentId);
+      if (!parent) continue;
+
+      switch (json.__typename) {
+        case "ProductVariant":
+          parent.variants.push({
+            id: json.id,
+            title: json.title,
+            sku: json.sku,
+            barcode: json.barcode,
+            price: json.price,
+            compareAtPrice: json.compareAtPrice,
+            inventoryQuantity: json.inventoryQuantity,
+            inventoryPolicy: json.inventoryPolicy,
+            taxable: json.taxable,
+            taxCode: json.taxCode,
+            position: json.position,
+            selectedOptions: Array.isArray(json.selectedOptions)
+              ? json.selectedOptions
+              : [],
+            inventoryItem: json.inventoryItem || null,
+          });
+          break;
+
+        case "Collection":
+          parent.collections.push({
+            id: json.id,
+            title: json.title,
+          });
+          break;
+
+        case "Metafield":
+          for (const id of extractMetaobjectIds(json.value)) {
+            referencedMetaobjectIds.add(id);
+          }
+
+          parent.metafields.push({
+            namespace: json.namespace,
+            key: json.key,
+            type: json.type,
+            value: json.value,
+          });
+          break;
+
+        case "MediaImage":
+          parent.featuredMedia = json;
+          break;
+
+        default:
+          break;
+      }
+    }
+
+    if (!syncBatchId) {
+      throw new Error("syncBatchId is required for staged product sync");
+    }
+
+    if (session?.accessToken && referencedMetaobjectIds.size > 0) {
       try {
-        if (!syncBatchId) {
-          throw new Error("syncBatchId is required for staged product sync");
-        }
-
-        if (session?.accessToken && referencedMetaobjectIds.size > 0) {
-          try {
-            metaobjectLookup = await fetchMetaobjectLookupByIds(
-              session,
-              Array.from(referencedMetaobjectIds),
-            );
-          } catch (error) {
-            console.error(
-              `Failed to resolve metaobject labels for shop ${shop}: ${error.message}`,
-            );
-          }
-        }
-
-        await stageProductMirrorBatch({ shop, syncBatchId });
-
-        for (const product of productsMap.values()) {
-          productBatch.push(product);
-
-          if (productBatch.length >= PRODUCT_BATCH_SIZE) {
-            await flushProductsAndVariants();
-          }
-        }
-
-        await flushProductsAndVariants();
-
-        await activateProductMirrorBatch({
-          shop,
-          syncBatchId,
-          totalProductsProcessed,
-          syncHistoryId,
-        });
-
-        resolve({
-          totalProductsProcessed,
-          totalVariantsProcessed,
-          syncBatchId,
-        });
+        metaobjectLookup = await fetchMetaobjectLookupByIds(
+          session,
+          Array.from(referencedMetaobjectIds),
+        );
       } catch (error) {
-        reject(error);
+        console.error(
+          `Failed to resolve metaobject labels for shop ${shop}: ${error.message}`,
+        );
       }
+    }
+
+    await stageProductMirrorBatch({ shop, syncBatchId, syncHistoryId });
+
+    for (const product of productsMap.values()) {
+      productBatch.push(product);
+
+      if (productBatch.length >= PRODUCT_BATCH_SIZE) {
+        await flushProductsAndVariants();
+      }
+    }
+
+    await flushProductsAndVariants();
+
+    await activateProductMirrorBatch({
+      shop,
+      syncBatchId,
+      totalProductsProcessed,
+      syncHistoryId,
     });
 
-    rl.on("error", reject);
-  });
+    return {
+      totalProductsProcessed,
+      totalVariantsProcessed,
+      syncBatchId,
+    };
+  } catch (error) {
+    await markSyncHistoryFailed({
+      syncHistoryId,
+      errorMessage: error.message,
+    });
+    throw error;
+  }
 }

@@ -1,27 +1,15 @@
-// ============================================
-// Jobs/Workers/productSyncWorker.js
-// ============================================
 import { Worker } from "bullmq";
 import { connection } from "../../Config/redis.js";
 import { Services } from "../../services/productService/productFilterService.js";
 import { getCurrentBulkOperationStatus } from "../../utils/bulkOperationHelper.js";
 import { productSyncQueue } from "../Queues/productSyncQueue.js";
-
-// 🔹 Use the shared Prisma client (Neon / Postgres)
 import { prisma } from "../../config/database.js";
-
-// 🔹 Use the same Shopify app instance that is configured
-//     with PostgreSQLSessionStorage (DATABASE_URL)
 import shopify from "../../shopify.js";
-
 import dotenv from "dotenv";
 dotenv.config();
 
 const service = new Services();
 
-// ============================================
-// SYNC ALL STORES IN BATCHES (Prisma version)
-// ============================================
 async function syncAllStoresBatched() {
   const batchSize = 20;
   let lastId = null;
@@ -29,8 +17,6 @@ async function syncAllStoresBatched() {
   while (true) {
     const stores = await prisma.store.findMany({
       where: {
-        // Mongo: $or: [{ isUnInstalled: false }, { isUnInstalled: { $exists: false } }]
-        // Prisma: default false, so just filter isUnInstalled === false
         isUnInstalled: false,
       },
       select: {
@@ -57,27 +43,19 @@ async function syncAllStoresBatched() {
   }
 }
 
-// ============================================
-// WORKER
-// ============================================
 export const productSyncWorker = new Worker(
   "product-sync-queue",
   async (job) => {
     const { shopUrl, type } = job.data;
 
     try {
-      // Handle scheduler jobs (cron triggers)
       if (type === "auto-sync") {
         await handleAutoSync();
       } else if (type === "priority-sync") {
         await handlePrioritySync();
-      }
-      // Handle individual store sync jobs
-      else if (shopUrl) {
+      } else if (shopUrl) {
         await syncStore(shopUrl);
-      }
-      // Backward compatibility - sync all stores
-      else {
+      } else {
         await syncAllStoresBatched();
       }
     } catch (error) {
@@ -95,9 +73,6 @@ export const productSyncWorker = new Worker(
   },
 );
 
-// ============================================
-// AUTO SYNC HANDLER - Every 6 hours (Prisma)
-// ============================================
 async function handleAutoSync() {
   const now = new Date();
   const sixHoursAgo = new Date(now.getTime() - 6 * 60 * 60 * 1000);
@@ -105,6 +80,7 @@ async function handleAutoSync() {
   const storesToSync = await prisma.store.findMany({
     where: {
       isUnInstalled: false,
+      isProductSyncing: false,
       OR: [
         { lastProductSyncAt: { lt: sixHoursAgo } },
         { lastProductSyncAt: null },
@@ -119,10 +95,9 @@ async function handleAutoSync() {
     take: 10,
   });
 
-  // Queue individual store syncs with staggered delays
   for (let i = 0; i < storesToSync.length; i++) {
     const store = storesToSync[i];
-    const delayMs = i * 30_000; // 30-second delay between stores
+    const delayMs = i * 30_000;
 
     await productSyncQueue.add(
       "auto-sync-job",
@@ -135,21 +110,15 @@ async function handleAutoSync() {
   }
 }
 
-// ============================================
-// PRIORITY SYNC HANDLER - Every 2 hours (Prisma)
-// ============================================
 async function handlePrioritySync() {
   const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
 
   const activeStores = await prisma.store.findMany({
     where: {
       isUnInstalled: false,
+      isProductSyncing: false,
       lastProductSyncAt: { lt: twoHoursAgo },
-      OR: [
-        { lastActivityAt: { gt: twoHoursAgo } },
-        // If you later add `isPremium` Boolean to Store model:
-        // { isPremium: true },
-      ],
+      OR: [{ lastActivityAt: { gt: twoHoursAgo } }],
     },
     select: {
       shopUrl: true,
@@ -169,32 +138,43 @@ async function handlePrioritySync() {
   }
 }
 
-// ============================================
-// SYNC INDIVIDUAL STORE
-// ============================================
 async function syncStore(shopUrl) {
   try {
+    const store = await prisma.store.findUnique({
+      where: { shopUrl },
+      select: {
+        isProductSyncing: true,
+      },
+    });
+
+    if (store?.isProductSyncing) {
+      return;
+    }
+
     const session = await restoreSession(shopUrl);
     if (!session) {
       console.warn(`⚠️ No offline session found for shop ${shopUrl}, skipping sync`);
       return;
     }
 
-    const { status } = await getCurrentBulkOperationStatus(session, "QUERY");
-    if (status === "RUNNING") {
-      // Bulk operation already running, don't start another
+    const currentBulkOperation = await getCurrentBulkOperationStatus(
+      session,
+      "QUERY",
+    );
+
+    if (currentBulkOperation?.status === "RUNNING") {
       return;
     }
 
-    await service.startBulkOperationToFetchProducts({ session });
+    await service.startBulkOperationToFetchProducts({
+      session,
+      isInitialSync: false,
+    });
   } catch (error) {
     console.error(`❌ Error syncing ${shopUrl}:`, error?.message || error);
   }
 }
 
-// ============================================
-// RESTORE SESSION – from PostgreSQLSessionStorage
-// ============================================
 async function restoreSession(shop) {
   try {
     const sessionId = `offline_${shop}`;
@@ -211,9 +191,6 @@ async function restoreSession(shop) {
   }
 }
 
-// ============================================
-// WORKER EVENT HANDLERS
-// ============================================
 productSyncWorker.on("completed", (job) => {
   console.log(`✅ Job ${job.id} completed`);
 });

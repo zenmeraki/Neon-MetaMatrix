@@ -6,26 +6,148 @@ import { addAppUninstallJob } from "./Jobs/Queues/appUninstallJob.js";
 import { addbulkOperatonQueryJob } from "./Jobs/Queues/bulkOperationQueryJob.js";
 import { addbulkOperatonMutationJob } from "./Jobs/Queues/bulkOperationMutationJob.js";
 import { addShopSyncJob } from "./Jobs/Queues/shopSyncJob.js";
-import CacheService from "./utils/cacheService.js";
 import { mapPlanKeyFromName } from "./services/SubscriptionService/SubscriptionService.js";
 import { prisma } from "./config/database.js";
 import { clearKeyCaches } from "./utils/cacheUtils.js";
 import logger from "./utils/loggerUtils.js";
+import crypto from "crypto";
 
-function webhookDedupeKey({ topic, shop, webhookId, entityId }) {
+function safeParseJson(body) {
+  try {
+    return JSON.parse(body);
+  } catch {
+    return {};
+  }
+}
+
+function createPayloadHash(payload) {
+  return crypto
+    .createHash("sha256")
+    .update(JSON.stringify(payload || {}))
+    .digest("hex");
+}
+
+function normalizeWebhookEntityId(payload) {
+  return (
+    payload?.admin_graphql_api_id ||
+    payload?.id ||
+    payload?.inventory_item_id ||
+    payload?.location_id ||
+    null
+  );
+}
+
+function buildWebhookDeliveryId({ topic, shop, webhookId, entityId }) {
+  return webhookId || `${topic}:${shop}:${entityId || "unknown"}`;
+}
+
+function buildWebhookDedupeKey({ topic, shop, webhookId, entityId }) {
   return `webhook:${topic}:${shop}:${webhookId || entityId || "unknown"}`;
 }
 
-async function reserveWebhook(topic, shop, webhookId, entityId) {
-  const key = webhookDedupeKey({ topic, shop, webhookId, entityId });
-  const existing = await CacheService.get(key);
+async function reserveWebhookDelivery({
+  topic,
+  shop,
+  webhookId,
+  entityId,
+  payload,
+}) {
+  const id = buildWebhookDeliveryId({ topic, shop, webhookId, entityId });
+  const dedupeKey = buildWebhookDedupeKey({ topic, shop, webhookId, entityId });
+  const payloadHash = createPayloadHash(payload);
 
-  if (existing) {
-    return false;
+  try {
+    await prisma.webhookDelivery.create({
+      data: {
+        id,
+        topic,
+        shop,
+        webhookId: webhookId || null,
+        entityId: entityId || null,
+        dedupeKey,
+        payloadHash,
+        status: "RECEIVED",
+        attemptCount: 1,
+      },
+    });
+
+    return { accepted: true, deliveryId: id, payloadHash };
+  } catch (error) {
+    return { accepted: false, deliveryId: id, payloadHash };
   }
+}
 
-  await CacheService.set(key, Date.now(), 300);
-  return true;
+async function markWebhookQueued(deliveryId) {
+  await prisma.webhookDelivery.update({
+    where: { id: deliveryId },
+    data: {
+      status: "QUEUED",
+      updatedAt: new Date(),
+    },
+  }).catch(() => {});
+}
+
+async function markWebhookProcessed(deliveryId) {
+  await prisma.webhookDelivery.update({
+    where: { id: deliveryId },
+    data: {
+      status: "PROCESSED",
+      processedAt: new Date(),
+      updatedAt: new Date(),
+    },
+  }).catch(() => {});
+}
+
+async function markWebhookFailed(deliveryId, error) {
+  await prisma.webhookDelivery.update({
+    where: { id: deliveryId },
+    data: {
+      status: "FAILED",
+      lastError: error?.message || String(error),
+      updatedAt: new Date(),
+    },
+  }).catch(() => {});
+}
+
+async function upsertReconcileSignal({
+  shop,
+  entityType,
+  entityId,
+  topic,
+  payloadHash,
+  webhookId,
+}) {
+  if (!shop || !entityType || !entityId) return;
+
+  const signalId = `${shop}:${entityType}:${entityId}`;
+
+  await prisma.mirrorReconcileSignal.upsert({
+    where: { id: signalId },
+    create: {
+      id: signalId,
+      shop,
+      entityType,
+      entityId,
+      topic,
+      status: "pending",
+      signalCount: 1,
+      latestWebhookId: webhookId || null,
+      latestPayloadHash: payloadHash || null,
+      latestEventAt: new Date(),
+      latestSourceKind: topic,
+      updatedAt: new Date(),
+    },
+    update: {
+      topic,
+      status: "pending",
+      signalCount: { increment: 1 },
+      latestWebhookId: webhookId || null,
+      latestPayloadHash: payloadHash || null,
+      latestEventAt: new Date(),
+      latestSourceKind: topic,
+      updatedAt: new Date(),
+    },
+  });
 }
 
 async function queueProductWebhook({
@@ -36,21 +158,43 @@ async function queueProductWebhook({
   producer,
   entityId,
 }) {
-  const reserved = await reserveWebhook(topic, shop, webhookId, entityId);
-  if (!reserved) {
+  const reservation = await reserveWebhookDelivery({
+    topic,
+    shop,
+    webhookId,
+    entityId,
+    payload,
+  });
+
+  if (!reservation.accepted) {
     return { success: true, message: "Duplicate ignored" };
   }
 
-  await producer({
-    ...payload,
-    shop,
-    webhookId,
-    id: entityId,
-  });
+  try {
+    await upsertReconcileSignal({
+      shop,
+      entityType: "product",
+      entityId,
+      topic,
+      payloadHash: reservation.payloadHash,
+      webhookId,
+    });
 
-  await clearKeyCaches(`${shop}:sync_details`);
+    await producer({
+      ...payload,
+      shop,
+      webhookId,
+      id: entityId,
+    });
 
-  return { success: true, message: `${topic} queued` };
+    await markWebhookQueued(reservation.deliveryId);
+    await clearKeyCaches(`${shop}:sync_details`);
+
+    return { success: true, message: `${topic} queued` };
+  } catch (error) {
+    await markWebhookFailed(reservation.deliveryId, error);
+    throw error;
+  }
 }
 
 async function queueShopSyncWebhook({
@@ -59,21 +203,45 @@ async function queueShopSyncWebhook({
   webhookId,
   entityId,
   syncType,
+  entityType = "shop_scope",
+  payload = {},
 }) {
-  const reserved = await reserveWebhook(topic, shop, webhookId, entityId);
-  if (!reserved) {
+  const reservation = await reserveWebhookDelivery({
+    topic,
+    shop,
+    webhookId,
+    entityId,
+    payload,
+  });
+
+  if (!reservation.accepted) {
     return { success: true, message: "Duplicate ignored" };
   }
 
-  await addShopSyncJob({
-    shop,
-    syncType,
-    reason: topic,
-  });
+  try {
+    await upsertReconcileSignal({
+      shop,
+      entityType,
+      entityId: String(entityId || syncType || "shop"),
+      topic,
+      payloadHash: reservation.payloadHash,
+      webhookId,
+    });
 
-  await clearKeyCaches(`${shop}:sync_details`);
+    await addShopSyncJob({
+      shop,
+      syncType,
+      reason: topic,
+    });
 
-  return { success: true, message: `${topic} queued` };
+    await markWebhookQueued(reservation.deliveryId);
+    await clearKeyCaches(`${shop}:sync_details`);
+
+    return { success: true, message: `${topic} queued` };
+  } catch (error) {
+    await markWebhookFailed(reservation.deliveryId, error);
+    throw error;
+  }
 }
 
 export default {
@@ -98,19 +266,38 @@ export default {
   SHOP_UPDATE: {
     deliveryMethod: DeliveryMethod.Http,
     callbackUrl: "/api/webhooks",
-    callback: async (_topic, shop, body) => {
-      const payload = JSON.parse(body);
+    callback: async (_topic, shop, body, webhookId) => {
+      const payload = safeParseJson(body);
+      const entityId = normalizeWebhookEntityId(payload) || shop;
 
-      await prisma.store.updateMany({
-        where: { shopUrl: shop },
-        data: {
-          shopEmail: payload.email || undefined,
-          updatedAt: new Date(),
-          lastActivityAt: new Date(),
-        },
+      const reservation = await reserveWebhookDelivery({
+        topic: "SHOP_UPDATE",
+        shop,
+        webhookId,
+        entityId,
+        payload,
       });
 
-      return { success: true, message: "Shop updated" };
+      if (!reservation.accepted) {
+        return { success: true, message: "Duplicate ignored" };
+      }
+
+      try {
+        await prisma.store.updateMany({
+          where: { shopUrl: shop },
+          data: {
+            shopEmail: payload.email || undefined,
+            updatedAt: new Date(),
+            lastActivityAt: new Date(),
+          },
+        });
+
+        await markWebhookProcessed(reservation.deliveryId);
+        return { success: true, message: "Shop updated" };
+      } catch (error) {
+        await markWebhookFailed(reservation.deliveryId, error);
+        throw error;
+      }
     },
   },
 
@@ -118,7 +305,7 @@ export default {
     deliveryMethod: DeliveryMethod.Http,
     callbackUrl: "/api/webhooks",
     callback: async (_topic, shop, body, webhookId) => {
-      const payload = JSON.parse(body);
+      const payload = safeParseJson(body);
       const productId = payload.admin_graphql_api_id;
 
       return queueProductWebhook({
@@ -136,7 +323,7 @@ export default {
     deliveryMethod: DeliveryMethod.Http,
     callbackUrl: "/api/webhooks",
     callback: async (_topic, shop, body, webhookId) => {
-      const payload = JSON.parse(body);
+      const payload = safeParseJson(body);
       const productId = payload.admin_graphql_api_id || payload.id;
 
       return queueProductWebhook({
@@ -154,7 +341,7 @@ export default {
     deliveryMethod: DeliveryMethod.Http,
     callbackUrl: "/api/webhooks",
     callback: async (_topic, shop, body, webhookId) => {
-      const payload = JSON.parse(body);
+      const payload = safeParseJson(body);
       const productId = payload.admin_graphql_api_id;
 
       return queueProductWebhook({
@@ -172,13 +359,15 @@ export default {
     deliveryMethod: DeliveryMethod.Http,
     callbackUrl: "/api/webhooks",
     callback: async (_topic, shop, body, webhookId) => {
-      const payload = JSON.parse(body);
+      const payload = safeParseJson(body);
       return queueShopSyncWebhook({
         topic: "COLLECTIONS_CREATE",
         shop,
         webhookId,
         entityId: payload.admin_graphql_api_id || payload.id,
         syncType: "collection",
+        entityType: "collection",
+        payload,
       });
     },
   },
@@ -187,13 +376,15 @@ export default {
     deliveryMethod: DeliveryMethod.Http,
     callbackUrl: "/api/webhooks",
     callback: async (_topic, shop, body, webhookId) => {
-      const payload = JSON.parse(body);
+      const payload = safeParseJson(body);
       return queueShopSyncWebhook({
         topic: "COLLECTIONS_UPDATE",
         shop,
         webhookId,
         entityId: payload.admin_graphql_api_id || payload.id,
         syncType: "collection",
+        entityType: "collection",
+        payload,
       });
     },
   },
@@ -202,13 +393,15 @@ export default {
     deliveryMethod: DeliveryMethod.Http,
     callbackUrl: "/api/webhooks",
     callback: async (_topic, shop, body, webhookId) => {
-      const payload = JSON.parse(body);
+      const payload = safeParseJson(body);
       return queueShopSyncWebhook({
         topic: "COLLECTIONS_DELETE",
         shop,
         webhookId,
         entityId: payload.admin_graphql_api_id || payload.id,
         syncType: "collection",
+        entityType: "collection",
+        payload,
       });
     },
   },
@@ -217,13 +410,15 @@ export default {
     deliveryMethod: DeliveryMethod.Http,
     callbackUrl: "/api/webhooks",
     callback: async (_topic, shop, body, webhookId) => {
-      const payload = JSON.parse(body);
+      const payload = safeParseJson(body);
       return queueShopSyncWebhook({
         topic: "INVENTORY_LEVELS_UPDATE",
         shop,
         webhookId,
         entityId: payload.inventory_item_id || payload.location_id,
         syncType: "product",
+        entityType: "inventory_item",
+        payload,
       });
     },
   },
@@ -232,13 +427,15 @@ export default {
     deliveryMethod: DeliveryMethod.Http,
     callbackUrl: "/api/webhooks",
     callback: async (_topic, shop, body, webhookId) => {
-      const payload = JSON.parse(body);
+      const payload = safeParseJson(body);
       return queueShopSyncWebhook({
         topic: "INVENTORY_ITEMS_CREATE",
         shop,
         webhookId,
         entityId: payload.admin_graphql_api_id || payload.id,
         syncType: "product",
+        entityType: "inventory_item",
+        payload,
       });
     },
   },
@@ -247,13 +444,15 @@ export default {
     deliveryMethod: DeliveryMethod.Http,
     callbackUrl: "/api/webhooks",
     callback: async (_topic, shop, body, webhookId) => {
-      const payload = JSON.parse(body);
+      const payload = safeParseJson(body);
       return queueShopSyncWebhook({
         topic: "INVENTORY_ITEMS_UPDATE",
         shop,
         webhookId,
         entityId: payload.admin_graphql_api_id || payload.id,
         syncType: "product",
+        entityType: "inventory_item",
+        payload,
       });
     },
   },
@@ -262,13 +461,15 @@ export default {
     deliveryMethod: DeliveryMethod.Http,
     callbackUrl: "/api/webhooks",
     callback: async (_topic, shop, body, webhookId) => {
-      const payload = JSON.parse(body);
+      const payload = safeParseJson(body);
       return queueShopSyncWebhook({
         topic: "INVENTORY_ITEMS_DELETE",
         shop,
         webhookId,
         entityId: payload.admin_graphql_api_id || payload.id,
         syncType: "product",
+        entityType: "inventory_item",
+        payload,
       });
     },
   },
@@ -277,13 +478,15 @@ export default {
     deliveryMethod: DeliveryMethod.Http,
     callbackUrl: "/api/webhooks",
     callback: async (_topic, shop, body, webhookId) => {
-      const payload = JSON.parse(body);
+      const payload = safeParseJson(body);
       return queueShopSyncWebhook({
         topic: "INVENTORY_LEVELS_CONNECT",
         shop,
         webhookId,
         entityId: payload.inventory_item_id || payload.location_id,
         syncType: "product",
+        entityType: "inventory_item",
+        payload,
       });
     },
   },
@@ -292,13 +495,15 @@ export default {
     deliveryMethod: DeliveryMethod.Http,
     callbackUrl: "/api/webhooks",
     callback: async (_topic, shop, body, webhookId) => {
-      const payload = JSON.parse(body);
+      const payload = safeParseJson(body);
       return queueShopSyncWebhook({
         topic: "INVENTORY_LEVELS_DISCONNECT",
         shop,
         webhookId,
         entityId: payload.inventory_item_id || payload.location_id,
         syncType: "product",
+        entityType: "inventory_item",
+        payload,
       });
     },
   },
@@ -307,37 +512,45 @@ export default {
     deliveryMethod: DeliveryMethod.Http,
     callbackUrl: "/api/webhooks",
     callback: async (_topic, shop, body, webhookId) => {
-      const payload = JSON.parse(body);
+      const payload = safeParseJson(body);
       const bulkOperationId = payload.admin_graphql_api_id || payload.id;
-      const reserved = await reserveWebhook(
-        "BULK_OPERATIONS_FINISH",
+
+      const reservation = await reserveWebhookDelivery({
+        topic: "BULK_OPERATIONS_FINISH",
         shop,
         webhookId,
-        bulkOperationId,
-      );
+        entityId: bulkOperationId,
+        payload,
+      });
 
-      if (!reserved) {
+      if (!reservation.accepted) {
         return { success: true, message: "Duplicate ignored" };
       }
 
-      const jobData = {
-        ...payload,
-        shop,
-        webhookId,
-      };
+      try {
+        const jobData = {
+          ...payload,
+          shop,
+          webhookId,
+        };
 
-      if (String(payload.type || "").toLowerCase() === "mutation") {
-        await addbulkOperatonMutationJob(jobData);
-      } else {
-        await addbulkOperatonQueryJob(jobData);
+        if (String(payload.type || "").toLowerCase() === "mutation") {
+          await addbulkOperatonMutationJob(jobData);
+        } else {
+          await addbulkOperatonQueryJob(jobData);
+        }
+
+        await markWebhookQueued(reservation.deliveryId);
+        await clearKeyCaches(`${shop}:sync_details`);
+
+        return {
+          success: true,
+          message: "Bulk operation job queued",
+        };
+      } catch (error) {
+        await markWebhookFailed(reservation.deliveryId, error);
+        throw error;
       }
-
-      await clearKeyCaches(`${shop}:sync_details`);
-
-      return {
-        success: true,
-        message: "Bulk operation job queued",
-      };
     },
   },
 
@@ -345,37 +558,72 @@ export default {
     deliveryMethod: DeliveryMethod.Http,
     callbackUrl: "/api/webhooks",
     callback: async (topic, shop, body, webhookId) => {
-      await addAppUninstallJob({
-        shop,
+      const payload = safeParseJson(body);
+
+      const reservation = await reserveWebhookDelivery({
         topic,
+        shop,
         webhookId,
-        receivedAt: new Date().toISOString(),
-        body,
+        entityId: shop,
+        payload,
       });
 
-      return {
-        success: true,
-        message: "App uninstall queued",
-      };
+      if (!reservation.accepted) {
+        return { success: true, message: "Duplicate ignored" };
+      }
+
+      try {
+        await addAppUninstallJob({
+          shop,
+          topic,
+          webhookId,
+          receivedAt: new Date().toISOString(),
+          body,
+        });
+
+        await markWebhookQueued(reservation.deliveryId);
+
+        return {
+          success: true,
+          message: "App uninstall queued",
+        };
+      } catch (error) {
+        await markWebhookFailed(reservation.deliveryId, error);
+        throw error;
+      }
     },
   },
 
   APP_SUBSCRIPTIONS_UPDATE: {
     deliveryMethod: DeliveryMethod.Http,
     callbackUrl: "/api/webhooks",
-    callback: async (_topic, shop, body) => {
-      try {
-        const payload = JSON.parse(body);
-        const sub = payload.app_subscription;
+    callback: async (_topic, shop, body, webhookId) => {
+      const payload = safeParseJson(body);
+      const sub = payload.app_subscription;
 
+      const reservation = await reserveWebhookDelivery({
+        topic: "APP_SUBSCRIPTIONS_UPDATE",
+        shop,
+        webhookId,
+        entityId: sub?.admin_graphql_api_id || shop,
+        payload,
+      });
+
+      if (!reservation.accepted) {
+        return { success: true, message: "Duplicate ignored" };
+      }
+
+      try {
         if (!sub) {
-          return;
+          await markWebhookProcessed(reservation.deliveryId);
+          return { success: true };
         }
 
         const incomingSubId = sub.admin_graphql_api_id;
         const existing = await prisma.subscription.findFirst({
           where: { shop },
         });
+
         const toDateOrNull = (value) => (value ? new Date(value) : null);
 
         if (sub.status === "ACTIVE") {
@@ -427,15 +675,18 @@ export default {
             }
           }
 
-          return;
+          await markWebhookProcessed(reservation.deliveryId);
+          return { success: true };
         }
 
         if (!["CANCELLED", "EXPIRED"].includes(sub.status)) {
-          return;
+          await markWebhookProcessed(reservation.deliveryId);
+          return { success: true };
         }
 
         if (!existing) {
-          return;
+          await markWebhookProcessed(reservation.deliveryId);
+          return { success: true };
         }
 
         if (existing.pendingSubscriptionId === incomingSubId) {
@@ -447,7 +698,9 @@ export default {
               pendingPlanName: null,
             },
           });
-          return;
+
+          await markWebhookProcessed(reservation.deliveryId);
+          return { success: true };
         }
 
         if (
@@ -455,7 +708,8 @@ export default {
           existing.subscriptionId !== incomingSubId &&
           existing.status === "ACTIVE"
         ) {
-          return;
+          await markWebhookProcessed(reservation.deliveryId);
+          return { success: true };
         }
 
         await prisma.subscription.updateMany({
@@ -476,7 +730,11 @@ export default {
             pendingPlanName: null,
           },
         });
+
+        await markWebhookProcessed(reservation.deliveryId);
+        return { success: true };
       } catch (error) {
+        await markWebhookFailed(reservation.deliveryId, error);
         logger.error("APP_SUBSCRIPTIONS_UPDATE webhook failed", {
           shop,
           message: error.message,

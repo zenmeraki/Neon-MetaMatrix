@@ -41,11 +41,13 @@ export async function handleSyncOperation({ bulkOperationId, shop = null }) {
 
     let recordCount = 0;
     const session = await getSession(syncHistory.shop);
+
     if (!session) {
       throw new Error(`No session found for shop ${syncHistory.shop}`);
     }
 
     const bulkOperation = await fetchBulkOperationDetails(session, bulkOperationId);
+
     if (!bulkOperation) {
       throw new Error("Failed to retrieve bulk operation details");
     }
@@ -88,7 +90,9 @@ export async function handleSyncOperation({ bulkOperationId, shop = null }) {
       recordCount = await prisma.collection.count({
         where: {
           shop: session.shop,
-          ...(syncHistory.syncBatchId ? { mirrorBatchId: syncHistory.syncBatchId } : {}),
+          ...(syncHistory.syncBatchId
+            ? { mirrorBatchId: syncHistory.syncBatchId }
+            : {}),
         },
       });
 
@@ -109,10 +113,30 @@ export async function handleSyncOperation({ bulkOperationId, shop = null }) {
       await clearKeyCaches(`${session.shop}:sync_details`);
       await clearKeyCaches(`${session.shop}:fetchCollections`);
       await clearKeyCaches(`${session.shop}:ProductFilterValues:collection`);
+
+      const createdAt = bulkOperation.createdAt
+        ? new Date(bulkOperation.createdAt)
+        : new Date();
+      const completedAt = bulkOperation.completedAt
+        ? new Date(bulkOperation.completedAt)
+        : new Date();
+      const durationMs = Math.max(completedAt.getTime() - createdAt.getTime(), 0);
+
+      await prisma.syncHistory.update({
+        where: { id: syncHistory.id },
+        data: {
+          status: "completed",
+          stage: "COMPLETED",
+          responseUrl: bulkOperation.url,
+          duration: durationMs,
+          recordCount,
+        },
+      });
     }
 
     if (syncHistory.operationType === "Product") {
       const service = new Services();
+
       const syncResult = await service.formatAndSyncProductsToDB({
         dataStream: urlResponse.data,
         shop: session.shop,
@@ -126,13 +150,6 @@ export async function handleSyncOperation({ bulkOperationId, shop = null }) {
       await clearKeyCaches(`${session.shop}:ProductFetch:`);
       await clearKeyCaches(`${session.shop}:productTypes:`);
       await clearKeyCaches(`${session.shop}:ProductFilterValues:`);
-
-      await prisma.store.update({
-        where: { shopUrl: session.shop },
-        data: {
-          lastProductSyncAt: new Date(),
-        },
-      });
 
       emitToUser(session.shop, "product_sync", {
         message: "Product sync completed",
@@ -151,49 +168,34 @@ export async function handleSyncOperation({ bulkOperationId, shop = null }) {
     await clearKeyCaches(`${session.shop}:ProductFetch`);
     await clearKeyCaches(`${session.shop}:sync_details`);
 
-    const createdAt = bulkOperation.createdAt
-      ? new Date(bulkOperation.createdAt)
-      : new Date();
-    const completedAt = bulkOperation.completedAt
-      ? new Date(bulkOperation.completedAt)
-      : new Date();
-    const durationMs = Math.max(completedAt.getTime() - createdAt.getTime(), 0);
-
-    await prisma.syncHistory.update({
-      where: { id: syncHistory.id },
-      data: {
-        status: "completed",
-        stage: "COMPLETED",
-        responseUrl: bulkOperation.url,
-        duration: durationMs,
-        recordCount,
-      },
-    });
-
-    return { message: "syncing completed" };
+    return { message: "syncing completed", recordCount };
   } catch (err) {
     if (syncHistory) {
-      await prisma.syncHistory.update({
-        where: { id: syncHistory.id },
-        data: {
-          status: "failed",
-          stage: "FAILED",
-          errorSummary: err.message,
-        },
-      }).catch(() => {});
+      await prisma.syncHistory
+        .update({
+          where: { id: syncHistory.id },
+          data: {
+            status: "failed",
+            stage: "FAILED",
+            errorMessage: err.message,
+          },
+        })
+        .catch(() => {});
     }
 
     if (syncHistory?.shop) {
-      await prisma.store.update({
-        where: { shopUrl: syncHistory.shop },
-        data: {
-          isProductSyncing: false,
-          isCollectionSyncing: false,
-          isProductTypeSyncing: false,
-          isProductInitialySyning: false,
-          syncProgressStage: "IDLE",
-        },
-      }).catch(() => {});
+      await prisma.store
+        .update({
+          where: { shopUrl: syncHistory.shop },
+          data: {
+            isProductSyncing: false,
+            isCollectionSyncing: false,
+            isProductTypeSyncing: false,
+            isProductInitialySyning: false,
+            syncProgressStage: "IDLE",
+          },
+        })
+        .catch(() => {});
 
       await markFullSyncFailed({
         shop: syncHistory.shop,
@@ -248,7 +250,12 @@ async function fetchBulkOperationDetails(session, bulkOperationId) {
   return response.body?.data?.node;
 }
 
-export async function processSyncDataInBatches(dataStream, shop, type, syncBatchId = null) {
+export async function processSyncDataInBatches(
+  dataStream,
+  shop,
+  type,
+  syncBatchId = null,
+) {
   const batchSize = 100;
   let batch = [];
 
@@ -327,7 +334,10 @@ export async function processSyncDataInBatches(dataStream, shop, type, syncBatch
             select: { activeCollectionBatchId: true },
           });
 
-          if (store?.activeCollectionBatchId && store.activeCollectionBatchId !== syncBatchId) {
+          if (
+            store?.activeCollectionBatchId &&
+            store.activeCollectionBatchId !== syncBatchId
+          ) {
             await prisma.collection.deleteMany({
               where: {
                 shop,
@@ -347,18 +357,3 @@ export async function processSyncDataInBatches(dataStream, shop, type, syncBatch
   });
 }
 
-async function updateSyncFields(shop) {
-  const result = await prisma.store.update({
-    where: { shopUrl: shop },
-    data: {
-      isProductTypeSyncing: false,
-      lastProductTypeSyncAt: new Date(),
-    },
-  });
-
-  if (!result) {
-    throw new Error("Store document not found");
-  }
-
-  await CacheService.del(`${shop}:storeDetails`);
-}

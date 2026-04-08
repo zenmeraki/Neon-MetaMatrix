@@ -1,10 +1,11 @@
-import { graphqlProductsAllFieldQuery } from "../../graphql/product.js";
+import { graphqlProductsBulkSyncQuery  } from "../../graphql/product.js";
 import { adminGraphqlWithRetry } from "../../utils/shopifyAdminApi.js";
 
 export async function runProductBulkFetch({ session }) {
-  const queryBody = String(graphqlProductsAllFieldQuery || "").trim();
+  const queryBody = String(graphqlProductsBulkSyncQuery  || "").trim();
+
   if (!queryBody) {
-    throw new Error("graphqlProductsAllFieldQuery is empty");
+    throw new Error("graphqlProductsBulkSyncQuery  is empty");
   }
 
   const query = `
@@ -39,7 +40,7 @@ export async function runProductBulkFetch({ session }) {
   const bulkOperation = runQueryResult?.bulkOperation;
 
   if (userErrors.length > 0) {
-    throw new Error(JSON.stringify(userErrors));
+    throw new Error(userErrors.map((err) => err.message).join(", "));
   }
 
   if (!bulkOperation?.id) {
@@ -48,6 +49,7 @@ export async function runProductBulkFetch({ session }) {
 
   return {
     bulkOperationId: bulkOperation.id,
+    status: bulkOperation.status,
     responseBody: response.body,
   };
 }

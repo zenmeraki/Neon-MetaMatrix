@@ -66,19 +66,23 @@ export async function fetchMetaobjectLookupByIds(session, ids = []) {
     return new Map();
   }
 
+  const uniqueIds = Array.from(new Set(ids.filter(Boolean)));
   const client = new shopify.api.clients.Graphql({ session });
   const lookup = new Map();
   const chunkSize = 100;
 
-  for (let i = 0; i < ids.length; i += chunkSize) {
-    const chunk = ids.slice(i, i + chunkSize);
+  for (let i = 0; i < uniqueIds.length; i += chunkSize) {
+    const chunk = uniqueIds.slice(i, i + chunkSize);
 
     const query = `
       query GetMetaobjectsByIds($ids: [ID!]!) {
         nodes(ids: $ids) {
           ... on Metaobject {
             id
-            fields { key value }
+            fields {
+              key
+              value
+            }
           }
         }
       }

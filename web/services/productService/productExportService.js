@@ -1,10 +1,9 @@
 import shopify from "../../shopify.js";
 import { Parser } from "json2csv";
 import { fieldMappings } from "../../utils/productExportUtils.js";
-import { graphqlProductsAllFieldQuery } from "../../graphql/product.js";
+import { graphqlProductsExportQuery  } from "../../graphql/product.js";
 import CacheService from "../../utils/cacheService.js";
 import { EXPORT_TYPES } from "../../Config/constants.js";
-import logger from "../../utils/loggerUtils.js";
 import { getCache, setCache } from "../../utils/cacheUtils.js";
 import { prisma } from "../../config/database.js";
 
@@ -38,50 +37,53 @@ export class ProductExportService {
   }
 
   async fetchProducts({ queryFilter = null, count = 0 }) {
-    const cacheData = await CacheService.get(
-      `${this.session.shop}:${queryFilter}:export`
-    );
+  const cacheKey = `${this.session.shop}:${queryFilter}:export`;
+  const cacheData = await CacheService.get(cacheKey);
 
-    if (cacheData) {
-      return cacheData;
-    }
-
-    let hasNextPage = true;
-    let endCursor = null;
-    const allProducts = [];
-
-    while (hasNextPage) {
-      try {
-        const response = await this.client.query({
-          data: {
-            query: graphqlProductsAllFieldQuery,
-            variables: {
-              first: 250,
-              after: endCursor || null,
-              query: queryFilter || null,
-            },
-          },
-        });
-
-        const edges = response.body.data.products.edges;
-        allProducts.push(...edges);
-        hasNextPage = response.body.data.products.pageInfo.hasNextPage;
-        endCursor = response.body.data.products.pageInfo.endCursor;
-        // Safety check - if we've fetched all products or reached the count, stop
-        if (allProducts.length >= count) {
-          break;
-        }
-      } catch (error) {
-        break;
-      }
-    }
-    await setCache(
-      `${this.session.shop}:${queryFilter}:export`,
-      allProducts,
-      300
-    );
-    return allProducts;
+  if (cacheData) {
+    return cacheData;
   }
+
+  let hasNextPage = true;
+  let endCursor = null;
+  const allProducts = [];
+
+  while (hasNextPage) {
+    const response = await this.client.query({
+      data: {
+        query: graphqlProductsExportQuery,
+        variables: {
+          first: 250,
+          after: endCursor,
+          query: queryFilter || null,
+        },
+      },
+    });
+
+    const connection = response.body?.data?.products;
+    const edges = connection?.edges || [];
+    const pageInfo = connection?.pageInfo;
+
+    const nodes = edges.map((edge) => ({
+      ...edge.node,
+      variants: Array.isArray(edge.node?.variants?.edges)
+        ? edge.node.variants.edges.map((variantEdge) => variantEdge.node)
+        : [],
+    }));
+
+    allProducts.push(...nodes);
+
+    hasNextPage = Boolean(pageInfo?.hasNextPage);
+    endCursor = pageInfo?.endCursor || null;
+
+    if (count > 0 && allProducts.length >= count) {
+      break;
+    }
+  }
+
+  await setCache(cacheKey, allProducts, 300);
+  return allProducts;
+}
 
   _checkValidation(count, activePlan) {
     if (activePlan === "Basic (Monthly)") {
@@ -99,79 +101,86 @@ export class ProductExportService {
     }
   }
 
-  transformToCSV(products, requestedColumns) {
-    const csvData = [];
+transformToCSV(products, requestedColumns) {
+  const csvData = [];
 
-    const getNestedValue = (obj, path, defaultValue = "") =>
-      path.reduce(
-        (acc, key) =>
-          acc && acc[key] !== undefined && acc[key] !== null
-            ? acc[key]
-            : defaultValue,
-        obj
-      );
+  const getNestedValue = (obj, path, defaultValue = "") =>
+  path.reduce((acc, key) => {
+    if (acc === null || acc === undefined) return defaultValue;
 
-    const safeSplitPop = (val) => (val ? val.toString().split("/").pop() : "");
+    const resolvedKey =
+      Array.isArray(acc) && !Number.isNaN(Number(key)) ? Number(key) : key;
 
-    products.forEach((product) => {
-      const variants = product.variants || [];
-      const images = product.media || [];
+    return acc[resolvedKey] !== undefined && acc[resolvedKey] !== null
+      ? acc[resolvedKey]
+      : defaultValue;
+  }, obj);
 
-      if (variants.length > 0) {
-        variants.forEach((variant, index) => {
-          const row = {};
-          requestedColumns.forEach((column) => {
-            const path = this.fieldMappings[column]?.split(".") || [];
-            let value = "";
+  const safeSplitPop = (val) => (val ? val.toString().split("/").pop() : "");
 
-            if (path[0] === "variants") {
-              value = getNestedValue(variant, path.slice(1));
-            } else if (path[0] === "images" && images.length > 0) {
-              value = getNestedValue(images[0], path.slice(1));
-            } else {
-              value = index === 0 ? getNestedValue(product, path) : "";
-            }
+  products.forEach((product) => {
+    const variants = Array.isArray(product.variants) ? product.variants : [];
+    const featuredImage = product?.featuredMedia?.preview?.image || null;
 
-            // Special cases
-            if (column === "Weight") {
-              const weight = variant?.inventoryItem?.measurement?.weight;
-              value = weight
-                ? `${weight.value} ${weight.unit}`
-                : "Not Specified";
-            }
-
-            if (column === "ProductID")
-              value = index === 0 ? safeSplitPop(product.id) : "";
-            if (column === "VariantID") value = safeSplitPop(value);
-
-            row[column] =
-              value !== null && value !== undefined ? value.toString() : "";
-          });
-          csvData.push(row);
-        });
-      } else {
+    if (variants.length > 0) {
+      variants.forEach((variant, index) => {
         const row = {};
+
         requestedColumns.forEach((column) => {
           const path = this.fieldMappings[column]?.split(".") || [];
-          let value =
-            path[0] === "images" && images.length > 0
-              ? getNestedValue(images[0], path.slice(1))
-              : getNestedValue(product, path);
+          let value = "";
 
-          if (column === "VariantID") value = safeSplitPop(value);
-          if (column === "ProductID") value = safeSplitPop(product.id);
+          if (path[0] === "variants") {
+            value = getNestedValue(variant, path.slice(1));
+          } else if (path[0] === "images" && featuredImage) {
+            value = getNestedValue(featuredImage, path.slice(1));
+          } else {
+            value = index === 0 ? getNestedValue(product, path) : "";
+          }
+
+          if (column === "Weight") {
+            const weight = variant?.inventoryItem?.measurement?.weight;
+            value = weight ? `${weight.value} ${weight.unit}` : "Not Specified";
+          }
+
+          if (column === "ProductID") {
+            value = index === 0 ? safeSplitPop(product.id) : "";
+          }
+
+          if (column === "VariantID") {
+            value = safeSplitPop(value);
+          }
 
           row[column] =
             value !== null && value !== undefined ? value.toString() : "";
         });
+
         csvData.push(row);
-      }
-    });
+      });
+    } else {
+      const row = {};
 
-    const parser = new Parser();
-    return parser.parse(csvData);
-  }
+      requestedColumns.forEach((column) => {
+        const path = this.fieldMappings[column]?.split(".") || [];
+        let value =
+          path[0] === "images" && featuredImage
+            ? getNestedValue(featuredImage, path.slice(1))
+            : getNestedValue(product, path);
 
+        if (column === "VariantID") value = safeSplitPop(value);
+        if (column === "ProductID") value = safeSplitPop(product.id);
+
+        row[column] =
+          value !== null && value !== undefined ? value.toString() : "";
+      });
+
+      csvData.push(row);
+    }
+  });
+
+  const parser = new Parser();
+  return parser.parse(csvData);
+}
   async getAllExportHistories(lang) {
     const cacheKey = `${this.session.shop}:fetchExportHistories:${lang}`;
 

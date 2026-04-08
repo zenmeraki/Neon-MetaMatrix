@@ -79,9 +79,9 @@ export async function getProductsWithFilters({
   const { page = 1, limit = 20, sortKey, sortOrder } = queryParams;
 
   const cacheKey = `${shop}:ProductFetch:${JSON.stringify(queryParams)}:${JSON.stringify(filterParams)}`;
-  const cachData = await getCache(cacheKey);
+  const cachedData = await getCache(cacheKey);
 
-  if (cachData) return cachData;
+  if (cachedData) return cachedData;
 
   const result = await resolveCanonicalProductTarget({
     shop,
@@ -141,6 +141,7 @@ export async function getDistinctProductFilterValues({
       where: { shopUrl: shop },
       select: { activeCollectionBatchId: true },
     });
+
     rows = await findDistinctCollectionTitles({
       shop,
       mirrorBatchId: store?.activeCollectionBatchId || null,
