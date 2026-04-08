@@ -43,7 +43,7 @@ export default function FieldSelectionCard({
         <Text variant="headingXs" tone="subdued" as="h4">
           {title}
         </Text>
-        <Badge>{fields.length} fields</Badge>
+        <Badge>{fields.length} {t("fields")}</Badge>
       </InlineStack>
 
       <Box
@@ -57,7 +57,7 @@ export default function FieldSelectionCard({
           {fields.map((field) => (
             <Box key={field.value} minWidth="220px">
               <Checkbox
-                label={field.label}
+                label={t(field.label)}
                 checked={selectedFields.includes(field.value)}
                 onChange={() => toggleField(field.value)}
                 disabled={loading}
@@ -84,7 +84,11 @@ export default function FieldSelectionCard({
           </BlockStack>
 
           <Checkbox
-            label={selectedFields.length === allFields.length ? "Deselect all" : "Select all"}
+            label={
+              selectedFields.length === allFields.length
+                ? t("DeselectAll")
+                : t("SelectAll")
+            }
             checked={selectedFields.length === allFields.length}
             onChange={handleSelectAll}
             disabled={loading}

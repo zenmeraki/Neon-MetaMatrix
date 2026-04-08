@@ -15,6 +15,7 @@ import FieldSelectionCard from "../components/FieldSelectionCard";
 import InfoCard from "../components/InfoCard";
 import ScheduledExportModal from "../components/ScheduledExportModal";
 
+
 export default function CsvExportPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -104,7 +105,7 @@ export default function CsvExportPage() {
       subtitle={t("exportPageSubtitle",)}
 
       primaryAction={{
-        content: loading ? "Exporting..." : "Generate CSV",
+        content: loading ? t("Exporting") : t("GenerateCSV"),
         onAction: handleExport,
         disabled:
           loading ||
@@ -116,7 +117,7 @@ export default function CsvExportPage() {
       }}
       secondaryActions={[
         {
-          content: "Scheduled Export",
+          content: t("ScheduledExport"),
           onAction: () => setShowScheduledExportModal(true),
           disabled:
             loading ||
@@ -147,8 +148,14 @@ export default function CsvExportPage() {
               </Text>
             </BlockStack>
             <InlineStack gap="200">
-              <Badge tone="info">{count === 0 ? "All filtered products" : `${count} matching products`}</Badge>
-              <Badge>{selectedFields.length} fields selected</Badge>
+              <Badge tone="info">
+                {count === 0
+                  ? t("Allfilteredproducts")
+                  : `${count} ${t("matchingProducts")}`}
+              </Badge>
+              <Badge>
+                {selectedFields.length} {t("fieldsselected")}
+              </Badge>
             </InlineStack>
           </InlineStack>
         </Card>

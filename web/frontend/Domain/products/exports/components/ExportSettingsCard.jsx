@@ -27,7 +27,7 @@ export default function ExportSettingsCard({
             </Text>
           </BlockStack>
           <Badge tone="info">
-            {count === 0 ? "All products" : `${count} products`}
+            {count === 0 ? t("AllProducts") : `${count} ${t("products")}`}
           </Badge>
         </InlineStack>
 

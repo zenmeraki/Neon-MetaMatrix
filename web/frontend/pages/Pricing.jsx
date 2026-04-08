@@ -18,8 +18,12 @@ import {
 import { CheckIcon, StarFilledIcon } from '@shopify/polaris-icons';
 import { Modal } from "@shopify/polaris";
 import { useNavigate } from "react-router-dom"
+
+import { useTranslation } from "react-i18next";
+
 export default function PricingPage() {
   const navigate = useNavigate()
+  const { t } = useTranslation();
   const [openFaqIndex, setOpenFaqIndex] = useState(null);
   const [showFreeModal, setShowFreeModal] = useState(false);
   const [selectedFreePlan, setSelectedFreePlan] = useState(null);
@@ -66,25 +70,24 @@ export default function PricingPage() {
 
   const faqs = [
     {
-      question: 'How do subscriptions work?',
-      answer: 'Our subscription plans are billed monthly through your Shopify account. You can upgrade, downgrade, or cancel your subscription at any time. All charges appear directly on your Shopify invoice.',
+      question: t("faqQuestion1"),
+      answer: t("faqAnswer1"),
     },
     {
-      question: 'What happens if I exceed my plan limits?',
-      answer: "You'll receive notifications when you're approaching your limit. You can upgrade your plan at any time to increase your limits without losing any data or configurations.",
+      question: t("faqQuestion2"),
+      answer: t("faqAnswer2"),
     },
     {
-      question: 'How do I cancel my subscription?',
-      answer: 'You can cancel your subscription at any time from the subscription management page. Your plan will remain active until the end of your billing period, and you can continue using all features during that time.',
+      question: t("faqQuestion3"),
+      answer: t("faqAnswer3"),
     },
     {
-      question: 'Can I switch between plans?',
-      answer: 'Yes! You can upgrade or downgrade at any time. Upgrades take effect immediately with prorated billing, while downgrades take effect at the start of your next billing cycle.',
+      question: t("faqQuestion4"),
+      answer: t("faqAnswer4"),
     },
-
     {
-      question: 'Is my data secure?',
-      answer: 'Absolutely. All data is encrypted in transit and at rest. We follow industry best practices and comply with Shopify\'s security requirements to keep your information safe.',
+      question: t("faqQuestion5"),
+      answer: t("faqAnswer5"),
     },
   ];
 
@@ -140,7 +143,7 @@ export default function PricingPage() {
               <BlockStack gap="400" inlineAlign="center">
                 <Spinner size="large" />
                 <Text variant="bodyLg" as="p" tone="subdued">
-                  Loading plans...
+                  {t("LoadingPlans")}
                 </Text>
               </BlockStack>
             </Box>
@@ -168,8 +171,8 @@ export default function PricingPage() {
 
   return (
     <Page
-      title='Choose the perfect plan for your business'
-      subtitle='Start free and upgrade as you grow. All plans include our core features with no hidden fees.'
+      title={t("pricingPageTitle")}
+      subtitle={t("pricingPageSubtitle")}
     >
       <Layout>
         <Layout.Section>
@@ -187,7 +190,7 @@ export default function PricingPage() {
                 <Card>
                   {plan.isCurrent && (
                     <Box position="absolute" insetBlockStart="200" insetInlineEnd="200">
-                      <Badge tone="success">Current plan</Badge>
+                      <Badge tone="success">{t("CurrentPlan")}</Badge>
                     </Box>
                   )}
                   <div style={{
@@ -199,7 +202,7 @@ export default function PricingPage() {
                     {plan.popular && (
                       <InlineStack align="center" gap="200" blockAlign="center">
                         <Text variant="headingSm" as="p" tone="text-inverse">
-                          Most Popular
+                          {t("MostPopular")}
                         </Text>
                       </InlineStack>
                     )}
@@ -209,10 +212,10 @@ export default function PricingPage() {
                     <BlockStack gap="500">
                       <BlockStack gap="200">
                         <Text variant="headingXl" as="h2">
-                          {plan.name}
+                          {t(plan.name)}
                         </Text>
                         <Text variant="bodyMd" as="p" tone="subdued">
-                          {plan.description}
+                          {t(plan.description)}
                         </Text>
                       </BlockStack>
 
@@ -232,17 +235,17 @@ export default function PricingPage() {
 
                           <Box paddingBlockEnd="100">
                             <Text variant="headingMd" as="p" tone="subdued">
-                              /month
+                              {t("PerMonth")}
                             </Text>
                           </Box>
                         </InlineStack>
 
 
                         {plan.isFree ? (
-                          <Badge tone="success">Free forever</Badge>
+                          <Badge tone="success">{t("FreeForever")}</Badge>
                         ) : (
                           <Text variant="bodySm" as="p" tone="subdued">
-                            {plan.highlight}
+                            {t(plan.highlight)}
                           </Text>
                         )}
                       </BlockStack>
@@ -264,12 +267,12 @@ export default function PricingPage() {
                         {subscribing === plan.key ? (
                           <InlineStack gap="200" align="center">
                             <Spinner size="small" />
-                            <Text as="span">Processing…</Text>
+                            <Text as="span">{t("Processing")}</Text>
                           </InlineStack>
                         ) : plan.isCurrent ? (
-                          "Current Plan"
+                          t("CurrentPlan")
                         ) : (
-                          plan.buttonText
+                          t(plan.buttonText)
                         )}
                       </Button>
 
@@ -277,7 +280,7 @@ export default function PricingPage() {
 
                       <BlockStack gap="300">
                         <Text variant="headingMd" as="h3">
-                          What's included
+                          {t("WhatsIncluded")}
                         </Text>
                         <BlockStack gap="300">
                           {plan.features.map((feature, featureIndex) => (
@@ -290,7 +293,7 @@ export default function PricingPage() {
                                 <Icon source={CheckIcon} tone="success" />
                               </div>
                               <Text variant="bodyMd" as="p">
-                                {feature}
+                                {t(feature)}
                               </Text>
                             </InlineStack>
                           ))}
@@ -309,11 +312,11 @@ export default function PricingPage() {
             <BlockStack gap="600" inlineAlign="center">
               <BlockStack gap="300" inlineAlign="center">
                 <Text variant="heading2xl" as="h2" alignment="center">
-                  Frequently Asked Questions
+                  {t("FrequentlyAskedQuestions")}
                 </Text>
                 <Box maxWidth="600px">
                   <Text variant="bodyLg" as="p" tone="subdued" alignment="center">
-                    Everything you need to know about our plans and billing
+                    {t("PlansAndBillingHelpText")}
                   </Text>
                 </Box>
               </BlockStack>
@@ -364,17 +367,17 @@ export default function PricingPage() {
                 <BlockStack gap="400" inlineAlign="center">
                   <BlockStack gap="200" inlineAlign="center">
                     <Text variant="headingLg" as="h3" alignment="center">
-                      Still have questions?
+                      {t("StillHaveQuestions")}
                     </Text>
                     <Text variant="bodyMd" as="p" tone="subdued" alignment="center">
-                      Our support team is here to help you choose the right plan
+                      {t("SupportHelpChoosePlan")}
                     </Text>
                   </BlockStack>
                   <InlineStack gap="300" align="center">
                     <Button variant="primary" size="large"
                       onClick={() => navigate("/suggestionpage")}
                     >
-                      Contact Support
+                      {t("ContactSupport")}
                     </Button>
 
                   </InlineStack>
@@ -389,7 +392,7 @@ export default function PricingPage() {
         onClose={() => setShowFreeModal(false)}
         title="Activate Free Plan?"
         primaryAction={{
-          content: "Confirm",
+          content: t("Confirm"),
           onAction: async () => {
             setShowFreeModal(false);
             if (selectedFreePlan) {
@@ -399,20 +402,20 @@ export default function PricingPage() {
         }}
         secondaryActions={[
           {
-            content: "Cancel",
+            content: t("Cancel"),
             onAction: () => setShowFreeModal(false),
           },
         ]}
       >
         <Modal.Section>
           <Text variant="bodyMd" as="p">
-            You are about to activate the Free plan.
+            {t("FreePlanActivationLine1")}
             <br />
             <br />
-            This plan includes limited features. You can upgrade anytime.
+            {t("FreePlanActivationLine2")}
             <br />
             <br />
-            Do you want to continue?
+            {t("FreePlanActivationLine3")}
           </Text>
         </Modal.Section>
       </Modal>

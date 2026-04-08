@@ -25,7 +25,7 @@ function getPrimaryStatusSummary(item) {
   }
 
   const status = String(item?.status || "pending").toLowerCase();
-  
+
 
   if (status === "completed") {
     return {
@@ -112,7 +112,7 @@ const HistoryTable = memo(function HistoryTable({
   emptyStateMessage = "No history items found.",
 }) {
   const navigate = useNavigate();
-    const { t } = useTranslation();
+  const { t } = useTranslation();
   const { isSyncInProgress } = useProductSyncStatus();
 
   const [showUndoModal, setShowUndoModal] = useState(false);
@@ -409,10 +409,10 @@ const HistoryTable = memo(function HistoryTable({
             </BlockStack>
 
             <InlineStack gap="200" wrap>
-              <Badge>{summary.total} total</Badge>
-              <Badge tone="info">{summary.processing} active</Badge>
-              <Badge tone="success">{summary.completed} completed</Badge>
-              <Badge tone="critical">{summary.failed} failed</Badge>
+              <Badge>{summary.total} {t("historySummaryTotal")}</Badge>
+              <Badge tone="info">{summary.processing} {t("historySummaryActive")}</Badge>
+              <Badge tone="success">{summary.completed} {t("historySummaryCompleted")}</Badge>
+              <Badge tone="critical">{summary.failed} {t("historySummaryFailed")}</Badge>
             </InlineStack>
           </InlineStack>
 
@@ -429,7 +429,7 @@ const HistoryTable = memo(function HistoryTable({
             </Box>
 
             <Text tone="subdued" variant="bodySm">
-              {localHistories.length} items
+              {localHistories.length}  {t("historyItemsCount")}
             </Text>
           </InlineStack>
         </BlockStack>
@@ -440,11 +440,16 @@ const HistoryTable = memo(function HistoryTable({
       <Box overflowX="auto" paddingInlineStart="800">
         <DataTable
           columnContentTypes={["text", "text", "text", "text", "text"]}
-          headings={["Title", "Status", "Processed", "Updated", "Actions"]}
+          headings={[
+            t("historyColumnTitle"),
+            t("historyColumnStatus"),
+            t("historyColumnProcessed"),
+            t("historyColumnUpdated"),
+            t("historyColumnActions"),
+          ]}
           rows={rows}
         />
       </Box>
-
       {hasMore ? (
         <>
           <Divider />
