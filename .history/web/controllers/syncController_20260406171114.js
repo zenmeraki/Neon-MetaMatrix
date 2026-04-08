@@ -1,3 +1,5 @@
+// web/controllers/syncController.js
+
 import { Services } from "../services/productService/productFilterService.js";
 import {
   getBulkEditStatus,
@@ -9,22 +11,17 @@ import { prisma } from "../config/database.js";
 
 const service = new Services();
 
+/**
+ * Trigger Shopify Bulk Operation to fetch products.
+ * (No DB change here — only cache + bulk op)
+ */
 export const syncProductData = async (req, res) => {
-  const session = res.locals?.shopify?.session;
+  const session = res.locals.shopify.session;
 
   try {
-    if (!session?.shop) {
-      return res.status(401).json({
-        error: "Shopify session missing",
-      });
-    }
+    const { status } = await getCurrentBulkOperationStatus(session, "QUERY");
 
-    const currentBulkOperation = await getCurrentBulkOperationStatus(
-      session,
-      "QUERY",
-    );
-
-    if (currentBulkOperation?.status === "RUNNING") {
+    if (status === "RUNNING") {
       return res.status(400).json({
         message: "Another operation is running in background",
       });
@@ -44,7 +41,6 @@ export const syncProductData = async (req, res) => {
           shopifyBulkJobCompleted: true,
           storeTotalProducts: true,
           lastProductSyncAt: true,
-          syncProgressStage: true,
         },
       }),
 
@@ -63,7 +59,6 @@ export const syncProductData = async (req, res) => {
           id: true,
           updatedAt: true,
           recordCount: true,
-          syncBatchId: true,
         },
       }),
     ]);
@@ -86,30 +81,25 @@ export const syncProductData = async (req, res) => {
           lastProductSyncAt: store.lastProductSyncAt,
           lastCompletedSyncAt: latestCompletedSync?.updatedAt || null,
           lastCompletedRecordCount: latestCompletedSync?.recordCount || null,
-          lastCompletedSyncBatchId: latestCompletedSync?.syncBatchId || null,
         },
       });
     }
 
     const result = await service.startBulkOperationToFetchProducts({
       session,
-      isInitialSync: false,
     });
 
-    await clearKeyCaches(`${session.shop}:sync_details`);
+    const cacheKey = `${session.shop}:sync_details`;
+    await clearKeyCaches(cacheKey);
 
     return res.status(200).json({
-      success: true,
-      message: "Product sync started",
+      ...result,
       skipped: false,
       forced: force,
-      bulkOperationId: result.bulkOperationId,
-      syncHistoryId: result.syncHistoryId,
-      syncBatchId: result.syncBatchId,
     });
   } catch (error) {
     await logApiError({
-      shop: session?.shop,
+      shop: session.shop,
       err: error,
       req,
       source: "syncController.syncProductData",
@@ -117,13 +107,17 @@ export const syncProductData = async (req, res) => {
 
     return res.status(500).json({
       error: "Failed to fetch products",
-      message: error.message,
     });
   }
 };
 
+/**
+ * Get sync status for a shop.
+ * Previously: Store.findOne({ shopUrl }).select("syncDetails")
+ * Now: prisma.store.findUnique + construct syncDetails object.
+ */
 export const getSyncStatus = async (req, res) => {
-  const session = res.locals?.shopify?.session;
+  const session = res.locals.shopify?.session;
 
   try {
     const shop = session?.shop || req.query.shop;
@@ -135,16 +129,18 @@ export const getSyncStatus = async (req, res) => {
     }
 
     const cacheKey = `${shop}:sync_details`;
-    const cached = await getCache(cacheKey);
 
-    if (cached) {
+    let syncDetails = await getCache(cacheKey);
+
+    if (syncDetails) {
       return res.status(200).json({
         success: true,
         shop,
-        syncStatus: cached,
+        syncStatus: syncDetails,
       });
     }
 
+    // Cache MISS
     const store = await prisma.store.findUnique({
       where: { shopUrl: shop },
       select: {
@@ -170,37 +166,17 @@ export const getSyncStatus = async (req, res) => {
         storeTotalProducts: true,
         isProductSyncing: true,
         lastProductSyncAt: true,
-        activeMirrorBatchId: true,
       },
     });
 
     if (!store) {
       return res.status(404).json({
-        success: false,
         error: "Store not found",
+        success: false,
       });
     }
 
-    const latestSync = await prisma.syncHistory.findFirst({
-      where: {
-        shop,
-        operationType: "Product",
-      },
-      orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        bulkOperationId: true,
-        syncBatchId: true,
-        status: true,
-        stage: true,
-        recordCount: true,
-        updatedAt: true,
-        errorMessage: true,
-        isInitialProductSync: true,
-      },
-    });
-
-    const syncDetails = {
+    syncDetails = {
       isCollectionSyncing: store.isCollectionSyncing,
       lastCollectionSyncAt: store.lastCollectionSyncAt,
       mirrorHealthState: store.mirrorHealthState,
@@ -223,8 +199,6 @@ export const getSyncStatus = async (req, res) => {
       storeTotalProducts: store.storeTotalProducts,
       isProductSyncing: store.isProductSyncing,
       lastProductSyncAt: store.lastProductSyncAt,
-      activeMirrorBatchId: store.activeMirrorBatchId,
-      latestSync,
     };
 
     await setCache(cacheKey, syncDetails, 300);
@@ -242,35 +216,30 @@ export const getSyncStatus = async (req, res) => {
       source: "syncController.getSyncStatus",
     });
 
+    console.error("💥 Error fetching sync status:", error);
+
     return res.status(500).json({
       error: "Internal Server Error",
-      message: error.message,
     });
   }
 };
 
+/**
+ * Track initial product sync progress.
+ */
 export const trackProductSync = async (req, res) => {
   try {
-    const session = res.locals?.shopify?.session;
-    const shop = session?.shop;
-
-    if (!shop) {
-      return res.status(401).json({
-        success: false,
-        error: "Shopify session missing",
-      });
-    }
+    const session = res.locals.shopify.session;
+    const shop = session.shop;
 
     const storeDetails = await prisma.store.findUnique({
       where: { shopUrl: shop },
       select: {
         isProductInitialySyning: true,
-        isProductSyncing: true,
         productInitialSyncProgress: true,
         shopifyBulkJobCompleted: true,
         storeTotalProducts: true,
         syncProgressStage: true,
-        lastSyncErrorSummary: true,
       },
     });
 
@@ -281,109 +250,93 @@ export const trackProductSync = async (req, res) => {
       });
     }
 
-    const latestSync = await prisma.syncHistory.findFirst({
-      where: {
-        shop,
-        operationType: "Product",
-      },
-      orderBy: { createdAt: "desc" },
-      select: {
-        bulkOperationId: true,
-        status: true,
-        stage: true,
-        errorMessage: true,
-        isInitialProductSync: true,
-      },
-    });
+    const {
+      isProductInitialySyning,
+      productInitialSyncProgress,
+      shopifyBulkJobCompleted,
+      storeTotalProducts,
+      syncProgressStage,
+    } = storeDetails;
 
-    const totalProducts = storeDetails.storeTotalProducts || 0;
-
-    if (
-      storeDetails.isProductSyncing === false &&
-      storeDetails.isProductInitialySyning === false
-    ) {
+    // Initial phase finished
+    if (isProductInitialySyning === false) {
       return res.status(200).json({
         success: true,
         message: "Product syncing completed.",
         status: "completed",
         stage: "IDLE",
-        totalProducts,
-        processedProducts: totalProducts,
+        totalProducts: storeTotalProducts,
+        processedProducts: storeTotalProducts,
         progress: 100,
       });
     }
 
-    if (latestSync?.status === "failed") {
-      return res.status(200).json({
-        success: false,
-        message: latestSync.errorMessage || storeDetails.lastSyncErrorSummary || "Product sync failed",
-        status: "failed",
-        stage: latestSync.stage || "FAILED",
-        totalProducts,
-        processedProducts: storeDetails.productInitialSyncProgress || 0,
-        progress:
-          totalProducts > 0
-            ? Math.min(
-                Number(
-                  (((storeDetails.productInitialSyncProgress || 0) / totalProducts) * 100).toFixed(2),
-                ),
-                100,
-              )
-            : 0,
-      });
-    }
+    const totalProducts = storeTotalProducts || 0;
 
-    if (!storeDetails.shopifyBulkJobCompleted) {
-      if (!latestSync?.bulkOperationId) {
+    // Phase 1: Shopify bulk job running
+    if (!shopifyBulkJobCompleted) {
+      const syncHistory = await prisma.syncHistory.findFirst({
+        where: {
+          shop,
+          isInitialProductSync: true,
+        },
+        orderBy: { createdAt: "desc" },
+        select: { bulkOperationId: true },
+      });
+
+      if (!syncHistory || !syncHistory.bulkOperationId) {
         return res.status(200).json({
           success: true,
-          message: "No product sync found",
+          message: "No initial product sync found",
           status: "idle",
-          stage: "IDLE",
           totalProducts,
           processedProducts: 0,
           progress: 0,
         });
       }
 
-      const result = await getBulkEditStatus(latestSync.bulkOperationId, session);
-      const shopifyBulkProgress = Number(result?.rootObjectCount || 0);
+      const result = await getBulkEditStatus(
+        syncHistory.bulkOperationId,
+        session
+      );
+
+      const shopifyBulkProgress = result?.rootObjectCount || 0;
+
+      const percentage =
+        totalProducts > 0
+          ? Math.min(
+              ((shopifyBulkProgress / totalProducts) * 100).toFixed(2),
+              100
+            ) / 2
+          : 0;
 
       return res.status(200).json({
         success: true,
         message: "Product Sync in progress...",
         status: "syncing",
-        stage: storeDetails.syncProgressStage || latestSync.stage || "SHOPIFY_BULK_RUNNING",
+        stage: syncProgressStage || "SHOPIFY_BULK_RUNNING",
         totalProducts,
         processedProducts: shopifyBulkProgress,
-        progress:
-          totalProducts > 0
-            ? Math.min(
-                Number(((shopifyBulkProgress / totalProducts) * 100).toFixed(2)),
-                100,
-              )
-            : 0,
+        progress: totalProducts > 0
+          ? Math.min(Number(((shopifyBulkProgress / totalProducts) * 100).toFixed(2)), 100)
+          : 0,
       });
     }
-
-    const processedProducts = storeDetails.productInitialSyncProgress || 0;
 
     return res.status(200).json({
       success: true,
       message: "Product Sync in progress...",
       status: "syncing",
-      stage: storeDetails.syncProgressStage || latestSync?.stage || "MIRROR_STAGING",
+      stage: syncProgressStage || "MIRROR_STAGING",
       totalProducts,
-      processedProducts,
-      progress:
-        totalProducts > 0
-          ? Math.min(
-              Number(((processedProducts / totalProducts) * 100).toFixed(2)),
-              100,
-            )
-          : 0,
+      processedProducts: productInitialSyncProgress || 0,
+      progress: totalProducts > 0
+        ? Math.min(Number((((productInitialSyncProgress || 0) / totalProducts) * 100).toFixed(2)), 100)
+        : 0,
     });
   } catch (error) {
+    console.error(error.message);
+
     return res.status(500).json({
       error: "Internal Server Error",
       message: error.message,

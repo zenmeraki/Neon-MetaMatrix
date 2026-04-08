@@ -18,30 +18,22 @@ import {
 } from "./productSyncService.js";
 
 export class Services {
-  async getProductsWithFilters({
-    queryParams = {},
-    filterParams = [],
-    shop = null,
-  }) {
-    return getProductsWithFilters({
-      queryParams,
-      filterParams,
-      shop,
-    });
+  constructor() {}
+
+  async getProductsWithFilters({ queryParams = {}, filterParams = [], shop = null }) {
+    try {
+      return await getProductsWithFilters({
+        queryParams,
+        filterParams,
+        shop,
+      });
+    } catch (err) {
+      throw new Error(err.message);
+    }
   }
 
-  async getDistinctProductFilterValues({
-    shop,
-    field,
-    search = "",
-    take = 20,
-  }) {
-    return getDistinctProductFilterValues({
-      shop,
-      field,
-      search,
-      take,
-    });
+  async getDistinctProductFilterValues({ shop, field, search = "", take = 20 }) {
+    return getDistinctProductFilterValues({ shop, field, search, take });
   }
 
   getProductPrismaWhere(filterParams = [], shop) {
@@ -76,14 +68,15 @@ export class Services {
     return buildPrismaCollectionFilter(operator, value);
   }
 
-  async startBulkOperationToFetchProducts({
-    session,
-    isInitialSync = false,
-  }) {
-    return startBulkOperationToFetchProducts({
-      session,
-      isInitialSync,
-    });
+  async startBulkOperationToFetchProducts({ session, isInitialSync = false }) {
+    try {
+      return await startBulkOperationToFetchProducts({
+        session,
+        isInitialSync,
+      });
+    } catch (err) {
+      throw new Error(err.message);
+    }
   }
 
   async formatAndSyncProductsToDB({
