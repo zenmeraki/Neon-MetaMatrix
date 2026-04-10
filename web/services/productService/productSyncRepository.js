@@ -94,42 +94,41 @@ export async function insertProductMirrorBatch({
   variantRows,
   syncBatchId,
 }) {
-  await prisma.$transaction(async (tx) => {
-    if (productRows.length > 0) {
-      await tx.product.createMany({
-        data: productRows.map((row) => ({
-          ...row,
-          mirrorBatchId: syncBatchId,
-        })),
-        skipDuplicates: true,
-      });
-    }
-
-    if (variantRows.length > 0) {
-      await tx.variant.createMany({
-        data: variantRows.map((row) => ({
-          ...row,
-          mirrorBatchId: syncBatchId,
-        })),
-        skipDuplicates: true,
-      });
-    }
-  });
+  if (productRows.length > 0) {
+    await prisma.product.createMany({
+      data: productRows.map((row) => ({ ...row, mirrorBatchId: syncBatchId })),
+      skipDuplicates: true,
+    });
+  }
+  if (variantRows.length > 0) {
+    await prisma.variant.createMany({
+      data: variantRows.map((row) => ({ ...row, mirrorBatchId: syncBatchId })),
+      skipDuplicates: true,
+    });
+  }
 }
 
-export async function markSyncHistoryFailed({
-  syncHistoryId,
-  errorMessage,
-}) {
-  if (!syncHistoryId) return;
+export async function markSyncHistoryFailed({ shop, syncHistoryId, errorMessage }) {
+  await prisma.$transaction(async (tx) => {
+    if (syncHistoryId) {
+      await tx.syncHistory.update({
+        where: { id: syncHistoryId },
+        data: { status: "failed", stage: "FAILED", errorMessage },
+      });
+    }
 
-  await prisma.syncHistory.update({
-    where: { id: syncHistoryId },
-    data: {
-      status: "failed",
-      stage: "FAILED",
-      errorMessage,
-    },
+    if (shop) {
+      await tx.store.update({
+        where: { shopUrl: shop },
+        data: {
+          isProductSyncing: false,
+          isProductInitialySyning: false,
+          syncProgressStage: "IDLE",
+          mirrorHealthState: "STALE",
+          lastSyncErrorSummary: errorMessage,
+        },
+      });
+    }
   });
 }
 

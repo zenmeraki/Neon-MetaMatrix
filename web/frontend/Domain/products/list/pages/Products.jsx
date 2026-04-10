@@ -11,7 +11,7 @@ import {
   SkeletonBodyText,
   Badge,
 } from "@shopify/polaris";
-import { useMemo, useEffect, useState, useCallback } from "react";
+import { useMemo, useEffect, useState, useCallback,useRef  } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { t } from "i18next";
@@ -49,6 +49,10 @@ export default function ProductsPage() {
   const [syncStatus, setSyncStatus] = useState(null);
   const [syncStatusLoading, setSyncStatusLoading] = useState(true);
 
+   const [syncCompleted, setSyncCompleted] = useState(false);
+   const wasSyncingRef = useRef(false);
+
+
   const fetchSyncStatus = useCallback(async () => {
     try {
       const response = await fetch("/api/sync/sync-status");
@@ -56,6 +60,8 @@ export default function ProductsPage() {
 
       if (response.ok && result?.syncStatus) {
         setSyncStatus(result.syncStatus);
+        return result.syncStatus;
+
       }
     } catch {
       // Keep the page usable if the sync-status call fails.
@@ -90,9 +96,17 @@ export default function ProductsPage() {
     fetchProducts(1, filterState);
   }, [filterState, fetchProducts]);
 
-  useEffect(() => {
-    fetchSyncStatus();
-  }, [fetchSyncStatus]);
+ useEffect(() => {
+  fetchSyncStatus().then((status) => {
+    const neverSynced =
+      !status?.shopifyBulkJobCompleted &&
+      !status?.isProductSyncing &&
+      !status?.isProductInitialySyning;
+    if (neverSynced) {
+      fetch("/api/sync/products").catch(() => {});
+    }
+  });
+}, []);
 
   useEffect(() => {
     const isSyncRunning =
@@ -109,6 +123,15 @@ export default function ProductsPage() {
     syncStatus?.isProductInitialySyning,
     fetchSyncStatus,
   ]);
+
+ useEffect(() => {
+   const isSyncing =
+     syncStatus?.isProductSyncing || syncStatus?.isProductInitialySyning;
+   if (wasSyncingRef.current && !isSyncing && syncStatus) {
+     setSyncCompleted(true);
+   }
+   wasSyncingRef.current = Boolean(isSyncing);
+}, [syncStatus?.isProductSyncing, syncStatus?.isProductInitialySyning, syncStatus]);
 
   const onFilterChange = (field, nextFilter) => {
     const updated = (() => {
@@ -238,7 +261,17 @@ export default function ProductsPage() {
             </Box>
           </Card>
         </Layout.Section>
-
+  {syncCompleted && (
+         <Layout.Section>
+             <Banner
+               tone="success"
+               title="Sync complete"
+               onDismiss={() => setSyncCompleted(false)}
+             >
+               <p>Products have been synced successfully.</p>
+             </Banner>
+           </Layout.Section>
+      )}   
         {error && (
           <Layout.Section>
             <Banner tone="critical" title="Error loading products">
