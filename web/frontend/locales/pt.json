@@ -860,5 +860,29 @@
   "historyUndoFailed": "Falha ao desfazer",
   "historyUndoProcessing": "Desfazer processamento",
   "historyUndoQueued": "Desfazer fila",
-  "spreadsheetDropzone": "Arrastar"
+  "spreadsheetDropzone": "Arrastar",
+  "loadingExportDetails": "Carregando detalhes de exportação",
+  "exportDetails": {
+    "summary": {
+      "title": "Resumo de exportação",
+      "type": "Tipo",
+      "totalItems": "Total de itens",
+      "startedAt": "Começou em",
+      "completedAt": "Concluído em",
+      "duration": "Duração"
+    },
+    "fields": {
+      "title": "Campos Exportados",
+      "empty": "Nenhum campo disponível"
+    },
+    "error": {
+      "title": "Detalhes do erro"
+    },
+    "title": "Detalhes de exportação",
+    "downloadCsv": "Baixar CSV",
+    "back": "Histórico de exportação"
+  },
+  "common": {
+    "seconds": "Segundos"
+  }
 }

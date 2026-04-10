@@ -860,6 +860,29 @@
   "historyUndoProcessing": "Annuler le traitement",
   "historyUndoQueued": "Annuler la file d'attente",
   "spreadsheetDropzone": "Traîner",
-
-  "neverSynced": "Jamais synchronisé"
+  "neverSynced": "Jamais synchronisé",
+  "loadingExportDetails": "Chargement des détails de l'exportation",
+  "exportDetails": {
+    "summary": {
+      "title": "Résumé de l'exportation",
+      "type": "Taper",
+      "totalItems": "Total des articles",
+      "startedAt": "Commencé à",
+      "completedAt": "Terminé à",
+      "duration": "Durée"
+    },
+    "fields": {
+      "title": "Champs exportés",
+      "empty": "Aucun champ disponible"
+    },
+    "error": {
+      "title": "Détails de l'erreur"
+    },
+    "title": "Détails de l'exportation",
+    "downloadCsv": "Télécharger CSV",
+    "back": "Historique des exportations"
+  },
+  "common": {
+    "seconds": "Secondes"
+  }
 }

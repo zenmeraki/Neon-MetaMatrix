@@ -861,6 +861,29 @@
   "historyUndoProcessing": "Deshacer procesamiento",
   "historyUndoQueued": "Deshacer en cola",
   "spreadsheetDropzone": "Arrastrar",
-
-  "neverSynced": "Nunca sincronizado"
+  "neverSynced": "Nunca sincronizado",
+  "loadingExportDetails": "Cargando detalles de exportación",
+  "exportDetails": {
+    "summary": {
+      "title": "Resumen de exportación",
+      "type": "Tipo",
+      "totalItems": "Artículos totales",
+      "startedAt": "Comenzó en",
+      "completedAt": "Completado en",
+      "duration": "Duración"
+    },
+    "fields": {
+      "title": "Campos exportados",
+      "empty": "No hay campos disponibles"
+    },
+    "error": {
+      "title": "Detalles del error"
+    },
+    "title": "Detalles de exportación",
+    "downloadCsv": "Descargar CSV",
+    "back": "Historial de exportación"
+  },
+  "common": {
+    "seconds": "Artículos de segunda clase"
+  }
 }

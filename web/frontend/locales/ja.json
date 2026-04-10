@@ -860,7 +860,28 @@
   "historyUndoFailed": "元に戻すことができませんでした",
   "historyUndoProcessing": "アンドゥ処理",
   "historyUndoQueued": "元に戻すキューに入れられました",
-  "spreadsheetDropzone": "ドラッグ"
-
+  "spreadsheetDropzone": "ドラッグ",
+  "loadingExportDetails": "エクスポートの詳細をロードしています",
+  "exportDetails": {
+    "summary": {
+      "title": "エクスポートの概要",
+      "type": "タイプ",
+      "totalItems": "総アイテム数",
+      "startedAt": "開始日",
+      "completedAt": "完了日",
+      "duration": "間隔"
+    },
+    "fields": {
+      "title": "エクスポートされたフィールド",
+      "empty": "使用可能なフィールドがありません"
+    },
+    "error": {
+      "title": "エラーの詳細"
+    },
+    "downloadCsv": "CSVをダウンロード",
+    "back": "エクスポート履歴"
+  },
+  "common": {
+    "seconds": "秒"
+  }
 }
-

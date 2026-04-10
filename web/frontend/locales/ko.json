@@ -860,6 +860,29 @@
   "historyUndoFailed": "실행취소 실패",
   "historyUndoProcessing": "실행 취소 처리",
   "historyUndoQueued": "실행 취소 대기 중",
-  "spreadsheetDropzone": "견인"
+  "spreadsheetDropzone": "견인",
+  "loadingExportDetails": "내보내기 세부정보 로드 중",
+  "exportDetails": {
+    "summary": {
+      "title": "내보내기 요약",
+      "type": "유형",
+      "totalItems": "총 품목",
+      "startedAt": "시작 시간",
+      "completedAt": "완료 시간",
+      "duration": "지속"
+    },
+    "fields": {
+      "title": "내보낸 필드",
+      "empty": "사용 가능한 필드가 없습니다."
+    },
+    "error": {
+      "title": "오류 세부정보"
+    },
+    "title": "내보내기 세부정보",
+    "downloadCsv": "CSV 다운로드",
+    "back": "수출 내역"
+  },
+  "common": {
+    "seconds": "초"
+  }
 }
-

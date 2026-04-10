@@ -860,5 +860,29 @@
   "historyUndoFailed": "Отменить не удалось",
   "historyUndoProcessing": "Отменить обработку",
   "historyUndoQueued": "Отменить в очереди",
-  "spreadsheetDropzone": "Тащить"
+  "spreadsheetDropzone": "Тащить",
+  "loadingExportDetails": "Загрузка сведений об экспорте",
+  "exportDetails": {
+    "summary": {
+      "title": "Экспортировать сводку",
+      "type": "Тип",
+      "totalItems": "Всего предметов",
+      "startedAt": "Началось с",
+      "completedAt": "Завершено в",
+      "duration": "Продолжительность"
+    },
+    "fields": {
+      "title": "Экспортированные поля",
+      "empty": "Нет доступных полей"
+    },
+    "error": {
+      "title": "Подробности ошибки"
+    },
+    "title": "Детали экспорта",
+    "downloadCsv": "Скачать CSV-файл",
+    "back": "Экспортировать историю"
+  },
+  "common": {
+    "seconds": "Секунды"
+  }
 }

@@ -1,57 +1,23 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-client_id = "6c1a39944a4ab6bdd6e4428ccceb028b"
+client_id = "6f9d8710bcea15a9a7814c24bb5404be"
 name = "new"
-application_url = "https://managing-brandon-shares-out.trycloudflare.com"
+application_url = "https://example.com"
 embedded = true
-handle = "new-270"
-
 
 [webhooks]
-api_version = "2025-04"
+api_version = "2026-01"
 
   [[webhooks.subscriptions]]
-
-  topics = [
-  "app/uninstalled",
-  "inventory_items/update",
-  "inventory_items/create",
-  "collections/update",
-  "shop/update",
-  "collections/delete",
-  "inventory_levels/update",
-  "products/update",
-  "inventory_levels/connect",
-  "collections/create",
-  "products/create",
-  "products/delete",
-  "inventory_items/delete",
-  "inventory_levels/disconnect",
-  "bulk_operations/finish"
-]
-  uri = "/api/webhooks"
-  compliance_topics = [ "customers/data_request", "customers/redact", "shop/redact" ]
+  topics = [ "bulk_operations/finish" ]
+  uri = "/webhooks/bulk-operations-finish"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "read_inventory,read_locations,read_metaobjects,read_products,write_products"
-optional_scopes = [ ]
-use_legacy_install_flow = false
+scopes = "read_inventory,read_products,write_products"
 
 [auth]
-redirect_urls = [
-  "https://remember-farmer-challenge-abs.trycloudflare.com/auth/callback",
-  "https://remember-farmer-challenge-abs.trycloudflare.com/auth/shopify/callback",
-  "https://remember-farmer-challenge-abs.trycloudflare.com/api/auth/callback"
-]
-
-[app_proxy]
-url = "https://impression-receive-wallace-surprised.trycloudflare.com/storefront/subscription"
-subpath = "proxy"
-prefix = "apps"
-
-[pos]
-embedded = false
+redirect_urls = [ "https://example.com/api/auth" ]
 
 [build]
 automatically_update_urls_on_dev = true

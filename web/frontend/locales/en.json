@@ -875,6 +875,29 @@
   "historyUndoProcessing": "Undo processing",
   "historyUndoQueued": "Undo queued",
   "spreadsheetDropzone": "Drag & drop CSV file or click to upload",
-
-  "neverSynced": "Never Synced"
+  "neverSynced": "Never Synced",
+  "loadingExportDetails": "Loading Export Details",
+  "exportDetails": {
+    "summary": {
+      "title": "Export Summary",
+      "type": "Type",
+      "totalItems": "Total Items",
+      "startedAt": "Started At",
+      "completedAt": "Completed At",
+      "duration": "Duration"
+    },
+    "fields": {
+      "title": "Exported Fields",
+      "empty": "No fields available"
+    },
+    "error": {
+      "title": "Error Details"
+    },
+    "title": "Export Details",
+    "downloadCsv": "Download CSV",
+    "back": "Export History"
+  },
+  "common": {
+    "seconds": "Seconds"
+  }
 }

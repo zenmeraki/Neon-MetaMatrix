@@ -875,6 +875,29 @@
   "historyUndoProcessing": "التراجع عن المعالجة",
   "historyUndoQueued": "التراجع عن قائمة الانتظار",
   "spreadsheetDropzone": "يجر",
-  
-  "neverSynced": "لم تتم المزامنة مطلقًا"
+  "neverSynced": "لم تتم المزامنة مطلقًا",
+  "loadingExportDetails": "جارٍ تحميل تفاصيل التصدير",
+  "exportDetails": {
+    "summary": {
+      "title": "ملخص التصدير",
+      "type": "يكتب",
+      "totalItems": "إجمالي العناصر",
+      "startedAt": "بدأت في",
+      "completedAt": "اكتمل في",
+      "duration": "مدة"
+    },
+    "fields": {
+      "title": "الحقول المصدرة",
+      "empty": "لا توجد حقول متاحة"
+    },
+    "error": {
+      "title": "تفاصيل الخطأ"
+    },
+    "title": "تفاصيل التصدير",
+    "downloadCsv": "قم بتنزيل ملف CSV",
+    "back": "تاريخ التصدير"
+  },
+  "common": {
+    "seconds": "ثواني"
+  }
 }

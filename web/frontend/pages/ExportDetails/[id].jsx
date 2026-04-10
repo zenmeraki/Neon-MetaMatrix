@@ -16,7 +16,10 @@ import { ArrowLeftIcon } from "@shopify/polaris-icons";
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
+import { useTranslation } from "react-i18next";
+
 export default function ExportHistoryDetailsPage() {
+    const { t } = useTranslation();
     const { id } = useParams();
     const navigate = useNavigate();
 
@@ -98,7 +101,7 @@ export default function ExportHistoryDetailsPage() {
 
     const formatDuration = (ms) => {
         if (!ms) return "-";
-        return `${(ms / 1000).toFixed(2)} seconds`;
+        return `${(ms / 1000).toFixed(2)} ${t("common.seconds")}`;
     };
 
     const formatDate = (date) => {
@@ -108,7 +111,7 @@ export default function ExportHistoryDetailsPage() {
 
     if (loading) {
         return (
-            <Page title="Loading Export Details">
+            <Page title={t("loadingExportDetails")}>
                 <Box padding="600">
                     <InlineStack align="center">
                         <Spinner size="large" />
@@ -147,16 +150,16 @@ export default function ExportHistoryDetailsPage() {
 
     return (
         <Page
-            title={filename || "Export Details"}
+           title={filename || t("exportDetails.title")}
             backAction={{
-                content: "Export History",
+                 content: t("exportDetails.back"),
                 icon: ArrowLeftIcon,
                 onAction: () => navigate(-1),
             }}
             primaryAction={
                 status === "COMPLETED"
                     ? {
-                        content: "Download CSV",
+                         content: t("exportDetails.downloadCsv"),
                         onAction: () => window.open(fileUrl, "_blank"),
                     }
                     : undefined
@@ -168,7 +171,10 @@ export default function ExportHistoryDetailsPage() {
                     <Card>
                         <BlockStack gap="400">
                             <InlineStack align="space-between">
-                                <Text variant="headingMd">Export Summary</Text>
+                                <Text variant="headingMd">
+                                    {t("exportDetails.summary.title")}
+                                </Text>
+
                                 <Badge tone={getStatusTone(status)}>{status}</Badge>
                             </InlineStack>
 
@@ -176,29 +182,32 @@ export default function ExportHistoryDetailsPage() {
 
                             <InlineStack gap="800">
                                 <BlockStack gap="100">
-                                    <Text tone="subdued">Type</Text>
+                                    <Text tone="subdued">
+                                        {t("exportDetails.summary.type")}
+                                    </Text>
+
                                     <Text>{type || "-"}</Text>
                                 </BlockStack>
 
                                 <BlockStack gap="100">
-                                    <Text tone="subdued">Total Items</Text>
+                                    <Text tone="subdued"> {t("exportDetails.summary.totalItems")}</Text>
                                     <Text>{totalItems ?? "-"}</Text>
                                 </BlockStack>
                             </InlineStack>
 
                             <InlineStack gap="800">
                                 <BlockStack gap="100">
-                                    <Text tone="subdued">Started At</Text>
+                                    <Text tone="subdued"> {t("exportDetails.summary.startedAt")}</Text>
                                     <Text>{formatDate(startedAt)}</Text>
                                 </BlockStack>
 
                                 <BlockStack gap="100">
-                                    <Text tone="subdued">Completed At</Text>
+                                    <Text tone="subdued"> {t("exportDetails.summary.completedAt")}</Text>
                                     <Text>{formatDate(completedAt)}</Text>
                                 </BlockStack>
 
                                 <BlockStack gap="100">
-                                    <Text tone="subdued">Duration</Text>
+                                    <Text tone="subdued"> {t("exportDetails.summary.duration")}</Text>
                                     <Text>{formatDuration(durationMs)}</Text>
                                 </BlockStack>
                             </InlineStack>
@@ -210,7 +219,7 @@ export default function ExportHistoryDetailsPage() {
                 <Layout.Section>
                     <Card>
                         <BlockStack gap="400">
-                            <Text variant="headingMd">Exported Fields</Text>
+                            <Text variant="headingMd">  {t("exportDetails.fields.title")}</Text>
                             <Divider />
 
                             {fields.length > 0 ? (
@@ -220,7 +229,7 @@ export default function ExportHistoryDetailsPage() {
                                     ))}
                                 </List>
                             ) : (
-                                <Text tone="subdued">No fields available</Text>
+                                <Text tone="subdued"> {t("exportDetails.fields.empty")}</Text>
                             )}
                         </BlockStack>
                     </Card>
@@ -232,7 +241,7 @@ export default function ExportHistoryDetailsPage() {
                         <Card>
                             <BlockStack gap="400">
                                 <Text variant="headingMd" tone="critical">
-                                    Error Details
+                                    {t("exportDetails.error.title")} 
                                 </Text>
                                 <Divider />
                                 <Box

@@ -863,6 +863,29 @@
   "historyUndoProcessing": "प्रसंस्करण पूर्ववत करें",
   "historyUndoQueued": "कतारबद्ध पूर्ववत करें",
   "spreadsheetDropzone": "खींचना",
-
-  "neverSynced": "कभी सिंक नहीं किया गया"
+  "neverSynced": "कभी सिंक नहीं किया गया",
+  "loadingExportDetails": "निर्यात विवरण लोड हो रहा है",
+  "exportDetails": {
+    "summary": {
+      "title": "निर्यात सारांश",
+      "type": "प्रकार",
+      "totalItems": "कुल आइटम",
+      "startedAt": "इस समय पर शुरू किया",
+      "completedAt": "पर पूरा हुआ",
+      "duration": "अवधि"
+    },
+    "fields": {
+      "title": "निर्यातित फ़ील्ड",
+      "empty": "कोई फ़ील्ड उपलब्ध नहीं है"
+    },
+    "error": {
+      "title": "त्रुटि विवरण"
+    },
+    "title": "निर्यात विवरण",
+    "downloadCsv": "सीएसवी डाउनलोड करें",
+    "back": "निर्यात इतिहास"
+  },
+  "common": {
+    "seconds": "सेकंड"
+  }
 }

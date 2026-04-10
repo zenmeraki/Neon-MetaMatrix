@@ -860,5 +860,29 @@
   "historyUndoFailed": "撤消失败",
   "historyUndoProcessing": "撤消处理",
   "historyUndoQueued": "撤消排队",
-  "spreadsheetDropzone": "拖"
+  "spreadsheetDropzone": "拖",
+  "loadingExportDetails": "正在加载导出详细信息",
+  "exportDetails": {
+    "summary": {
+      "title": "出口总结",
+      "type": "类型",
+      "totalItems": "总项目",
+      "startedAt": "开始于",
+      "completedAt": "完成于",
+      "duration": "期间"
+    },
+    "fields": {
+      "title": "导出字段",
+      "empty": "没有可用字段"
+    },
+    "error": {
+      "title": "错误详细信息"
+    },
+    "title": "导出详情",
+    "downloadCsv": "下载 CSV 文件",
+    "back": "出口历史"
+  },
+  "common": {
+    "seconds": "秒数"
+  }
 }

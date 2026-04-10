@@ -861,6 +861,29 @@
   "historyUndoProcessing": "Bearbeitung rückgängig machen",
   "historyUndoQueued": "Rückgängig machen in der Warteschlange",
   "spreadsheetDropzone": "Ziehen",
-
-  "neverSynced": "Nie synchronisiert"
+  "neverSynced": "Nie synchronisiert",
+  "loadingExportDetails": "Exportdetails werden geladen",
+  "exportDetails": {
+    "summary": {
+      "title": "Zusammenfassung exportieren",
+      "type": "Typ",
+      "totalItems": "Gesamtzahl der Artikel",
+      "startedAt": "Begonnen um",
+      "completedAt": "Abgeschlossen am",
+      "duration": "Dauer"
+    },
+    "fields": {
+      "title": "Exportierte Felder",
+      "empty": "Keine Felder verfügbar"
+    },
+    "error": {
+      "title": "Fehlerdetails"
+    },
+    "title": "Exportdetails",
+    "downloadCsv": "CSV herunterladen",
+    "back": "Verlauf exportieren"
+  },
+  "common": {
+    "seconds": "Sekunden"
+  }
 }
