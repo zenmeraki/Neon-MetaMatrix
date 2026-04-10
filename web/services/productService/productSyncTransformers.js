@@ -120,15 +120,12 @@ export function resolveMetaobjectRefs(rawValue, metaobjectLookup) {
   if (!rawValue || !metaobjectLookup) return null;
 
   const normalized = normalizeNullableString(rawValue);
-  if (
-    normalized &&
-    normalized.startsWith("gid://shopify/Metaobject/")
-  ) {
+  if (normalized && normalized.startsWith("gid://shopify/Metaobject/")) {
     return metaobjectLookup.get(normalized) || null;
   }
 
   try {
-    const parsed = JSON.parse(rawValue); // e.g. ["gid://shopify/Metaobject/123"]
+    const parsed = JSON.parse(rawValue);
     if (!Array.isArray(parsed)) {
       return isMetaobjectReferenceString(normalized) ? null : normalized;
     }
@@ -139,20 +136,19 @@ export function resolveMetaobjectRefs(rawValue, metaobjectLookup) {
 
     return labels.length > 0 ? labels.join(", ") : null;
   } catch {
-    // Never leak raw metaobject IDs into flat mirror columns.
     return isMetaobjectReferenceString(normalized) ? null : normalized;
   }
 }
+
 function mapExtendedProductFields(product, metaobjectLookup = new Map()) {
-  
   const metafieldLookup = buildMetafieldLookup(extractMetafields(product.metafields));
 
-  // Helper that auto-resolves GID refs
   const getString = (candidates) =>
     resolveMetaobjectRefs(
       getMetafieldValue(metafieldLookup, candidates),
-      metaobjectLookup
+      metaobjectLookup,
     );
+
   return {
     googleShoppingEnabled: parseNullableBoolean(
       getMetafieldValue(metafieldLookup, [
@@ -324,7 +320,7 @@ function mapExtendedProductFields(product, metaobjectLookup = new Map()) {
       "custom.category_fabric",
       "custom.categoryfabric",
     ]),
-   categoryFit: getString([
+    categoryFit: getString([
       "shopify.fit",
       "custom.category_fit",
       "custom.categoryfit",
@@ -350,6 +346,11 @@ function mapExtendedProductFields(product, metaobjectLookup = new Map()) {
 export function flattenProduct(product, shop, metaobjectLookup = new Map()) {
   const options = Array.isArray(product.options) ? product.options : [];
   const variants = Array.isArray(product.variants) ? product.variants : [];
+  const collections = Array.isArray(product.collections) ? product.collections : [];
+  const tags = Array.isArray(product.tags)
+    ? product.tags.map((tag) => normalizeNullableString(tag)).filter(Boolean)
+    : [];
+
   const extendedFields = mapExtendedProductFields(product, metaobjectLookup);
 
   return {
@@ -360,29 +361,40 @@ export function flattenProduct(product, shop, metaobjectLookup = new Map()) {
     status: product.status ?? "DRAFT",
     productType: normalizeNullableString(product.productType),
     vendor: normalizeNullableString(product.vendor),
-    tags: Array.isArray(product.tags) ? product.tags : [],
+    tags,
     templateSuffix: normalizeNullableString(product.templateSuffix),
-    description: normalizeNullableString(product.descriptionHtml),
+
+    // IMPORTANT: keep this aligned with compiler/query layer
+    descriptionText: normalizeNullableString(product.descriptionHtml),
+    descriptionHtml: normalizeNullableString(product.descriptionHtml),
+
     createdAt: product.createdAt ? new Date(product.createdAt) : null,
     updatedAt: product.updatedAt ? new Date(product.updatedAt) : null,
     publishedAt: product.publishedAt ? new Date(product.publishedAt) : null,
+
     seoTitle: normalizeNullableString(product.seo?.title),
     seoDescription: normalizeNullableString(product.seo?.description),
+
     totalInventory: normalizeNullableInt(product.totalInventory) ?? 0,
     categoryId: normalizeNullableString(product.category?.id),
     categoryName: normalizeNullableString(product.category?.name),
+
     ...extendedFields,
+
     featuredImageUrl: normalizeNullableString(
       product.featuredMedia?.preview?.image?.url,
     ),
     featuredImageAltText: normalizeNullableString(
       product.featuredMedia?.alt || product.featuredMedia?.preview?.image?.altText,
     ),
+
     optionsJson: options,
-    collectionsJson: Array.isArray(product.collections) ? product.collections : [],
+    collectionsJson: collections,
+
     option1Name: getOptionNameByPosition(options, 1),
     option2Name: getOptionNameByPosition(options, 2),
     option3Name: getOptionNameByPosition(options, 3),
+
     variantCount: variants.length,
     visibleOnlineStore: !!product.onlineStoreUrl,
   };

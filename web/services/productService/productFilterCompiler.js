@@ -218,27 +218,30 @@ export function buildPrismaCollectionFilter(operator, value) {
     case "equals":
     case "is":
       return {
-        collectionsJson: {
-          path: "$[*].title",
-          array_contains: [value],
+        collections: {
+          some: {
+            collection: {
+              title: {
+                equals: value,
+                mode: "insensitive",
+              },
+            },
+          },
         },
       };
 
     case "contains":
       return {
-        OR: [
-          {
-            collectionsJson: {
-              path: "$[*].title",
-              array_contains: [value],
+        collections: {
+          some: {
+            collection: {
+              title: {
+                contains: value,
+                mode: "insensitive",
+              },
             },
           },
-          {
-            collectionsJson: {
-              string_contains: value,
-            },
-          },
-        ],
+        },
       };
 
     case "does not equal":
@@ -246,26 +249,32 @@ export function buildPrismaCollectionFilter(operator, value) {
     case "does not contain":
       return {
         NOT: {
-          OR: [
-            {
-              collectionsJson: {
-                path: "$[*].title",
-                array_contains: [value],
+          collections: {
+            some: {
+              collection: {
+                title: {
+                  contains: value,
+                  mode: "insensitive",
+                },
               },
             },
-            {
-              collectionsJson: {
-                string_contains: value,
-              },
-            },
-          ],
+          },
         },
       };
 
     case "is empty":
     case "is empty/blank":
       return {
-        OR: [{ collectionsJson: null }, { collectionsJson: { equals: [] } }],
+        collections: {
+          none: {},
+        },
+      };
+
+    case "is not empty":
+      return {
+        collections: {
+          some: {},
+        },
       };
 
     default:
@@ -292,7 +301,7 @@ export function getProductPrismaWhere(filterParams = [], shop) {
             { vendor: { contains: value, mode: "insensitive" } },
             { productType: { contains: value, mode: "insensitive" } },
             { handle: { contains: value, mode: "insensitive" } },
-            { description: { contains: value, mode: "insensitive" } },
+            { descriptionText: { contains: value, mode: "insensitive" } },
             { categoryName: { contains: value, mode: "insensitive" } },
           ],
         });
@@ -311,7 +320,7 @@ export function getProductPrismaWhere(filterParams = [], shop) {
         break;
 
       case "description":
-        AND.push(buildPrismaStringFilter("description", operator, value));
+        AND.push(buildPrismaStringFilter("descriptionText", operator, value));
         break;
 
       case "product_type":
@@ -666,7 +675,7 @@ export function getProductPrismaWhere(filterParams = [], shop) {
 
       case "seo":
       case "seo_visibility":
-        if (value === "true") {
+        if (String(value).toLowerCase() === "true") {
           AND.push({
             OR: [{ seoTitle: { not: null } }, { seoDescription: { not: null } }],
           });

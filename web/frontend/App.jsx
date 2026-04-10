@@ -4,6 +4,7 @@ import { NavMenu } from "@shopify/app-bridge-react";
 import { useEffect, useState } from "react";
 import Routes from "./Routes";
 import { QueryProvider, PolarisProvider } from "./components";
+import { Link } from "react-router-dom";
 
 import "./app.css";
 
@@ -23,22 +24,19 @@ export default function App() {
     <PolarisProvider>
       <BrowserRouter>
         <QueryProvider>
-          <NavMenu>
-            <a href="/" rel="home">
-              {t("Home")}
-            </a>
-            {!isSyncing && (
-              <>
-                <a href="/products">{t("Products")}</a>
-                <a href="/history">{t("History")}</a>
-                {/* <a href="/product-code-snippets">{t("Snippet Studio")}</a> */}
-                <a href="/refresh">{t("SyncData")}</a>
-                <a href="/spreadsheet">{t("Spreadsheet Edit")}</a>
-                <a href="/suggestionpage">{t("Suggestion")}</a>
-                <a href="/pricing">{t("Pricing")}</a>
-              </>
-            )}
-          </NavMenu>
+         <NavMenu>
+  <Link to="/" rel="home">{t("Home")}</Link>
+  {!isSyncing && (
+    <>
+      <Link to="/products">{t("Products")}</Link>
+      <Link to="/history">{t("History")}</Link>
+      <Link to="/refresh">{t("SyncData")}</Link>
+      <Link to="/spreadsheet">{t("Spreadsheet Edit")}</Link>
+      <Link to="/suggestionpage">{t("Suggestion")}</Link>
+      <Link to="/pricing">{t("Pricing")}</Link>
+    </>
+  )}
+</NavMenu>
 
           <Routes pages={pages} data={{ setIsSyncing }} />
         </QueryProvider>

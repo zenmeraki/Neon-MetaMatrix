@@ -1,11 +1,18 @@
 // utils/uploadCsvToCloudinary.js
 import cloudinary from "../Config/cloudinary.js";
 
-export const uploadCsvToCloudinary = async (filePath, exportJobId, filename) => {
-  // Strip .csv extension for public_id (Cloudinary appends it automatically for raw files)
-  const publicId = filename
-    ? filename.replace(/\.csv$/i, "")
-    : `export-${exportJobId}`;
+export const uploadCsvToCloudinary = async (
+  filePath,
+  exportJobId,
+  filename
+) => {
+  const publicId = (
+    filename
+      ? filename.replace(/\.csv$/i, "")
+      : `export-${exportJobId}`
+  )
+    .trim()               // remove trailing spaces
+    .replace(/\s+/g, "-"); // replace spaces with dash
 
   const result = await cloudinary.uploader.upload(filePath, {
     resource_type: "raw",

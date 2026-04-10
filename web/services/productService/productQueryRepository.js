@@ -1,3 +1,4 @@
+//services/productService/productQueryRepository.js
 import { Prisma } from "../../generated/prisma/index.js";
 import { prisma } from "../../config/database.js";
 

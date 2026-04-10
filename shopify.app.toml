@@ -1,16 +1,16 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-client_id = "6c1a39944a4ab6bdd6e4428ccceb028b"
-name = "new"
-application_url = "https://managing-brandon-shares-out.trycloudflare.com"
+client_id = "8080a194096cb602f516d4bb1841df93"
+name = "test-meta-new"
+application_url = "https://cold-sagem-reno-cent.trycloudflare.com"
 embedded = true
-handle = "new-270"
+handle = "test-meta-new"
 
 [webhooks]
 api_version = "2025-04"
 
   [[webhooks.subscriptions]]
-  topics = [ "bulk_operations/finish", "products/create" ]
+  topics = [ "products/create", "bulk_operations/finish" ]
   uri = "https://a50e-2409-4073-307-d512-1554-bf40-8d5f-a82.ngrok-free.app/api/webhooks"
 
   [[webhooks.subscriptions]]
@@ -27,22 +27,21 @@ api_version = "2025-04"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "read_inventory,read_locations,read_products,write_inventory,write_products"
+scopes = "read_locations,read_products,write_products"
+optional_scopes = [ ]
+use_legacy_install_flow = false
 
 [auth]
 redirect_urls = [
-  "https://managing-brandon-shares-out.trycloudflare.com/auth/callback",
-  "https://managing-brandon-shares-out.trycloudflare.com/auth/shopify/callback",
-  "https://managing-brandon-shares-out.trycloudflare.com/api/auth/callback"
+  "https://cold-sagem-reno-cent.trycloudflare.com/auth/callback",
+  "https://cold-sagem-reno-cent.trycloudflare.com/auth/shopify/callback",
+  "https://cold-sagem-reno-cent.trycloudflare.com/api/auth/callback"
 ]
 
 [app_proxy]
-url = "https://impression-receive-wallace-surprised.trycloudflare.com/storefront/subscription"
+url = "https://automatic-learners-excluded-decorative.trycloudflare.com/storefront/subscription"
 subpath = "proxy"
 prefix = "apps"
-
-[pos]
-embedded = false
 
 [build]
 automatically_update_urls_on_dev = true

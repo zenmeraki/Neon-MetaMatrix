@@ -1,4 +1,4 @@
-export const graphqlProductsAllFieldQuery = `{
+export const graphqlProductsBulkSyncQuery = `{
   products {
     edges {
       node {
@@ -30,7 +30,6 @@ export const graphqlProductsAllFieldQuery = `{
           name
         }
 
-        
         metafields(first: 100) {
           edges {
             node {
@@ -121,3 +120,99 @@ export const graphqlProductsAllFieldQuery = `{
     }
   }
 }`;
+
+export const graphqlProductsExportQuery = `
+  query ProductsExport($first: Int!, $after: String, $query: String) {
+    products(first: $first, after: $after, query: $query) {
+      edges {
+        node {
+          id
+          title
+          handle
+          status
+          productType
+          vendor
+          tags
+          templateSuffix
+          createdAt
+          updatedAt
+          publishedAt
+          onlineStoreUrl
+          descriptionHtml
+
+          seo {
+            title
+            description
+          }
+
+          totalInventory
+
+          category {
+            id
+            name
+          }
+
+          featuredMedia {
+            ... on MediaImage {
+              id
+              alt
+              preview {
+                image {
+                  url
+                  altText
+                }
+              }
+            }
+          }
+
+          variants(first: 100) {
+            edges {
+              node {
+                id
+                title
+                sku
+                barcode
+                price
+                compareAtPrice
+                inventoryQuantity
+                inventoryPolicy
+                taxable
+                taxCode
+                position
+
+                selectedOptions {
+                  name
+                  value
+                }
+
+                inventoryItem {
+                  tracked
+                  requiresShipping
+
+                  unitCost {
+                    amount
+                  }
+
+                  countryCodeOfOrigin
+                  harmonizedSystemCode
+
+                  measurement {
+                    weight {
+                      value
+                      unit
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+`;
