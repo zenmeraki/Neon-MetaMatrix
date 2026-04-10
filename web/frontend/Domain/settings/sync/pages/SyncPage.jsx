@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo , useRef} from "react";
 import {
   Badge,
   Banner,
@@ -33,6 +33,7 @@ export default function DataSyncPage() {
   const [syncingItem, setSyncingItem] = useState("");
   const [shouldPoll, setShouldPoll] = useState(false);
   const [waitingForSync, setWaitingForSync] = useState(false);
+  const wasSyncingRef = useRef(false);
 
   const showToast = (message, error = false) =>
     setToast({ active: true, message, error });
@@ -78,11 +79,19 @@ export default function DataSyncPage() {
     dataSources?.isProductTypeSyncing ||
     dataSources?.isCollectionSyncing;
 
+useEffect(() => {
+  if (dataSources && syncingItem && !isAnySyncRunning) {
+    setSyncingItem("");
+  }
+}, [dataSources, isAnySyncRunning, syncingItem]);
+
   useEffect(() => {
-    if (dataSources && syncingItem && !isAnySyncRunning) {
-      setSyncingItem("");
-    }
-  }, [dataSources, isAnySyncRunning, syncingItem]);
+   const isSyncing = isAnySyncRunning || waitingForSync;
+   if (wasSyncingRef.current && !isSyncing && dataSources) {
+     showToast("Sync completed successfully ✓");
+   }
+   wasSyncingRef.current = Boolean(isSyncing);
+ }, [isAnySyncRunning, waitingForSync, dataSources]);
 
   const handleRefresh = async (row) => {
     if (isAnySyncRunning || syncingItem) {
@@ -95,7 +104,7 @@ export default function DataSyncPage() {
     setShouldPoll(true);
 
     try {
-      const response = await fetch(row.api);
+      const response = await fetch(`${row.api}?force=true`);
       const result = await response.json();
       if (!response.ok) throw new Error(result?.error);
       showToast(`${row.name} sync started`);
@@ -125,13 +134,13 @@ export default function DataSyncPage() {
     (name) => {
       if (!dataSources) return null;
       const map = {
-        Products: dataSources.isProductSyncing,
+        Products: dataSources.isProductSyncing || waitingForSync || syncingItem === "Products",
         "Product Types": dataSources.isProductTypeSyncing,
         Collections: dataSources.isCollectionSyncing,
       };
      return map[name] ? t("syncing") : t("synced");
     },
-    [dataSources],
+    [dataSources, waitingForSync, syncingItem, t],
   );
 
   const summaryTone = isAnySyncRunning || waitingForSync ? "warning" : "success";
@@ -179,7 +188,7 @@ export default function DataSyncPage() {
           </Box>
         </Card>
       )),
-    [dataSources, getDate, getStatus, isAnySyncRunning, syncingItem, t],
+    [dataSources, getDate, getStatus, isAnySyncRunning, syncingItem, waitingForSync, t],
   );
 
   return (

@@ -6,34 +6,43 @@ application_url = "https://managing-brandon-shares-out.trycloudflare.com"
 embedded = true
 handle = "new-270"
 
+
 [webhooks]
 api_version = "2025-04"
 
   [[webhooks.subscriptions]]
-  topics = [ "bulk_operations/finish", "products/create" ]
-  uri = "https://a50e-2409-4073-307-d512-1554-bf40-8d5f-a82.ngrok-free.app/api/webhooks"
 
-  [[webhooks.subscriptions]]
-  uri = "https://contributing-cole-senate-dried.trycloudflare.com/gdpr/customer_data_erasure"
-  compliance_topics = [ "customers/redact" ]
-
-  [[webhooks.subscriptions]]
-  uri = "https://contributing-cole-senate-dried.trycloudflare.com/gdpr/customer_data_request"
-  compliance_topics = [ "customers/data_request" ]
-
-  [[webhooks.subscriptions]]
-  uri = "https://contributing-cole-senate-dried.trycloudflare.com/gdpr/shop_data_erasure"
-  compliance_topics = [ "shop/redact" ]
+  topics = [
+  "app/uninstalled",
+  "inventory_items/update",
+  "inventory_items/create",
+  "collections/update",
+  "shop/update",
+  "collections/delete",
+  "inventory_levels/update",
+  "products/update",
+  "inventory_levels/connect",
+  "collections/create",
+  "products/create",
+  "products/delete",
+  "inventory_items/delete",
+  "inventory_levels/disconnect",
+  "bulk_operations/finish"
+]
+  uri = "/api/webhooks"
+  compliance_topics = [ "customers/data_request", "customers/redact", "shop/redact" ]
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "read_inventory,read_locations,read_products,write_inventory,write_products"
+scopes = "read_inventory,read_locations,read_metaobjects,read_products,write_products"
+optional_scopes = [ ]
+use_legacy_install_flow = false
 
 [auth]
 redirect_urls = [
-  "https://managing-brandon-shares-out.trycloudflare.com/auth/callback",
-  "https://managing-brandon-shares-out.trycloudflare.com/auth/shopify/callback",
-  "https://managing-brandon-shares-out.trycloudflare.com/api/auth/callback"
+  "https://remember-farmer-challenge-abs.trycloudflare.com/auth/callback",
+  "https://remember-farmer-challenge-abs.trycloudflare.com/auth/shopify/callback",
+  "https://remember-farmer-challenge-abs.trycloudflare.com/api/auth/callback"
 ]
 
 [app_proxy]
