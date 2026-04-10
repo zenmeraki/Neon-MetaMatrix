@@ -12,9 +12,7 @@ export default function CsvUploader({ file, onDrop, onRemove }) {
                 <Box padding="600">
                     <Text alignment="center">
                         <Icon source={UploadIcon} />
-                        {t("spreadsheetDropzone", {
-                            defaultValue: "Drag & drop CSV file or click to upload",
-                        })}
+                        {t("spreadsheetDropzone",)}
                     </Text>
                 </Box>
             )}

@@ -861,5 +861,8 @@
   "historyUndoCompleted": "पूर्ववत पूरा हुआ",
   "historyUndoFailed": "पूर्ववत करना विफल रहा",
   "historyUndoProcessing": "प्रसंस्करण पूर्ववत करें",
-  "historyUndoQueued": "कतारबद्ध पूर्ववत करें"
+  "historyUndoQueued": "कतारबद्ध पूर्ववत करें",
+  "spreadsheetDropzone": "खींचना",
+
+  "neverSynced": "कभी सिंक नहीं किया गया"
 }

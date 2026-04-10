@@ -859,5 +859,6 @@
   "historyUndoCompleted": "Desfazer concluído",
   "historyUndoFailed": "Falha ao desfazer",
   "historyUndoProcessing": "Desfazer processamento",
-  "historyUndoQueued": "Desfazer fila"
+  "historyUndoQueued": "Desfazer fila",
+  "spreadsheetDropzone": "Arrastar"
 }

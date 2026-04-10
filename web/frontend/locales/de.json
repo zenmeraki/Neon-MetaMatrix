@@ -859,5 +859,8 @@
   "historyUndoCompleted": "Rückgängigmachen abgeschlossen",
   "historyUndoFailed": "Rückgängig machen fehlgeschlagen",
   "historyUndoProcessing": "Bearbeitung rückgängig machen",
-  "historyUndoQueued": "Rückgängig machen in der Warteschlange"
+  "historyUndoQueued": "Rückgängig machen in der Warteschlange",
+  "spreadsheetDropzone": "Ziehen",
+
+  "neverSynced": "Nie synchronisiert"
 }

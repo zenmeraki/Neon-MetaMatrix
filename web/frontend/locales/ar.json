@@ -873,5 +873,8 @@
   "historyUndoCompleted": "تم التراجع",
   "historyUndoFailed": "فشل التراجع",
   "historyUndoProcessing": "التراجع عن المعالجة",
-  "historyUndoQueued": "التراجع عن قائمة الانتظار"
+  "historyUndoQueued": "التراجع عن قائمة الانتظار",
+  "spreadsheetDropzone": "يجر",
+  
+  "neverSynced": "لم تتم المزامنة مطلقًا"
 }

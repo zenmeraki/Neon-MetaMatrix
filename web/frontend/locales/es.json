@@ -859,5 +859,8 @@
   "historyUndoCompleted": "Deshacer completado",
   "historyUndoFailed": "Error al deshacer",
   "historyUndoProcessing": "Deshacer procesamiento",
-  "historyUndoQueued": "Deshacer en cola"
+  "historyUndoQueued": "Deshacer en cola",
+  "spreadsheetDropzone": "Arrastrar",
+
+  "neverSynced": "Nunca sincronizado"
 }

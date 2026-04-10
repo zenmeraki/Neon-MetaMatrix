@@ -649,7 +649,7 @@
   "mirrorDetailsTitle": "Mirror details",
   "mirrorDetailsText": "Product sync refreshes the mirrored catalog used for filtering, previews, exports, and edit planning.",
   "syncRefreshHint": "Run a refresh whenever catalog changes in Shopify need to appear in your app workspace before the next planned operation.",
-  "refreshButton": "Refresh",
+  "refreshButton": "Sync",
   "syncBadgeInProgress": "Sync in progress",
   "syncBadgeReady": "Mirror ready",
   "historyOverviewText": "Review edit activity, export runs, and background work from one organized workspace.",
@@ -873,5 +873,8 @@
   "historyUndoCompleted": "Undo completed",
   "historyUndoFailed": "Undo failed",
   "historyUndoProcessing": "Undo processing",
-  "historyUndoQueued": "Undo queued"
+  "historyUndoQueued": "Undo queued",
+  "spreadsheetDropzone": "Drag & drop CSV file or click to upload",
+
+  "neverSynced": "Never Synced"
 }

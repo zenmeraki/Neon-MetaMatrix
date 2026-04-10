@@ -859,5 +859,8 @@
   "historyUndoCompleted": "元に戻すが完了しました",
   "historyUndoFailed": "元に戻すことができませんでした",
   "historyUndoProcessing": "アンドゥ処理",
-  "historyUndoQueued": "元に戻すキューに入れられました"
+  "historyUndoQueued": "元に戻すキューに入れられました",
+  "spreadsheetDropzone": "ドラッグ"
+
 }
+

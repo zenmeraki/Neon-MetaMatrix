@@ -859,5 +859,6 @@
   "historyUndoCompleted": "撤消已完成",
   "historyUndoFailed": "撤消失败",
   "historyUndoProcessing": "撤消处理",
-  "historyUndoQueued": "撤消排队"
+  "historyUndoQueued": "撤消排队",
+  "spreadsheetDropzone": "拖"
 }

@@ -858,5 +858,8 @@
   "historyUndoCompleted": "Annuler terminé",
   "historyUndoFailed": "Échec de l'annulation",
   "historyUndoProcessing": "Annuler le traitement",
-  "historyUndoQueued": "Annuler la file d'attente"
+  "historyUndoQueued": "Annuler la file d'attente",
+  "spreadsheetDropzone": "Traîner",
+
+  "neverSynced": "Jamais synchronisé"
 }

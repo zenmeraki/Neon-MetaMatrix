@@ -859,5 +859,7 @@
   "historyUndoCompleted": "실행취소 완료",
   "historyUndoFailed": "실행취소 실패",
   "historyUndoProcessing": "실행 취소 처리",
-  "historyUndoQueued": "실행 취소 대기 중"
+  "historyUndoQueued": "실행 취소 대기 중",
+  "spreadsheetDropzone": "견인"
 }
+

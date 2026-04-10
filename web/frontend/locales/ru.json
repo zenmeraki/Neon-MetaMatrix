@@ -859,5 +859,6 @@
   "historyUndoCompleted": "Отмена завершена",
   "historyUndoFailed": "Отменить не удалось",
   "historyUndoProcessing": "Отменить обработку",
-  "historyUndoQueued": "Отменить в очереди"
+  "historyUndoQueued": "Отменить в очереди",
+  "spreadsheetDropzone": "Тащить"
 }
