@@ -19,15 +19,16 @@ export const syncProductData = async (req, res) => {
       });
     }
 
+        console.log(`[api:sync_request] shop=${session.shop} force=${req.query.force || req.body?.force}`);
+
     const currentBulkOperation = await getCurrentBulkOperationStatus(
       session,
       "QUERY",
     );
 
-    if (currentBulkOperation?.status === "RUNNING") {
-      return res.status(400).json({
-        message: "Another operation is running in background",
-      });
+     if (currentBulkOperation?.status === "RUNNING") {
+      console.log(`[api:sync_blocked] shop=${session.shop} reason=bulk_op_running`);
+      return res.status(400).json({ message: "Another operation is running in background" });
     }
 
     const force =
@@ -95,6 +96,7 @@ export const syncProductData = async (req, res) => {
       session,
       isInitialSync: false,
     });
+    console.log(`[api:sync_triggered] shop=${session.shop} bulkOperationId=${result.bulkOperationId} syncHistoryId=${result.syncHistoryId}`);
 
     await clearKeyCaches(`${session.shop}:sync_details`);
 
@@ -254,11 +256,8 @@ export const trackProductSync = async (req, res) => {
     const session = res.locals?.shopify?.session;
     const shop = session?.shop;
 
-    if (!shop) {
-      return res.status(401).json({
-        success: false,
-        error: "Shopify session missing",
-      });
+   if (!shop) {
+      return res.status(401).json({ success: false, error: "Shopify session missing" });
     }
 
     const storeDetails = await prisma.store.findUnique({
@@ -384,6 +383,13 @@ export const trackProductSync = async (req, res) => {
           : 0,
     });
   } catch (error) {
+     await logApiError({
+      shop: session?.shop,   // session is already in scope from the try block
+      err: error,
+      req,
+      source: "syncController.trackProductSync",
+    });
+
     return res.status(500).json({
       error: "Internal Server Error",
       message: error.message,

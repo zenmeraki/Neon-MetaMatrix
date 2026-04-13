@@ -92,7 +92,6 @@ export class Services {
     session,
     syncBatchId,
     syncHistoryId = null,
-    replaceShopData = true,
   }) {
     return formatAndSyncProductsToDB({
       dataStream,
@@ -100,7 +99,6 @@ export class Services {
       session,
       syncBatchId,
       syncHistoryId,
-      replaceShopData,
     });
   }
 }

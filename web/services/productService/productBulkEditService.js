@@ -110,6 +110,12 @@ function normalizeMirrorProductForPreview(rawProduct) {
 
   return {
     ...rawProduct,
+    descriptionHtml: rawProduct.descriptionHtml ?? null,
+  descriptionText: rawProduct.descriptionText ?? null,
+  description:
+    rawProduct.descriptionHtml ??
+    rawProduct.descriptionText ??
+    "",
     options,
     variants,
     seo: {
@@ -583,6 +589,12 @@ export default class ProductBulkService {
 
       const product = {
         ...rawProduct,
+         descriptionHtml: rawProduct.descriptionHtml ?? null,
+  descriptionText: rawProduct.descriptionText ?? null,
+  description:
+    rawProduct.descriptionHtml ??
+    rawProduct.descriptionText ??
+    "",
         options: Array.isArray(rawProduct.options)
           ? rawProduct.options
           : Array.isArray(rawProduct.optionsJson)

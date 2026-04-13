@@ -27,8 +27,10 @@ export async function startBulkOperationToFetchProducts({
   session,
   isInitialSync = false,
 }) {
-  const { bulkOperationId, responseBody } = await runProductBulkFetch({ session });
+  console.log(`[sync:start] shop=${session.shop} isInitialSync=${isInitialSync}`);
 
+  const { bulkOperationId, responseBody } = await runProductBulkFetch({ session });
+  console.log(`[sync:bulk_created] shop=${session.shop} bulkOperationId=${bulkOperationId}`);
   await markProductSyncStarted({ shop: session.shop });
   await setStoreSyncQueued({ shop: session.shop, isInitialSync });
   await clearProductSyncCache(session.shop);
@@ -38,6 +40,9 @@ export async function startBulkOperationToFetchProducts({
     bulkOperationId,
     isInitialSync,
   });
+
+  console.log(`[sync:history_created] shop=${session.shop} syncHistoryId=${syncHistory.id} syncBatchId=${syncHistory.syncBatchId}`);
+
 
   return {
     message: "Bulk product sync started",
@@ -55,6 +60,12 @@ export async function formatAndSyncProductsToDB({
   syncBatchId,
   syncHistoryId = null,
 }) {
+  if (!syncBatchId) {
+    throw new Error("syncBatchId is required for staged product sync");
+  }
+
+  console.log(`[sync:stream_start] shop=${shop} syncBatchId=${syncBatchId} syncHistoryId=${syncHistoryId}`);
+
   let metaobjectLookup = new Map();
 
   try {
@@ -98,6 +109,9 @@ export async function formatAndSyncProductsToDB({
       totalProductsProcessed += productRows.length;
       totalVariantsProcessed += variantRows.length;
 
+      console.log(`[sync:flush] shop=${shop} totalProductsProcessed=${totalProductsProcessed} totalVariantsProcessed=${totalVariantsProcessed}`);
+
+
       if (totalProductsProcessed > 0 && totalProductsProcessed % 5000 === 0) {
         await updateInitialSyncProgress({ shop, totalProductsProcessed });
       }
@@ -108,8 +122,15 @@ export async function formatAndSyncProductsToDB({
       crlfDelay: Infinity,
     });
 
+    let lineCount = 0;
     for await (const line of rl) {
       if (!line.trim()) continue;
+      lineCount++;
+
+      // Log every 10k lines so you can see the stream is moving
+      if (lineCount % 10000 === 0) {
+        console.log(`[sync:stream_reading] shop=${shop} linesRead=${lineCount} productsMapSize=${productsMap.size}`);
+      }
 
       let json;
       try {
@@ -193,24 +214,29 @@ export async function formatAndSyncProductsToDB({
       }
     }
 
-    if (!syncBatchId) {
-      throw new Error("syncBatchId is required for staged product sync");
-    }
+    console.log(`[sync:stream_done] shop=${shop} totalLinesRead=${lineCount} uniqueProducts=${productsMap.size} referencedMetaobjects=${referencedMetaobjectIds.size}`);
+
 
     if (session?.accessToken && referencedMetaobjectIds.size > 0) {
+      console.log(`[sync:metaobjects_start] shop=${shop} count=${referencedMetaobjectIds.size}`);
+
       try {
         metaobjectLookup = await fetchMetaobjectLookupByIds(
           session,
           Array.from(referencedMetaobjectIds),
         );
+        console.log(`[sync:metaobjects_done] shop=${shop} resolved=${metaobjectLookup.size}`);
+
       } catch (error) {
         console.error(
           `Failed to resolve metaobject labels for shop ${shop}: ${error.message}`,
         );
       }
     }
+    console.log(`[sync:staging_start] shop=${shop} syncBatchId=${syncBatchId}`);
 
     await stageProductMirrorBatch({ shop, syncBatchId, syncHistoryId });
+    console.log(`[sync:staging_done] shop=${shop}`);
 
     for (const product of productsMap.values()) {
       productBatch.push(product);
@@ -222,6 +248,9 @@ export async function formatAndSyncProductsToDB({
 
     await flushProductsAndVariants();
 
+    console.log(`[sync:activating] shop=${shop} syncBatchId=${syncBatchId} totalProductsProcessed=${totalProductsProcessed}`);
+
+
     await activateProductMirrorBatch({
       shop,
       syncBatchId,
@@ -229,13 +258,20 @@ export async function formatAndSyncProductsToDB({
       syncHistoryId,
     });
 
+    console.log(`[sync:complete] shop=${shop} syncBatchId=${syncBatchId} totalProductsProcessed=${totalProductsProcessed} totalVariantsProcessed=${totalVariantsProcessed}`);
+
+
     return {
       totalProductsProcessed,
       totalVariantsProcessed,
       syncBatchId,
     };
   } catch (error) {
+     console.error(`[sync:failed] shop=${shop} syncBatchId=${syncBatchId} syncHistoryId=${syncHistoryId} error=${error.message}`);
+    console.error(error.stack);
+    
     await markSyncHistoryFailed({
+      shop,
       syncHistoryId,
       errorMessage: error.message,
     });

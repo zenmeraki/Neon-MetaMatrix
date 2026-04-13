@@ -101,7 +101,9 @@ function mergeProductForBulkMirror(existing, incoming) {
         ? existing.tags
         : [],
     templateSuffix: preferIncomingOrExisting(incoming.templateSuffix, existing?.templateSuffix ?? null),
-    description: preferIncomingOrExisting(incoming.description, existing?.description ?? null),
+    descriptionHtml: preferIncomingOrExisting(incoming.descriptionHtml, existing?.descriptionHtml ?? null),
+    descriptionText: preferIncomingOrExisting(incoming.descriptionText, existing?.descriptionText ?? null),
+
     createdAt: preferIncomingOrExisting(incoming.createdAt, existing?.createdAt ?? null),
     updatedAt: preferIncomingOrExisting(incoming.updatedAt, existing?.updatedAt ?? null),
     publishedAt: preferIncomingOrExisting(incoming.publishedAt, existing?.publishedAt ?? null),
@@ -162,7 +164,8 @@ function toProductCreateInput(product, variants, mirrorBatchId = "legacy") {
     vendor: product.vendor ?? null,
     tags: asArray(product.tags),
     templateSuffix: product.templateSuffix ?? null,
-    description: product.description ?? null,
+     descriptionHtml: product.descriptionHtml ?? null,
+    descriptionText: product.descriptionText ?? null,
     createdAt: product.createdAt ?? null,
     updatedAt: product.updatedAt ?? null,
     publishedAt: product.publishedAt ?? null,
@@ -346,7 +349,8 @@ async function applyBulkMirrorUpdates(history, bulkOperation) {
             vendor: true,
             tags: true,
             templateSuffix: true,
-            description: true,
+            descriptionHtml: true,    // ← fixed
+            descriptionText: true,
             createdAt: true,
             updatedAt: true,
             publishedAt: true,
@@ -572,83 +576,83 @@ export async function handleProductEditOperation({ bulkOperationId, shop = null 
   }
 
   try {
-  const history = await prisma.editHistory.findFirst({
-    where: {
-      bulkOperationId,
-      ...(shop ? { shop } : {}),
-    },
-  });
+    const history = await prisma.editHistory.findFirst({
+      where: {
+        bulkOperationId,
+        ...(shop ? { shop } : {}),
+      },
+    });
 
-  if (!history) {
-    return { success: false, reason: "history_not_found" };
-  }
-
-  const claimKind = await claimBulkEditFinalization(history);
-  if (!claimKind) {
-    const undo = normalizeUndoState(history.undo);
-    if (
-      isTerminalExecutionState(history.executionState) &&
-      (!undo.state || isTerminalUndoState(undo.state))
-    ) {
-      return { success: true, skipped: true, reason: "already_finalized" };
+    if (!history) {
+      return { success: false, reason: "history_not_found" };
     }
 
-    return { success: true, skipped: true, reason: "not_claimable" };
-  }
+    const claimKind = await claimBulkEditFinalization(history);
+    if (!claimKind) {
+      const undo = normalizeUndoState(history.undo);
+      if (
+        isTerminalExecutionState(history.executionState) &&
+        (!undo.state || isTerminalUndoState(undo.state))
+      ) {
+        return { success: true, skipped: true, reason: "already_finalized" };
+      }
 
-  const session = await getSession(history.shop);
-  const bulkOperation = await fetchBulkOperationDetails(session, bulkOperationId);
-  const hasFailure =
-    bulkOperation?.errorCode ||
-    ["FAILED", "CANCELED", "CANCELING"].includes(bulkOperation?.status);
+      return { success: true, skipped: true, reason: "not_claimable" };
+    }
 
-  if (hasFailure || bulkOperation?.partialDataUrl) {
-    await markProcessingBatchStatus(
-      history.processingBatchId,
-      bulkOperation?.partialDataUrl ? "partial" : "failed",
-    );
+    const session = await getSession(history.shop);
+    const bulkOperation = await fetchBulkOperationDetails(session, bulkOperationId);
+    const hasFailure =
+      bulkOperation?.errorCode ||
+      ["FAILED", "CANCELED", "CANCELING"].includes(bulkOperation?.status);
 
-    await markHistoryFailure(
-      history,
-      bulkOperation,
-      bulkOperation?.partialDataUrl
-        ? "Shopify bulk operation completed with partial failures"
-        : "Shopify bulk operation failed",
-      claimKind === "undo" ? "undo_bulk_mutation" : "shopify_bulk_mutation",
-      claimKind,
-    );
+    if (hasFailure || bulkOperation?.partialDataUrl) {
+      await markProcessingBatchStatus(
+        history.processingBatchId,
+        bulkOperation?.partialDataUrl ? "partial" : "failed",
+      );
+
+      await markHistoryFailure(
+        history,
+        bulkOperation,
+        bulkOperation?.partialDataUrl
+          ? "Shopify bulk operation completed with partial failures"
+          : "Shopify bulk operation failed",
+        claimKind === "undo" ? "undo_bulk_mutation" : "shopify_bulk_mutation",
+        claimKind,
+      );
+
+      if (claimKind === "edit") {
+        await finalizeRecurringRunFromHistory({
+          historyId: history.id,
+          status: "FAILED",
+          errorMessage: "Shopify bulk operation failed",
+        });
+
+        await finalizeAutomaticProductRuleRunFromHistory({
+          historyId: history.id,
+          status: "FAILED",
+          errorMessage: "Shopify bulk operation failed",
+        });
+      }
+
+      await clearKeyCaches(`${history.shop}:historyDetails:${history.id}`);
+      return { success: false, reason: "bulk_operation_failed" };
+    }
+
+    await applyBulkMirrorUpdates(history, bulkOperation);
 
     if (claimKind === "edit") {
-      await finalizeRecurringRunFromHistory({
-        historyId: history.id,
-        status: "FAILED",
-        errorMessage: "Shopify bulk operation failed",
-      });
-
-      await finalizeAutomaticProductRuleRunFromHistory({
-        historyId: history.id,
-        status: "FAILED",
-        errorMessage: "Shopify bulk operation failed",
-      });
+      const result = await finalizeEditSuccess(history);
+      await clearKeyCaches(`${history.shop}:historyDetails:${history.id}`);
+      return { success: true, continued: result.continued, kind: "edit" };
     }
 
+    const result = await finalizeUndoSuccess(history);
     await clearKeyCaches(`${history.shop}:historyDetails:${history.id}`);
-    return { success: false, reason: "bulk_operation_failed" };
-  }
-
-  await applyBulkMirrorUpdates(history, bulkOperation);
-
-  if (claimKind === "edit") {
-    const result = await finalizeEditSuccess(history);
-    await clearKeyCaches(`${history.shop}:historyDetails:${history.id}`);
-    return { success: true, continued: result.continued, kind: "edit" };
-  }
-
-  const result = await finalizeUndoSuccess(history);
-  await clearKeyCaches(`${history.shop}:historyDetails:${history.id}`);
-  return { success: true, continued: result.continued, kind: "undo" };
+    return { success: true, continued: result.continued, kind: "undo" };
   } finally {
-    await releaseBulkOperationFinalizeLock(finalizeLockKey).catch(() => {});
+    await releaseBulkOperationFinalizeLock(finalizeLockKey).catch(() => { });
   }
 }
 
@@ -718,7 +722,10 @@ export async function fetchBulkOperationData(url, shop) {
           productType: product.productType ?? null,
           vendor: product.vendor ?? null,
           templateSuffix: product.templateSuffix ?? null,
-          description: product.descriptionHtml ?? null,
+          descriptionHtml: product.descriptionHtml ?? null,
+          descriptionText: product.descriptionHtml
+            ? product.descriptionHtml.replace(/<[^>]*>/g, " ").replace(/\s{2,}/g, " ").trim() || null
+            : null,
           createdAt: product.createdAt ? new Date(product.createdAt) : null,
           updatedAt: product.updatedAt ? new Date(product.updatedAt) : null,
           publishedAt: product.publishedAt ? new Date(product.publishedAt) : null,
