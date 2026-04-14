@@ -888,18 +888,93 @@
   "common": {
     "seconds": "सेकंड"
   },
-
   "historyStatus": {
+    "queued": "कतार में",
+    "dispatching": "भेजने की तैयारी में",
+    "awaiting_shopify": "Shopify में चल रहा है",
+    "finalizing": "अंतिम रूप दिया जा रहा है",
     "completed": "पूर्ण",
+    "partial": "आंशिक रूप से पूर्ण",
     "failed": "विफल",
+    "cancelled": "रद्द",
     "processing": "प्रक्रिया में",
     "pending": "लंबित",
-
-    "finalizing": "अंतिम रूप दिया जा रहा है",
-
-    "undo_processing": "पूर्ववत किया जा रहा है",
+    "running": "फ़ाइल बनाई जा रही है",
+    "undo_queued": "पूर्ववत कतार में",
+    "undo_dispatching": "पूर्ववत भेजने की तैयारी में",
+    "undo_awaiting_shopify": "पूर्ववत Shopify में चल रहा है",
+    "undo_finalizing": "पूर्ववत अंतिम रूप दिया जा रहा है",
     "undo_completed": "पूर्ववत पूर्ण",
+    "undo_partial": "पूर्ववत आंशिक रूप से पूर्ण",
     "undo_failed": "पूर्ववत विफल",
-    "undo_queued": "पूर्ववत कतार में"
-  }
+    "undo_cancelled": "पूर्ववत रद्द",
+    "undo_processing": "पूर्ववत प्रक्रिया में"
+  },
+  "historyStatusDetail": {
+    "queued": "निष्पादन की प्रतीक्षा में।",
+    "dispatching": "अगले Shopify mutation batch की तैयारी हो रही है।",
+    "awaiting_shopify": "Shopify bulk operation के पूरा होने की प्रतीक्षा में।",
+    "finalizing": "पूर्णता के परिणाम सुरक्षित रूप से लागू किए जा रहे हैं।",
+    "processing": "निष्पादन अभी भी चल रहा है।",
+    "partial": "कुछ batch पूरे हुए, लेकिन त्रुटियाँ दर्ज की गईं।",
+    "undo_queued": "इस edit को सुरक्षित रूप से पूर्ववत करने की प्रतीक्षा में।",
+    "undo_dispatching": "Undo mutation batch की तैयारी हो रही है।",
+    "undo_awaiting_shopify": "Shopify undo completion की प्रतीक्षा में।",
+    "undo_finalizing": "Undo completion results सुरक्षित रूप से लागू किए जा रहे हैं।",
+    "undo_processing": "पूर्ववत प्रक्रिया अभी भी चल रही है।",
+    "undo_partial": "पूर्ववत पूरा हुआ, लेकिन त्रुटियाँ दर्ज की गईं।",
+    "export_queued": "निर्यात निष्पादन की प्रतीक्षा में।",
+    "export_running": "निर्यात पंक्तियाँ बनाई जा रही हैं।",
+    "export_finalizing": "अंतिम फ़ाइल अपलोड और completion write प्रगति में है।",
+    "export_partial": "निर्यात पूरा हुआ, लेकिन कुछ समस्याएँ दर्ज की गईं।"
+  },
+  "recurringEditDescriptionPrefix": "यह आवर्ती संपादन वर्तमान फ़िल्टर और संपादन नियम को स्वचालित रूप से फिर से चलाएगा। \nयह वर्तमान में लक्ष्य करता है",
+  "recurringEditDescriptionSuffix": "मेल खाने वाले उत्पाद.",
+  "recurringEditTitleLabel": "शीर्षक",
+  "recurringEditTitlePlaceholder": "इस पुनरावर्ती संपादन के लिए एक नाम दर्ज करें",
+  "recurringEditFrequencyLabel": "आवृत्ति",
+  "recurringEditTimezoneLabel": "समयक्षेत्र",
+  "recurringEditFrequencyOptions": {
+    "Hourly": "हर घंटे",
+    "Every 2 Hours": "हर 2 घंटे",
+    "Daily": "दैनिक",
+    "Weekly": "साप्ताहिक",
+    "Monthly": "मासिक"
+  },
+  "recurringEditTimezoneOptions": {
+    "Asia/Kolkata": "एशिया/कोलकाता (IST)",
+    "UTC": "यूटीसी",
+    "America/New_York": "अमेरिका/न्यूयॉर्क",
+    "America/Los_Angeles": "अमेरिका/लॉस एंजिल्स",
+    "Europe/London": "यूरोप/लंदन"
+  },
+  "recurringEditDefaultField": "उत्पाद",
+  "recurringEditDefaultEditType": "अपडेट",
+  "recurringEditDefaultTitleConnector": "पुनरावर्ती",
+  "recurringEditFields": {
+    "price": "मूल्य",
+    "title": "शीर्षक",
+    "vendor": "विक्रेता",
+    "description": "विवरण",
+    "handle": "हैंडल",
+    "product_type": "उत्पाद प्रकार",
+    "barcode": "बारकोड",
+    "sku": "एसकेयू"
+  },
+  "recurringEditEditTypes": {
+    "Decrease by percent": "प्रतिशत से घटाएँ",
+    "Increase by percent": "प्रतिशत से बढ़ाएँ",
+    "Changed by fixed amount": "निश्चित राशि से बदलें",
+    "Set to fixed value": "निश्चित मान पर सेट करें",
+    "setTextToValue": "पाठ को मान पर सेट करें",
+    "addTextToEnd": "अंत में पाठ जोड़ें",
+    "removeTextFromEnd": "अंत से पाठ हटाएँ",
+    "addTextToBeginning": "शुरुआत में पाठ जोड़ें",
+    "removeTextFromBeginning": "शुरुआत से पाठ हटाएँ",
+    "limitTextLength": "पाठ की लंबाई सीमित करें",
+    "removeTextToEndFromWord": "शब्द से अंत तक पाठ हटाएँ",
+    "removeTextUpToWord": "शब्द तक पाठ हटाएँ",
+    "searchReplace": "खोजें/प्रतिस्थापित करें"
+  },
+  "historyEmptyStateTitle": "अभी तक कोई गतिविधि नहीं"
 }

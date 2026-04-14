@@ -42,6 +42,14 @@ function getPrimaryStatusSummary(item) {
     };
   }
 
+  if (status === "finalizing") {
+    return {
+      key: "finalizing",
+      tone: "info",
+      isTerminal: false,
+    };
+  }
+
   if (status === "processing") {
     return {
       key: "processing",
@@ -118,7 +126,22 @@ const HistoryTable = memo(function HistoryTable({
 
   const getStatusLabel = useCallback(
     (statusKey) => {
-      return t(`historyStatus.${statusKey}`);
+      return t(`historyStatus.${statusKey}`, { defaultValue: statusKey });
+    },
+    [t],
+  );
+
+  const getStatusDetail = useCallback(
+    (status) => {
+      if (!status) return null;
+
+      if (status.detailKey) {
+        return t(status.detailKey, {
+          defaultValue: status.detail || "",
+        });
+      }
+
+      return status.detail || null;
     },
     [t],
   );
@@ -300,6 +323,8 @@ const HistoryTable = memo(function HistoryTable({
         item?.progressSummary?.label ||
         `${item?.processedCount || 0} / ${item?.totalItems || item?.processedCount || 0}`;
 
+      const primaryDetail = getStatusDetail(primaryStatus);
+
       const timeValue =
         isActiveStatus(undoStatus) && item?.undo?.startedAt
           ? item.undo.startedAt
@@ -325,9 +350,9 @@ const HistoryTable = memo(function HistoryTable({
           <Text variant="bodyMd" as="span">
             {progressLabel}
           </Text>
-          {primaryStatus.detail ? (
+          {primaryDetail ? (
             <Text variant="bodySm" tone="subdued" as="span">
-              {primaryStatus.detail}
+              {primaryDetail}
             </Text>
           ) : null}
         </BlockStack>,
@@ -355,7 +380,16 @@ const HistoryTable = memo(function HistoryTable({
         </InlineStack>,
       ];
     });
-  }, [localHistories, canUndo, isSyncInProgress, navigate, renderStatusBadge, handleUndo, t]);
+  }, [
+    localHistories,
+    canUndo,
+    isSyncInProgress,
+    navigate,
+    renderStatusBadge,
+    handleUndo,
+    t,
+    getStatusDetail,
+  ]);
 
   if (isLoading) {
     return (
@@ -382,7 +416,7 @@ const HistoryTable = memo(function HistoryTable({
     return (
       <Card>
         <Box padding="1200">
-          <EmptyState heading="No activity yet">
+          <EmptyState  heading={t("historyEmptyStateTitle")}>
             <p>{emptyStateMessage}</p>
           </EmptyState>
         </Box>

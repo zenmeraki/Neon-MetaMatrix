@@ -883,5 +883,76 @@
   },
   "common": {
     "seconds": "秒"
-  }
+  },
+  "historyStatus": {
+    "queued": "キュー中",
+    "dispatching": "準備中",
+    "awaiting_shopify": "Shopifyで実行中",
+    "finalizing": "最終処理中",
+    "completed": "完了",
+    "partial": "一部完了",
+    "failed": "失敗",
+    "cancelled": "キャンセル",
+    "processing": "処理中",
+    "pending": "保留中",
+    "running": "ファイル作成中",
+    "undo_queued": "元に戻す（キュー中）",
+    "undo_dispatching": "元に戻す準備中",
+    "undo_awaiting_shopify": "Shopifyで元に戻す実行中",
+    "undo_finalizing": "元に戻す最終処理中",
+    "undo_completed": "元に戻す完了",
+    "undo_partial": "元に戻す一部完了",
+    "undo_failed": "元に戻す失敗",
+    "undo_cancelled": "元に戻すキャンセル",
+    "undo_processing": "元に戻す処理中"
+  },
+  "recurringEditDescriptionPrefix": "この繰り返しの編集により、現在のフィルターが再実行され、ルールが自動的に編集されます。\n現在対象としているのは",
+  "recurringEditDescriptionSuffix": "一致する製品。",
+  "recurringEditTitleLabel": "タイトル",
+  "recurringEditTitlePlaceholder": "この定期的な編集の名前を入力してください",
+  "recurringEditFrequencyLabel": "頻度",
+  "recurringEditTimezoneLabel": "タイムゾーン",
+  "recurringEditFrequencyOptions": {
+    "Hourly": "毎時",
+    "Every 2 Hours": "2時間ごと",
+    "Daily": "毎日",
+    "Weekly": "毎週",
+    "Monthly": "毎月"
+  },
+  "recurringEditTimezoneOptions": {
+    "Asia/Kolkata": "アジア/コルカタ (IST)",
+    "UTC": "UTC",
+    "America/New_York": "アメリカ/ニューヨーク",
+    "America/Los_Angeles": "アメリカ/ロサンゼルス",
+    "Europe/London": "ヨーロッパ/ロンドン"
+  },
+  "recurringEditDefaultField": "商品",
+  "recurringEditDefaultEditType": "更新",
+  "recurringEditDefaultTitleConnector": "定期",
+  "recurringEditFields": {
+    "price": "価格",
+    "title": "タイトル",
+    "vendor": "ベンダー",
+    "description": "説明",
+    "handle": "ハンドル",
+    "product_type": "商品タイプ",
+    "barcode": "バーコード",
+    "sku": "SKU"
+  },
+  "recurringEditEditTypes": {
+    "Decrease by percent": "割合で減らす",
+    "Increase by percent": "割合で増やす",
+    "Changed by fixed amount": "固定金額で変更",
+    "Set to fixed value": "固定値に設定",
+    "setTextToValue": "テキストを値に設定",
+    "addTextToEnd": "末尾にテキストを追加",
+    "removeTextFromEnd": "末尾からテキストを削除",
+    "addTextToBeginning": "先頭にテキストを追加",
+    "removeTextFromBeginning": "先頭からテキストを削除",
+    "limitTextLength": "テキスト長を制限",
+    "removeTextToEndFromWord": "単語から末尾までのテキストを削除",
+    "removeTextUpToWord": "単語までのテキストを削除",
+    "searchReplace": "検索/置換"
+  },
+  "historyEmptyStateTitle": "まだ活動はありません"
 }

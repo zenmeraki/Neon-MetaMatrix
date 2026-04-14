@@ -884,5 +884,76 @@
   },
   "common": {
     "seconds": "Секунды"
-  }
+  },
+  "historyStatus": {
+    "queued": "В очереди",
+    "dispatching": "Подготовка",
+    "awaiting_shopify": "Выполняется в Shopify",
+    "finalizing": "Завершение",
+    "completed": "Завершено",
+    "partial": "Частично завершено",
+    "failed": "Ошибка",
+    "cancelled": "Отменено",
+    "processing": "Обработка",
+    "pending": "Ожидание",
+    "running": "Создание файла",
+    "undo_queued": "Отмена в очереди",
+    "undo_dispatching": "Подготовка отмены",
+    "undo_awaiting_shopify": "Отмена в Shopify",
+    "undo_finalizing": "Завершение отмены",
+    "undo_completed": "Отмена завершена",
+    "undo_partial": "Частичная отмена",
+    "undo_failed": "Ошибка отмены",
+    "undo_cancelled": "Отмена отменена",
+    "undo_processing": "Отмена в процессе"
+  },
+  "recurringEditDescriptionPrefix": "Это повторяющееся редактирование приведет к автоматическому повторному запуску текущего фильтра и правилу редактирования. \nВ настоящее время он нацелен",
+  "recurringEditDescriptionSuffix": "соответствующие продукты.",
+  "recurringEditTitleLabel": "Заголовок",
+  "recurringEditTitlePlaceholder": "Введите название для этого повторяющегося редактирования.",
+  "recurringEditFrequencyLabel": "Частота",
+  "recurringEditTimezoneLabel": "Часовой пояс",
+  "recurringEditFrequencyOptions": {
+    "Hourly": "Каждый час",
+    "Every 2 Hours": "Каждые 2 часа",
+    "Daily": "Ежедневно",
+    "Weekly": "Еженедельно",
+    "Monthly": "Ежемесячно"
+  },
+  "recurringEditTimezoneOptions": {
+    "Asia/Kolkata": "Азия/Колката (IST)",
+    "UTC": "UTC",
+    "America/New_York": "Америка/Нью-Йорк",
+    "America/Los_Angeles": "Америка/Лос-Анджелес",
+    "Europe/London": "Европа/Лондон"
+  },
+  "recurringEditDefaultField": "товары",
+  "recurringEditDefaultEditType": "обновление",
+  "recurringEditDefaultTitleConnector": "повторяющееся",
+  "recurringEditFields": {
+    "price": "Цена",
+    "title": "Название",
+    "vendor": "Поставщик",
+    "description": "Описание",
+    "handle": "Handle",
+    "product_type": "Тип товара",
+    "barcode": "Штрихкод",
+    "sku": "SKU"
+  },
+  "recurringEditEditTypes": {
+    "Decrease by percent": "Уменьшить на процент",
+    "Increase by percent": "Увеличить на процент",
+    "Changed by fixed amount": "Изменить на фиксированную сумму",
+    "Set to fixed value": "Установить фиксированное значение",
+    "setTextToValue": "Установить текст в значение",
+    "addTextToEnd": "Добавить текст в конец",
+    "removeTextFromEnd": "Удалить текст с конца",
+    "addTextToBeginning": "Добавить текст в начало",
+    "removeTextFromBeginning": "Удалить текст с начала",
+    "limitTextLength": "Ограничить длину текста",
+    "removeTextToEndFromWord": "Удалить текст до конца от слова",
+    "removeTextUpToWord": "Удалить текст до слова",
+    "searchReplace": "Найти/Заменить"
+  },
+  "historyEmptyStateTitle": "Пока нет активности"
 }

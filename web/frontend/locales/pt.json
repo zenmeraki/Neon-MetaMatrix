@@ -884,5 +884,76 @@
   },
   "common": {
     "seconds": "Segundos"
-  }
+  },
+  "historyStatus": {
+    "queued": "Na fila",
+    "dispatching": "Preparando",
+    "awaiting_shopify": "Executando no Shopify",
+    "finalizing": "Finalizando",
+    "completed": "Concluído",
+    "partial": "Parcialmente concluído",
+    "failed": "Falhou",
+    "cancelled": "Cancelado",
+    "processing": "Processando",
+    "pending": "Pendente",
+    "running": "Gerando arquivo",
+    "undo_queued": "Desfazer na fila",
+    "undo_dispatching": "Preparando desfazer",
+    "undo_awaiting_shopify": "Desfazer no Shopify",
+    "undo_finalizing": "Finalizando desfazer",
+    "undo_completed": "Desfazer concluído",
+    "undo_partial": "Desfazer parcial",
+    "undo_failed": "Desfazer falhou",
+    "undo_cancelled": "Desfazer cancelado",
+    "undo_processing": "Desfazer em andamento"
+  },
+  "recurringEditDescriptionPrefix": "Esta edição recorrente executará novamente o filtro atual e editará a regra automaticamente. \nAtualmente tem como alvo",
+  "recurringEditDescriptionSuffix": "produtos correspondentes.",
+  "recurringEditTitleLabel": "Título",
+  "recurringEditTitlePlaceholder": "Insira um nome para esta edição recorrente",
+  "recurringEditFrequencyLabel": "Freqüência",
+  "recurringEditTimezoneLabel": "Fuso horário",
+  "recurringEditFrequencyOptions": {
+    "Hourly": "A cada hora",
+    "Every 2 Hours": "A cada 2 horas",
+    "Daily": "Diário",
+    "Weekly": "Semanal",
+    "Monthly": "Mensal"
+  },
+  "recurringEditTimezoneOptions": {
+    "Asia/Kolkata": "Ásia/Kolkata (IST)",
+    "UTC": "UTC",
+    "America/New_York": "América/Nova York",
+    "America/Los_Angeles": "América/Los Angeles",
+    "Europe/London": "Europa/Londres"
+  },
+  "recurringEditDefaultField": "produtos",
+  "recurringEditDefaultEditType": "atualização",
+  "recurringEditDefaultTitleConnector": "recorrente",
+  "recurringEditFields": {
+    "price": "Preço",
+    "title": "Título",
+    "vendor": "Fornecedor",
+    "description": "Descrição",
+    "handle": "Handle",
+    "product_type": "Tipo de produto",
+    "barcode": "Código de barras",
+    "sku": "SKU"
+  },
+  "recurringEditEditTypes": {
+    "Decrease by percent": "Diminuir por porcentagem",
+    "Increase by percent": "Aumentar por porcentagem",
+    "Changed by fixed amount": "Alterar por valor fixo",
+    "Set to fixed value": "Definir para valor fixo",
+    "setTextToValue": "Definir texto para valor",
+    "addTextToEnd": "Adicionar texto ao final",
+    "removeTextFromEnd": "Remover texto do final",
+    "addTextToBeginning": "Adicionar texto ao início",
+    "removeTextFromBeginning": "Remover texto do início",
+    "limitTextLength": "Limitar comprimento do texto",
+    "removeTextToEndFromWord": "Remover texto até o fim a partir da palavra",
+    "removeTextUpToWord": "Remover texto até a palavra",
+    "searchReplace": "Buscar/Substituir"
+  },
+  "historyEmptyStateTitle": "Nenhuma atividade ainda"
 }

@@ -899,5 +899,75 @@
   },
   "common": {
     "seconds": "ثواني"
-  }
+  },
+  "historyStatus": {
+    "queued": "في الانتظار",
+    "dispatching": "جارٍ التحضير",
+    "awaiting_shopify": "قيد التنفيذ في Shopify",
+    "finalizing": "جارٍ الإنهاء",
+    "completed": "مكتمل",
+    "partial": "مكتمل جزئياً",
+    "failed": "فشل",
+    "cancelled": "تم الإلغاء",
+    "processing": "جارٍ المعالجة",
+    "pending": "معلق",
+    "running": "جارٍ إنشاء الملف",
+    "undo_queued": "التراجع في الانتظار",
+    "undo_dispatching": "جارٍ تحضير التراجع",
+    "undo_awaiting_shopify": "التراجع في Shopify",
+    "undo_finalizing": "جارٍ إنهاء التراجع",
+    "undo_completed": "تم التراجع",
+    "undo_partial": "تم التراجع جزئياً",
+    "undo_failed": "فشل التراجع",
+    "undo_cancelled": "تم إلغاء التراجع",
+    "undo_processing": "جارٍ التراجع"
+  },
+  "recurringEditDescriptionPrefix": "سيؤدي هذا التعديل المتكرر إلى إعادة تشغيل عامل التصفية الحالي وقاعدة التحرير تلقائيًا. \nويستهدف حاليا",
+  "recurringEditDescriptionSuffix": "المنتجات المطابقة.",
+  "recurringEditTitleLabel": "عنوان",
+  "recurringEditTitlePlaceholder": "أدخل اسمًا لهذا التعديل المتكرر",
+  "recurringEditFrequencyLabel": "تكرار",
+  "recurringEditTimezoneLabel": "المنطقة الزمنية",
+  "recurringEditFrequencyOptions": {
+    "Hourly": "كل ساعة",
+    "Every 2 Hours": "كل ساعتين",
+    "Daily": "يومي",
+    "Weekly": "أسبوعي",
+    "Monthly": "شهري"
+  },
+  "recurringEditTimezoneOptions": {
+    "Asia/Kolkata": "آسيا/كولكاتا (IST)",
+    "UTC": "UTC",
+    "America/New_York": "أمريكا/نيويورك",
+    "America/Los_Angeles": "أمريكا/لوس أنجلوس",
+    "Europe/London": "أوروبا/لندن"
+  },
+  "recurringEditDefaultEditType": "تحديث",
+  "recurringEditDefaultTitleConnector": "متكرر",
+  "recurringEditFields": {
+    "price": "السعر",
+    "title": "العنوان",
+    "vendor": "المورد",
+    "description": "الوصف",
+    "handle": "المعرّف",
+    "product_type": "نوع المنتج",
+    "barcode": "الباركود",
+    "sku": "SKU"
+  },
+  "recurringEditEditTypes": {
+    "Decrease by percent": "تقليل بالنسبة المئوية",
+    "Increase by percent": "زيادة بالنسبة المئوية",
+    "Changed by fixed amount": "تغيير بمقدار ثابت",
+    "Set to fixed value": "تعيين إلى قيمة ثابتة",
+    "setTextToValue": "تعيين النص إلى قيمة",
+    "addTextToEnd": "إضافة نص إلى النهاية",
+    "removeTextFromEnd": "إزالة النص من النهاية",
+    "addTextToBeginning": "إضافة نص إلى البداية",
+    "removeTextFromBeginning": "إزالة النص من البداية",
+    "limitTextLength": "تحديد طول النص",
+    "removeTextToEndFromWord": "إزالة النص حتى النهاية بدءًا من الكلمة",
+    "removeTextUpToWord": "إزالة النص حتى الكلمة",
+    "searchReplace": "بحث/استبدال"
+  },
+  "historyEmptyStateTitle": "لا يوجد نشاط بعد"
 }

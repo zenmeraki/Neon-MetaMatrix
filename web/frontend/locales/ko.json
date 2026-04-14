@@ -884,5 +884,76 @@
   },
   "common": {
     "seconds": "초"
-  }
+  },
+  "historyStatus": {
+    "queued": "대기 중",
+    "dispatching": "준비 중",
+    "awaiting_shopify": "Shopify에서 실행 중",
+    "finalizing": "마무리 중",
+    "completed": "완료됨",
+    "partial": "부분 완료",
+    "failed": "실패",
+    "cancelled": "취소됨",
+    "processing": "처리 중",
+    "pending": "보류 중",
+    "running": "파일 생성 중",
+    "undo_queued": "되돌리기 대기 중",
+    "undo_dispatching": "되돌리기 준비 중",
+    "undo_awaiting_shopify": "Shopify에서 되돌리기 실행 중",
+    "undo_finalizing": "되돌리기 마무리 중",
+    "undo_completed": "되돌리기 완료",
+    "undo_partial": "되돌리기 부분 완료",
+    "undo_failed": "되돌리기 실패",
+    "undo_cancelled": "되돌리기 취소",
+    "undo_processing": "되돌리기 처리 중"
+  },
+  "recurringEditDescriptionPrefix": "이 반복 수정은 현재 필터와 수정 규칙을 자동으로 다시 실행합니다. \n현재 타겟은",
+  "recurringEditDescriptionSuffix": "어울리는 제품.",
+  "recurringEditTitleLabel": "제목",
+  "recurringEditTitlePlaceholder": "이 반복 수정의 이름을 입력하세요.",
+  "recurringEditFrequencyLabel": "빈도",
+  "recurringEditTimezoneLabel": "시간대",
+  "recurringEditFrequencyOptions": {
+    "Hourly": "매시간",
+    "Every 2 Hours": "2시간마다",
+    "Daily": "매일",
+    "Weekly": "매주",
+    "Monthly": "매월"
+  },
+  "recurringEditTimezoneOptions": {
+    "Asia/Kolkata": "아시아/콜카타 (IST)",
+    "UTC": "UTC",
+    "America/New_York": "미국/뉴욕",
+    "America/Los_Angeles": "미국/로스앤젤레스",
+    "Europe/London": "유럽/런던"
+  },
+  "recurringEditDefaultField": "제품",
+  "recurringEditDefaultEditType": "업데이트",
+  "recurringEditDefaultTitleConnector": "반복",
+  "recurringEditFields": {
+    "price": "가격",
+    "title": "제목",
+    "vendor": "공급업체",
+    "description": "설명",
+    "handle": "핸들",
+    "product_type": "제품 유형",
+    "barcode": "바코드",
+    "sku": "SKU"
+  },
+  "recurringEditEditTypes": {
+    "Decrease by percent": "퍼센트로 감소",
+    "Increase by percent": "퍼센트로 증가",
+    "Changed by fixed amount": "고정 금액으로 변경",
+    "Set to fixed value": "고정 값으로 설정",
+    "setTextToValue": "텍스트를 값으로 설정",
+    "addTextToEnd": "끝에 텍스트 추가",
+    "removeTextFromEnd": "끝에서 텍스트 제거",
+    "addTextToBeginning": "처음에 텍스트 추가",
+    "removeTextFromBeginning": "처음에서 텍스트 제거",
+    "limitTextLength": "텍스트 길이 제한",
+    "removeTextToEndFromWord": "단어부터 끝까지 텍스트 제거",
+    "removeTextUpToWord": "단어까지 텍스트 제거",
+    "searchReplace": "찾기/바꾸기"
+  },
+  "historyEmptyStateTitle": "아직 활동이 없습니다"
 }

@@ -42,10 +42,16 @@ const DAYS_OF_WEEK = [
   "Saturday",
 ];
 
-function getDefaultTitle(editedField, editedBy) {
-  const safeField = editedField || "products";
-  const safeEditType = editedBy || "update";
-  return `${safeField} recurring ${safeEditType}`;
+function getDefaultTitle(editedField, editedBy, t) {
+  const safeField = editedField
+    ? t(`recurringEditFields.${editedField}`, { defaultValue: editedField })
+    : t("recurringEditDefaultField");
+
+  const safeEditType = editedBy
+    ? t(`recurringEditEditTypes.${editedBy}`, { defaultValue: editedBy })
+    : t("recurringEditDefaultEditType");
+
+  return `${safeField} ${t("recurringEditDefaultTitleConnector")} ${safeEditType}`;
 }
 
 function getCurrentDateInputValue() {
@@ -75,6 +81,7 @@ function RecurringEditModal({
 }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+
   const dayOfMonthOptions = useMemo(
     () =>
       Array.from({ length: 31 }, (_, index) => ({
@@ -84,7 +91,9 @@ function RecurringEditModal({
     [],
   );
 
-  const [title, setTitle] = useState(getDefaultTitle(editedField, editedBy));
+  const [title, setTitle] = useState(() =>
+    getDefaultTitle(editedField, editedBy, t),
+  );
   const [frequency, setFrequency] = useState("Daily");
   const [timezone, setTimezone] = useState("Asia/Kolkata");
   const [timeToRun, setTimeToRun] = useState("12:00");
@@ -106,7 +115,7 @@ function RecurringEditModal({
   });
 
   const resetForm = useCallback(() => {
-    setTitle(getDefaultTitle(editedField, editedBy));
+    setTitle(getDefaultTitle(editedField, editedBy, t));
     setFrequency("Daily");
     setTimezone("Asia/Kolkata");
     setTimeToRun("12:00");
@@ -121,7 +130,7 @@ function RecurringEditModal({
     setSubmitting(false);
     setError("");
     setUpgradeWarning("");
-  }, [editedBy, editedField]);
+  }, [editedBy, editedField, t]);
 
   const handleClose = useCallback(() => {
     resetForm();
@@ -138,7 +147,8 @@ function RecurringEditModal({
     });
   }, []);
 
-  const requiresTime = frequency === "Daily" || frequency === "Weekly" || frequency === "Monthly";
+  const requiresTime =
+    frequency === "Daily" || frequency === "Weekly" || frequency === "Monthly";
   const needsWeekdaySelection = frequency === "Weekly";
   const needsDayOfMonthSelection = frequency === "Monthly";
 
@@ -159,7 +169,9 @@ function RecurringEditModal({
       return "Please select an end date";
     }
 
-    const startAt = hasStartAt ? buildIsoFromDateAndTime(startDate, startTime) : null;
+    const startAt = hasStartAt
+      ? buildIsoFromDateAndTime(startDate, startTime)
+      : null;
     const endAt = hasEndAt ? buildIsoFromDateAndTime(endDate, endTime) : null;
 
     if (startAt && endAt && new Date(startAt) >= new Date(endAt)) {
@@ -239,10 +251,7 @@ function RecurringEditModal({
       if (!response.ok) {
         const message = data?.message || "Failed to create recurring edit";
 
-        if (
-          response.status === 400 &&
-          message.toLowerCase().includes("pro")
-        ) {
+        if (response.status === 400 && message.toLowerCase().includes("pro")) {
           setUpgradeWarning(message);
           return;
         }
@@ -304,7 +313,9 @@ function RecurringEditModal({
     <Toast
       content={toastState.message}
       error={toastState.error}
-      onDismiss={() => setToastState({ active: false, message: "", error: false })}
+      onDismiss={() =>
+        setToastState({ active: false, message: "", error: false })
+      }
     />
   ) : null;
 
@@ -313,16 +324,16 @@ function RecurringEditModal({
       <Modal
         open={show}
         onClose={handleClose}
-        title={t("recurringEditModalTitle",)}
+        title={t("recurringEditModalTitle")}
         primaryAction={{
-          content: t("recurringEditSaveButton",),
+          content: t("recurringEditSaveButton"),
           onAction: handleSubmit,
           loading: submitting,
           disabled: submitting,
         }}
         secondaryActions={[
           {
-            content: t("commonCancelButton",),
+            content: t("commonCancelButton"),
             onAction: handleClose,
           },
         ]}
@@ -351,31 +362,36 @@ function RecurringEditModal({
 
             <Banner tone="info">
               <p>
-                This recurring edit will re-run the current filter and edit rule
-                automatically. It currently targets <strong>{count}</strong>{" "}
-                matching products.
+                {t("recurringEditDescriptionPrefix")} <strong>{count}</strong>{" "}
+                {t("recurringEditDescriptionSuffix")}
               </p>
             </Banner>
 
             <FormLayout>
               <TextField
-                label="Title"
+                label={t("recurringEditTitleLabel")}
                 value={title}
                 onChange={setTitle}
                 autoComplete="off"
-                placeholder="Enter a name for this recurring edit"
+                placeholder={t("recurringEditTitlePlaceholder")}
               />
 
               <FormLayout.Group>
                 <Select
-                  label="Frequency"
-                  options={FREQUENCY_OPTIONS}
+                  label={t("recurringEditFrequencyLabel")}
+                  options={FREQUENCY_OPTIONS.map((opt) => ({
+                    ...opt,
+                    label: t(`recurringEditFrequencyOptions.${opt.value}`),
+                  }))}
                   value={frequency}
                   onChange={setFrequency}
                 />
                 <Select
-                  label="Timezone"
-                  options={TIMEZONE_OPTIONS}
+                  label={t("recurringEditTimezoneLabel")}
+                  options={TIMEZONE_OPTIONS.map((opt) => ({
+                    ...opt,
+                    label: t(`recurringEditTimezoneOptions.${opt.value}`),
+                  }))}
                   value={timezone}
                   onChange={setTimezone}
                 />
@@ -383,18 +399,18 @@ function RecurringEditModal({
 
               {requiresTime && (
                 <TextField
-                  label={t("recurringEditTimeLabel",)}
+                  label={t("recurringEditTimeLabel")}
                   type="time"
                   value={timeToRun}
                   onChange={setTimeToRun}
-                  helpText={t("recurringEditTimeHelpText",)}
-                />
+                  helpText={t("recurringEditTimeHelpText")}
+                />  
               )}
 
               {needsWeekdaySelection && (
                 <BlockStack gap="200">
                   <Text as="p" variant="bodyMd" fontWeight="semibold">
-                    {t("recurringEditDaysOfWeekLabel",)}
+                    {t("recurringEditDaysOfWeekLabel")}
                   </Text>
                   <InlineStack gap="300" wrap>
                     {DAYS_OF_WEEK.map((day) => (
@@ -411,16 +427,16 @@ function RecurringEditModal({
 
               {needsDayOfMonthSelection && (
                 <Select
-                  label={t("recurringEditDayOfMonthLabel",)}
+                  label={t("recurringEditDayOfMonthLabel")}
                   options={dayOfMonthOptions}
                   value={dayOfMonthToRun}
                   onChange={setDayOfMonthToRun}
-                  helpText={t("recurringEditDayOfMonthHelpText",)}
+                  helpText={t("recurringEditDayOfMonthHelpText")}
                 />
               )}
 
               <Checkbox
-                label={t("recurringEditStartSpecificDateLabel",)}
+                label={t("recurringEditStartSpecificDateLabel")}
                 checked={hasStartAt}
                 onChange={(checked) => setHasStartAt(checked)}
               />
@@ -428,14 +444,14 @@ function RecurringEditModal({
               {hasStartAt && (
                 <FormLayout.Group>
                   <TextField
-                    label={t("recurringEditStartDateLabel",)}
+                    label={t("recurringEditStartDateLabel")}
                     type="date"
                     value={startDate}
                     onChange={setStartDate}
                     min={getCurrentDateInputValue()}
                   />
                   <TextField
-                    label={t("recurringEditStartTimeLabel",)}
+                    label={t("recurringEditStartTimeLabel")}
                     type="time"
                     value={startTime}
                     onChange={setStartTime}
@@ -444,7 +460,7 @@ function RecurringEditModal({
               )}
 
               <Checkbox
-                label={t("recurringEditStopAfterDateLabel",)}
+                label={t("recurringEditStopAfterDateLabel")}
                 checked={hasEndAt}
                 onChange={(checked) => setHasEndAt(checked)}
               />
@@ -452,14 +468,14 @@ function RecurringEditModal({
               {hasEndAt && (
                 <FormLayout.Group>
                   <TextField
-                    label={t("recurringEditEndDateLabel",)}
+                    label={t("recurringEditEndDateLabel")}
                     type="date"
                     value={endDate}
                     onChange={setEndDate}
                     min={startDate || getCurrentDateInputValue()}
                   />
                   <TextField
-                    label={t("recurringEditEndTimeLabel",)}
+                    label={t("recurringEditEndTimeLabel")}
                     type="time"
                     value={endTime}
                     onChange={setEndTime}

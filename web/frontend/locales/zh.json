@@ -884,5 +884,76 @@
   },
   "common": {
     "seconds": "秒数"
-  }
+  },
+  "historyStatus": {
+    "queued": "排队中",
+    "dispatching": "准备中",
+    "awaiting_shopify": "在 Shopify 中运行",
+    "finalizing": "正在完成",
+    "completed": "已完成",
+    "partial": "部分完成",
+    "failed": "失败",
+    "cancelled": "已取消",
+    "processing": "处理中",
+    "pending": "待处理",
+    "running": "正在生成文件",
+    "undo_queued": "撤销排队中",
+    "undo_dispatching": "准备撤销",
+    "undo_awaiting_shopify": "在 Shopify 中撤销",
+    "undo_finalizing": "撤销完成中",
+    "undo_completed": "撤销完成",
+    "undo_partial": "撤销部分完成",
+    "undo_failed": "撤销失败",
+    "undo_cancelled": "撤销取消",
+    "undo_processing": "撤销处理中"
+  },
+  "recurringEditDescriptionPrefix": "此重复编辑将自动重新运行当前过滤器和编辑规则。\n目前它的目标是",
+  "recurringEditDescriptionSuffix": "配套产品。",
+  "recurringEditTitleLabel": "标题",
+  "recurringEditTitlePlaceholder": "输入此重复编辑的名称",
+  "recurringEditFrequencyLabel": "频率",
+  "recurringEditTimezoneLabel": "时区",
+  "recurringEditFrequencyOptions": {
+    "Hourly": "每小时",
+    "Every 2 Hours": "每2小时",
+    "Daily": "每日",
+    "Weekly": "每周",
+    "Monthly": "每月"
+  },
+  "recurringEditTimezoneOptions": {
+    "Asia/Kolkata": "亚洲/加尔各答 (IST)",
+    "UTC": "UTC",
+    "America/New_York": "美洲/纽约",
+    "America/Los_Angeles": "美洲/洛杉矶",
+    "Europe/London": "欧洲/伦敦"
+  },
+  "recurringEditDefaultField": "产品",
+  "recurringEditDefaultEditType": "更新",
+  "recurringEditDefaultTitleConnector": "定期",
+  "recurringEditFields": {
+    "price": "价格",
+    "title": "标题",
+    "vendor": "供应商",
+    "description": "描述",
+    "handle": "Handle",
+    "product_type": "产品类型",
+    "barcode": "条形码",
+    "sku": "SKU"
+  },
+  "recurringEditEditTypes": {
+    "Decrease by percent": "按百分比减少",
+    "Increase by percent": "按百分比增加",
+    "Changed by fixed amount": "按固定金额更改",
+    "Set to fixed value": "设置为固定值",
+    "setTextToValue": "将文本设置为值",
+    "addTextToEnd": "在末尾添加文本",
+    "removeTextFromEnd": "从末尾删除文本",
+    "addTextToBeginning": "在开头添加文本",
+    "removeTextFromBeginning": "从开头删除文本",
+    "limitTextLength": "限制文本长度",
+    "removeTextToEndFromWord": "从单词处删除到末尾的文本",
+    "removeTextUpToWord": "删除到单词为止的文本",
+    "searchReplace": "查找/替换"
+  },
+  "historyEmptyStateTitle": "还没有活动"
 }

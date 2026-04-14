@@ -900,17 +900,93 @@
   "common": {
     "seconds": "Seconds"
   },
-  
   "historyStatus": {
+    "queued": "Queued",
+    "dispatching": "Dispatching",
+    "awaiting_shopify": "Running in Shopify",
+    "finalizing": "Finalizing",
     "completed": "Completed",
+    "partial": "Partially completed",
     "failed": "Failed",
+    "cancelled": "Cancelled",
     "processing": "Processing",
     "pending": "Pending",
-    "finalizing": "Finalizing",
-    "undo_processing": "Undo processing",
+    "running": "Building file",
+    "undo_queued": "Undo queued",
+    "undo_dispatching": "Undo dispatching",
+    "undo_awaiting_shopify": "Undo running in Shopify",
+    "undo_finalizing": "Undo finalizing",
     "undo_completed": "Undo completed",
+    "undo_partial": "Undo partially completed",
     "undo_failed": "Undo failed",
-    "undo_queued": "Undo queued"
-  }
+    "undo_cancelled": "Undo cancelled",
+    "undo_processing": "Undo processing"
+  },
+  "historyStatusDetail": {
+    "queued": "Waiting for execution.",
+    "dispatching": "Preparing the next Shopify mutation batch.",
+    "awaiting_shopify": "Waiting for Shopify bulk operation completion.",
+    "finalizing": "Applying the completion results safely.",
+    "processing": "Execution is still running.",
+    "partial": "Some batches finished, but errors were recorded.",
+    "undo_queued": "Waiting to safely undo this edit.",
+    "undo_dispatching": "Preparing the undo mutation batch.",
+    "undo_awaiting_shopify": "Waiting for Shopify undo completion.",
+    "undo_finalizing": "Applying undo results safely.",
+    "undo_processing": "Undo is still running.",
+    "undo_partial": "Undo finished with recorded errors.",
+    "export_queued": "Waiting for export execution.",
+    "export_running": "Export rows are being generated.",
+    "export_finalizing": "Final file upload in progress.",
+    "export_partial": "Export finished with some issues."
+  },
+  "recurringEditDescriptionPrefix": "This recurring edit will re-run the current filter and edit rule automatically. It currently targets",
+  "recurringEditDescriptionSuffix": "matching products.",
+  "recurringEditTitleLabel": "Title",
+  "recurringEditTitlePlaceholder": "Enter a name for this recurring edit",
+  "recurringEditFrequencyLabel": "Frequency",
+  "recurringEditTimezoneLabel": "Timezone",
+  "recurringEditFrequencyOptions": {
+    "Hourly": "Hourly",
+    "Every 2 Hours": "Every 2 Hours",
+    "Daily": "Daily",
+    "Weekly": "Weekly",
+    "Monthly": "Monthly"
+  },
+  "recurringEditTimezoneOptions": {
+    "Asia/Kolkata": "Asia/Kolkata (IST)",
+    "UTC": "UTC",
+    "America/New_York": "America/New_York",
+    "America/Los_Angeles": "America/Los_Angeles",
+    "Europe/London": "Europe/London"
+  },
+  "recurringEditDefaultField": "products",
+  "recurringEditDefaultEditType": "update",
+  "recurringEditDefaultTitleConnector": "recurring",
+  "recurringEditFields": {
+    "price": "Price",
+    "title": "Title",
+    "vendor": "Vendor",
+    "description": "Description",
+    "handle": "Handle",
+    "product_type": "Product type",
+    "barcode": "Barcode",
+    "sku": "SKU"
+  },
+  "recurringEditEditTypes": {
+    "Decrease by percent": "Decrease by percent",
+    "Increase by percent": "Increase by percent",
+    "Changed by fixed amount": "Changed by fixed amount",
+    "Set to fixed value": "Set to fixed value",
+    "setTextToValue": "Set text to value",
+    "addTextToEnd": "Add text to end",
+    "removeTextFromEnd": "Remove text from end",
+    "addTextToBeginning": "Add text to beginning",
+    "removeTextFromBeginning": "Remove text from beginning",
+    "limitTextLength": "Limit text length",
+    "removeTextToEndFromWord": "Remove text to end from word",
+    "removeTextUpToWord": "Remove text up to word",
+    "searchReplace": "Search/replace"
+  },
+  "historyEmptyStateTitle": "No activity yet"
 }
-

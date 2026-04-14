@@ -885,5 +885,76 @@
   },
   "common": {
     "seconds": "Sekunden"
-  }
+  },
+  "historyStatus": {
+    "queued": "In Warteschlange",
+    "dispatching": "Wird vorbereitet",
+    "awaiting_shopify": "Läuft in Shopify",
+    "finalizing": "Wird abgeschlossen",
+    "completed": "Abgeschlossen",
+    "partial": "Teilweise abgeschlossen",
+    "failed": "Fehlgeschlagen",
+    "cancelled": "Abgebrochen",
+    "processing": "In Bearbeitung",
+    "pending": "Ausstehend",
+    "running": "Datei wird erstellt",
+    "undo_queued": "Rückgängig in Warteschlange",
+    "undo_dispatching": "Rückgängig wird vorbereitet",
+    "undo_awaiting_shopify": "Rückgängig läuft in Shopify",
+    "undo_finalizing": "Rückgängig wird abgeschlossen",
+    "undo_completed": "Rückgängig abgeschlossen",
+    "undo_partial": "Rückgängig teilweise abgeschlossen",
+    "undo_failed": "Rückgängig fehlgeschlagen",
+    "undo_cancelled": "Rückgängig abgebrochen",
+    "undo_processing": "Rückgängig in Bearbeitung"
+  },
+  "recurringEditDescriptionPrefix": "Bei dieser wiederkehrenden Bearbeitung werden der aktuelle Filter und die Bearbeitungsregel automatisch erneut ausgeführt. \nDerzeit zielt es darauf ab",
+  "recurringEditDescriptionSuffix": "passende Produkte.",
+  "recurringEditTitleLabel": "Titel",
+  "recurringEditTitlePlaceholder": "Geben Sie einen Namen für diese wiederkehrende Bearbeitung ein",
+  "recurringEditFrequencyLabel": "Frequenz",
+  "recurringEditTimezoneLabel": "Zeitzone",
+  "recurringEditFrequencyOptions": {
+    "Hourly": "Stündlich",
+    "Every 2 Hours": "Alle 2 Stunden",
+    "Daily": "Täglich",
+    "Weekly": "Wöchentlich",
+    "Monthly": "Monatlich"
+  },
+  "recurringEditTimezoneOptions": {
+    "Asia/Kolkata": "Asien/Kolkata (IST)",
+    "UTC": "UTC",
+    "America/New_York": "Amerika/New York",
+    "America/Los_Angeles": "Amerika/Los Angeles",
+    "Europe/London": "Europa/London"
+  },
+  "recurringEditDefaultField": "Produkte",
+  "recurringEditDefaultEditType": "Aktualisierung",
+  "recurringEditDefaultTitleConnector": "wiederkehrend",
+  "recurringEditFields": {
+    "price": "Preis",
+    "title": "Titel",
+    "vendor": "Anbieter",
+    "description": "Beschreibung",
+    "handle": "Handle",
+    "product_type": "Produkttyp",
+    "barcode": "Barcode",
+    "sku": "SKU"
+  },
+  "recurringEditEditTypes": {
+    "Decrease by percent": "Um Prozentsatz verringern",
+    "Increase by percent": "Um Prozentsatz erhöhen",
+    "Changed by fixed amount": "Um festen Betrag ändern",
+    "Set to fixed value": "Auf festen Wert setzen",
+    "setTextToValue": "Text auf Wert setzen",
+    "addTextToEnd": "Text am Ende hinzufügen",
+    "removeTextFromEnd": "Text vom Ende entfernen",
+    "addTextToBeginning": "Text am Anfang hinzufügen",
+    "removeTextFromBeginning": "Text vom Anfang entfernen",
+    "limitTextLength": "Textlänge begrenzen",
+    "removeTextToEndFromWord": "Text ab Wort bis Ende entfernen",
+    "removeTextUpToWord": "Text bis Wort entfernen",
+    "searchReplace": "Suchen/Ersetzen"
+  },
+  "historyEmptyStateTitle": "Noch keine Aktivität"
 }

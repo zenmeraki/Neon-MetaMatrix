@@ -885,5 +885,76 @@
   },
   "common": {
     "seconds": "Artículos de segunda clase"
-  }
+  },
+  "historyStatus": {
+    "queued": "En cola",
+    "dispatching": "Preparando",
+    "awaiting_shopify": "Ejecutándose en Shopify",
+    "finalizing": "Finalizando",
+    "completed": "Completado",
+    "partial": "Parcialmente completado",
+    "failed": "Fallido",
+    "cancelled": "Cancelado",
+    "processing": "Procesando",
+    "pending": "Pendiente",
+    "running": "Generando archivo",
+    "undo_queued": "Deshacer en cola",
+    "undo_dispatching": "Preparando deshacer",
+    "undo_awaiting_shopify": "Deshacer en Shopify",
+    "undo_finalizing": "Finalizando deshacer",
+    "undo_completed": "Deshacer completado",
+    "undo_partial": "Deshacer parcial",
+    "undo_failed": "Deshacer fallido",
+    "undo_cancelled": "Deshacer cancelado",
+    "undo_processing": "Deshacer en proceso"
+  },
+  "recurringEditDescriptionPrefix": "Esta edición recurrente volverá a ejecutar el filtro actual y la regla de edición automáticamente. \nActualmente apunta",
+  "recurringEditDescriptionSuffix": "productos a juego.",
+  "recurringEditTitleLabel": "Título",
+  "recurringEditTitlePlaceholder": "Introduce un nombre para esta edición recurrente",
+  "recurringEditFrequencyLabel": "Frecuencia",
+  "recurringEditTimezoneLabel": "Zona horaria",
+  "recurringEditFrequencyOptions": {
+    "Hourly": "Cada hora",
+    "Every 2 Hours": "Cada 2 horas",
+    "Daily": "Diario",
+    "Weekly": "Semanal",
+    "Monthly": "Mensual"
+  },
+  "recurringEditTimezoneOptions": {
+    "Asia/Kolkata": "Asia/Kolkata (IST)",
+    "UTC": "UTC",
+    "America/New_York": "América/Nueva York",
+    "America/Los_Angeles": "América/Los Ángeles",
+    "Europe/London": "Europa/Londres"
+  },
+  "recurringEditDefaultField": "productos",
+  "recurringEditDefaultEditType": "actualización",
+  "recurringEditDefaultTitleConnector": "recurrente",
+  "recurringEditFields": {
+    "price": "Precio",
+    "title": "Título",
+    "vendor": "Proveedor",
+    "description": "Descripción",
+    "handle": "Handle",
+    "product_type": "Tipo de producto",
+    "barcode": "Código de barras",
+    "sku": "SKU"
+  },
+  "recurringEditEditTypes": {
+    "Decrease by percent": "Disminuir por porcentaje",
+    "Increase by percent": "Aumentar por porcentaje",
+    "Changed by fixed amount": "Cambiar por cantidad fija",
+    "Set to fixed value": "Establecer a valor fijo",
+    "setTextToValue": "Establecer texto al valor",
+    "addTextToEnd": "Agregar texto al final",
+    "removeTextFromEnd": "Eliminar texto del final",
+    "addTextToBeginning": "Agregar texto al inicio",
+    "removeTextFromBeginning": "Eliminar texto del inicio",
+    "limitTextLength": "Limitar longitud del texto",
+    "removeTextToEndFromWord": "Eliminar texto hasta el final desde la palabra",
+    "removeTextUpToWord": "Eliminar texto hasta la palabra",
+    "searchReplace": "Buscar/Reemplazar"
+  },
+  "historyEmptyStateTitle": "Aún no hay actividad"
 }

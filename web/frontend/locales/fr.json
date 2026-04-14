@@ -884,5 +884,76 @@
   },
   "common": {
     "seconds": "Secondes"
-  }
+  },
+  "historyStatus": {
+    "queued": "En attente",
+    "dispatching": "Préparation",
+    "awaiting_shopify": "En cours sur Shopify",
+    "finalizing": "Finalisation",
+    "completed": "Terminé",
+    "partial": "Partiellement terminé",
+    "failed": "Échoué",
+    "cancelled": "Annulé",
+    "processing": "Traitement",
+    "pending": "En attente",
+    "running": "Création du fichier",
+    "undo_queued": "Annulation en attente",
+    "undo_dispatching": "Préparation de l'annulation",
+    "undo_awaiting_shopify": "Annulation sur Shopify",
+    "undo_finalizing": "Finalisation de l'annulation",
+    "undo_completed": "Annulation terminée",
+    "undo_partial": "Annulation partielle",
+    "undo_failed": "Annulation échouée",
+    "undo_cancelled": "Annulation annulée",
+    "undo_processing": "Annulation en cours"
+  },
+  "recurringEditDescriptionPrefix": "Cette modification récurrente réexécutera automatiquement le filtre actuel et modifiera la règle. \nIl vise actuellement",
+  "recurringEditDescriptionSuffix": "produits correspondants.",
+  "recurringEditTitleLabel": "Titre",
+  "recurringEditTitlePlaceholder": "Saisissez un nom pour cette modification récurrente",
+  "recurringEditFrequencyLabel": "Fréquence",
+  "recurringEditTimezoneLabel": "Fuseau horaire",
+  "recurringEditFrequencyOptions": {
+    "Hourly": "Toutes les heures",
+    "Every 2 Hours": "Toutes les 2 heures",
+    "Daily": "Quotidien",
+    "Weekly": "Hebdomadaire",
+    "Monthly": "Mensuel"
+  },
+  "recurringEditTimezoneOptions": {
+    "Asia/Kolkata": "Asie/Kolkata (IST)",
+    "UTC": "UTC",
+    "America/New_York": "Amérique/New York",
+    "America/Los_Angeles": "Amérique/Los Angeles",
+    "Europe/London": "Europe/Londres"
+  },
+  "recurringEditDefaultField": "produits",
+  "recurringEditDefaultEditType": "mise à jour",
+  "recurringEditDefaultTitleConnector": "récurrent",
+  "recurringEditFields": {
+    "price": "Prix",
+    "title": "Titre",
+    "vendor": "Fournisseur",
+    "description": "Description",
+    "handle": "Handle",
+    "product_type": "Type de produit",
+    "barcode": "Code-barres",
+    "sku": "SKU"
+  },
+  "recurringEditEditTypes": {
+    "Decrease by percent": "Diminuer en pourcentage",
+    "Increase by percent": "Augmenter en pourcentage",
+    "Changed by fixed amount": "Modifier par montant fixe",
+    "Set to fixed value": "Définir sur une valeur fixe",
+    "setTextToValue": "Définir le texte sur la valeur",
+    "addTextToEnd": "Ajouter du texte à la fin",
+    "removeTextFromEnd": "Supprimer le texte de la fin",
+    "addTextToBeginning": "Ajouter du texte au début",
+    "removeTextFromBeginning": "Supprimer le texte du début",
+    "limitTextLength": "Limiter la longueur du texte",
+    "removeTextToEndFromWord": "Supprimer le texte jusqu'à la fin à partir du mot",
+    "removeTextUpToWord": "Supprimer le texte jusqu'au mot",
+    "searchReplace": "Rechercher/Remplacer"
+  },
+  "historyEmptyStateTitle": "Aucune activité pour le moment"
 }
