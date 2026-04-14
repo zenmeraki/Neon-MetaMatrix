@@ -37,7 +37,7 @@ export function buildPrismaStringFilter(field, operator, value) {
     case "is":
       return { [field]: { equals: value, mode: "insensitive" } };
 
-    case "does not equal":
+    
     case "is not":
       return { NOT: { [field]: { equals: value, mode: "insensitive" } } };
 
@@ -77,7 +77,7 @@ export function buildPrismaNumberFilter(field, operator, value) {
     case "<":
     case "less than":
       return { [field]: { lt: num } };
-
+case "does not equal":
     case "<=":
     case "less than or equal":
       return { [field]: { lte: num } };
@@ -218,63 +218,56 @@ export function buildPrismaCollectionFilter(operator, value) {
     case "equals":
     case "is":
       return {
-        collections: {
-          some: {
-            collection: {
-              title: {
-                equals: value,
-                mode: "insensitive",
-              },
-            },
-          },
+        collectionsJson: {
+          string_contains: value,   // matches title substring in the JSON blob
         },
       };
 
     case "contains":
       return {
-        collections: {
-          some: {
-            collection: {
-              title: {
-                contains: value,
-                mode: "insensitive",
-              },
-            },
-          },
+        collectionsJson: {
+          string_contains: value,
         },
       };
 
     case "does not equal":
-    case "is not":
-    case "does not contain":
-      return {
-        NOT: {
-          collections: {
-            some: {
-              collection: {
-                title: {
-                  contains: value,
-                  mode: "insensitive",
-                },
-              },
-            },
-          },
+case "is not":
+  return {
+    NOT: {
+      collections: {
+        some: {
+          collection: { title: { equals: value, mode: "insensitive" } },
         },
-      };
+      },
+    },
+  };
+
+case "does not contain":
+  return {
+    NOT: {
+      collections: {
+        some: {
+          collection: { title: { contains: value, mode: "insensitive" } },
+        },
+      },
+    },
+  };
 
     case "is empty":
     case "is empty/blank":
       return {
-        collections: {
-          none: {},
-        },
+        OR: [
+          { collectionsJson: { equals: null } },
+          { collectionsJson: { equals: [] } },
+        ],
       };
 
     case "is not empty":
       return {
-        collections: {
-          some: {},
-        },
+        AND: [
+          { collectionsJson: { not: null } },
+          { NOT: { collectionsJson: { equals: [] } } },
+        ],
       };
 
     default:
@@ -673,19 +666,32 @@ export function getProductPrismaWhere(filterParams = [], shop) {
         });
         break;
 
-      case "seo":
-      case "seo_visibility":
-        if (String(value).toLowerCase() === "true") {
+     case "seo":
+      case "seo_visibility": {
+        const isPositive =
+          operator === "is" ||
+          operator === "equals" ||
+          operator === "is not empty" ||
+          String(value).toLowerCase() === "true";
+
+        const isNegative =
+          operator === "is not" ||
+          operator === "does not equal" ||
+          operator === "is empty" ||
+          operator === "is empty/blank" ||
+          String(value).toLowerCase() === "false";
+
+        if (isPositive) {
           AND.push({
             OR: [{ seoTitle: { not: null } }, { seoDescription: { not: null } }],
           });
-        } else {
+        } else if (isNegative) {
           AND.push({
             AND: [{ seoTitle: null }, { seoDescription: null }],
           });
         }
         break;
-
+      }
       case "profit_margin":
         AND.push({
           variants: {

@@ -3,6 +3,7 @@
 client_id = "6f9d8710bcea15a9a7814c24bb5404be"
 name = "new"
 application_url = "https://example.com"
+
 embedded = true
 
 [webhooks]
@@ -17,7 +18,17 @@ api_version = "2026-01"
 scopes = "read_inventory,read_products,write_products"
 
 [auth]
-redirect_urls = [ "https://example.com/api/auth" ]
+
+redirect_urls = [
+  "https://were-statement-rarely-presently.trycloudflare.com/auth/callback",
+  "https://were-statement-rarely-presently.trycloudflare.com/auth/shopify/callback",
+  "https://were-statement-rarely-presently.trycloudflare.com/api/auth/callback"
+]
+
+[app_proxy]
+url = "https://automatic-learners-excluded-decorative.trycloudflare.com/storefront/subscription"
+subpath = "proxy"
+prefix = "apps"
 
 [build]
 automatically_update_urls_on_dev = true

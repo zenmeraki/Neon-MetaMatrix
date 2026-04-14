@@ -261,16 +261,16 @@ const bulkImportEditWorker = new Worker(
           continue;
         }
 
-        const existingProductForDiff = {
-          ...existingProduct,
-          descriptionHtml: existingProduct.description,
-          seo: {
-            title: existingProduct.seoTitle,
-            description: existingProduct.seoDescription,
-          },
-          options: extractProductOptions(existingProduct),
-          variants: mapExistingVariantsForDiff(existingProduct.variants),
-        };
+       const existingProductForDiff = {
+  ...existingProduct,
+  descriptionHtml: existingProduct.descriptionHtml,
+  seo: {
+    title: existingProduct.seoTitle,
+    description: existingProduct.seoDescription,
+  },
+  options: extractProductOptions(existingProduct),
+  variants: mapExistingVariantsForDiff(existingProduct.variants),
+};
 
         const productFieldChanges = diffProductFields(existingProductForDiff, productSet);
         const variantFieldChanges = diffVariants(

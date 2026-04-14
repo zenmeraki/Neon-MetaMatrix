@@ -9,7 +9,17 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const service = new Services();
+async function acquireShopLock(shopUrl, ttlSeconds = 600) {
+  const key = `lock:product_sync:${shopUrl}`;
+  // SET NX EX — atomic: only sets if key does not exist
+  const result = await connection.set(key, "1", "EX", ttlSeconds, "NX");
+  return result === "OK";
+}
 
+async function releaseShopLock(shopUrl) {
+  const key = `lock:product_sync:${shopUrl}`;
+  await connection.del(key);
+}
 async function syncAllStoresBatched() {
   const batchSize = 20;
   let lastId = null;
@@ -139,6 +149,13 @@ async function handlePrioritySync() {
 }
 
 async function syncStore(shopUrl) {
+  const lockAcquired = await acquireShopLock(shopUrl);
+  if (!lockAcquired) {
+    console.log(`[worker:sync_locked] shop=${shopUrl} reason=lock_not_acquired`);
+    return;
+  }
+
+
   try {
     const store = await prisma.store.findUnique({
       where: { shopUrl },
@@ -148,6 +165,8 @@ async function syncStore(shopUrl) {
     });
 
     if (store?.isProductSyncing) {
+      console.log(`[worker:sync_skipped] shop=${shopUrl} reason=already_syncing`);
+
       return;
     }
 
@@ -163,15 +182,23 @@ async function syncStore(shopUrl) {
     );
 
     if (currentBulkOperation?.status === "RUNNING") {
+      console.log(`[worker:sync_skipped] shop=${shopUrl} reason=bulk_op_running bulkOpId=${currentBulkOperation.id}`);
+
       return;
     }
+    console.log(`[worker:sync_start] shop=${shopUrl}`);
 
     await service.startBulkOperationToFetchProducts({
       session,
       isInitialSync: false,
     });
+    console.log(`[worker:sync_triggered] shop=${shopUrl}`);
+
   } catch (error) {
     console.error(`❌ Error syncing ${shopUrl}:`, error?.message || error);
+  }
+  finally {
+    await releaseShopLock(shopUrl);  // ← always release, even on error
   }
 }
 

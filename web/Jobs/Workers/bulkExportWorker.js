@@ -33,7 +33,7 @@ const WORKER_NAME = "bulkExportWorker";
 
 const PRODUCT_FIELD_RESOLVERS = {
   title: (p) => p.title ?? "",
-  description: (p) => p.description ?? "",
+  description: (p) => p.descriptionHtml ?? p.descriptionText ?? "",
   vendor: (p) => p.vendor ?? "",
   productType: (p) => p.productType ?? "",
   handle: (p) => p.handle ?? "",

@@ -1,3 +1,16 @@
+function stripHtml(html) {
+  if (!html) return null;
+  // Remove all HTML tags and decode common entities
+  return html
+    .replace(/<[^>]*>/g, " ")          // tags → space
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/\s{2,}/g, " ")           // collapse whitespace
+    .trim() || null;
+}
 export function normalizeNullableString(value) {
   if (value === undefined || value === null) return null;
   const s = String(value).trim();
@@ -363,9 +376,7 @@ export function flattenProduct(product, shop, metaobjectLookup = new Map()) {
     vendor: normalizeNullableString(product.vendor),
     tags,
     templateSuffix: normalizeNullableString(product.templateSuffix),
-
-    // IMPORTANT: keep this aligned with compiler/query layer
-    descriptionText: normalizeNullableString(product.descriptionHtml),
+    descriptionText: normalizeNullableString(stripHtml(product.descriptionHtml)),
     descriptionHtml: normalizeNullableString(product.descriptionHtml),
 
     createdAt: product.createdAt ? new Date(product.createdAt) : null,
@@ -374,7 +385,7 @@ export function flattenProduct(product, shop, metaobjectLookup = new Map()) {
 
     seoTitle: normalizeNullableString(product.seo?.title),
     seoDescription: normalizeNullableString(product.seo?.description),
-
+    
     totalInventory: normalizeNullableInt(product.totalInventory) ?? 0,
     categoryId: normalizeNullableString(product.category?.id),
     categoryName: normalizeNullableString(product.category?.name),

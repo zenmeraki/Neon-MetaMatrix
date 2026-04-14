@@ -132,20 +132,11 @@ export async function markSyncHistoryFailed({ shop, syncHistoryId, errorMessage 
   });
 }
 
-export async function activateProductMirrorBatch({
-  shop,
-  syncBatchId,
-  totalProductsProcessed,
-  syncHistoryId,
-}) {
+export async function activateProductMirrorBatch({ shop, syncBatchId, totalProductsProcessed, syncHistoryId }) {
   const store = await prisma.store.findUnique({
     where: { shopUrl: shop },
-    select: {
-      activeMirrorBatchId: true,
-      isProductInitialySyning: true,
-    },
+    select: { activeMirrorBatchId: true },
   });
-
   const previousBatchId = store?.activeMirrorBatchId || null;
   const completedAt = new Date();
 
@@ -181,23 +172,13 @@ export async function activateProductMirrorBatch({
         },
       });
     }
+
+    // ← MOVED INSIDE TRANSACTION
+    if (previousBatchId && previousBatchId !== syncBatchId) {
+      await tx.variant.deleteMany({ where: { shop, mirrorBatchId: previousBatchId } });
+      await tx.product.deleteMany({ where: { shop, mirrorBatchId: previousBatchId } });
+    }
   });
-
-  if (previousBatchId && previousBatchId !== syncBatchId) {
-    await prisma.variant.deleteMany({
-      where: {
-        shop,
-        mirrorBatchId: previousBatchId,
-      },
-    });
-
-    await prisma.product.deleteMany({
-      where: {
-        shop,
-        mirrorBatchId: previousBatchId,
-      },
-    });
-  }
 }
 
 export async function updateInitialSyncProgress({

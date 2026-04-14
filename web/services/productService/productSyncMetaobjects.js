@@ -109,6 +109,6 @@ export async function fetchMetaobjectLookupByIds(session, ids = []) {
   return lookup;
 }
 
-export async function fetchMetaobjectLookup(session, ids = []) {
-  return fetchMetaobjectLookupByIds(session, ids);
-}
+// export async function fetchMetaobjectLookup(session, ids = []) {
+//   return fetchMetaobjectLookupByIds(session, ids);
+// }
