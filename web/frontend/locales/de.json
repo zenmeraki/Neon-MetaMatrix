@@ -956,5 +956,22 @@
     "removeTextUpToWord": "Text bis Wort entfernen",
     "searchReplace": "Suchen/Ersetzen"
   },
-  "historyEmptyStateTitle": "Noch keine Aktivität"
+  "historyEmptyStateTitle": "Noch keine Aktivität",
+  "exportColumnTitle": "Titel",
+  "exportColumnProgress": "Fortschritt",
+  "exportColumnType": "Typ",
+  "exportColumnStatus": "Status",
+  "exportColumnTime": "Zeit exportieren",
+  "exportColumnActions": "Aktionen",
+  "exportDownloading": "Herunterladen...",
+  "exportDownload": "Herunterladen",
+  "exportItems": "Artikel",
+  "exportLoadError": "Der Exportverlauf konnte nicht geladen werden.",
+  "exportInProgress": "Im Gange",
+  "exportType": {
+    "manual": "Manueller Export",
+    "scheduled": "Geplanter Export"
+  },
+  "exportDownloadLinkMissing": "Download-Link nicht verfügbar.",
+  "exportDownloadFailed": "Datei konnte nicht heruntergeladen werden."
 }

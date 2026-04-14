@@ -956,5 +956,22 @@
     "removeTextUpToWord": "Eliminar texto hasta la palabra",
     "searchReplace": "Buscar/Reemplazar"
   },
-  "historyEmptyStateTitle": "Aún no hay actividad"
+  "historyEmptyStateTitle": "Aún no hay actividad",
+  "exportColumnTitle": "Título",
+  "exportColumnProgress": "Progreso",
+  "exportColumnType": "Tipo",
+  "exportColumnStatus": "Estado",
+  "exportColumnTime": "tiempo de exportación",
+  "exportColumnActions": "Comportamiento",
+  "exportDownloading": "Descargando...",
+  "exportDownload": "Descargar",
+  "exportItems": "elementos",
+  "exportLoadError": "No se pudo cargar el historial de exportación.",
+  "exportInProgress": "En curso",
+  "exportType": {
+    "manual": "Exportación manual",
+    "scheduled": "Exportación programada"
+  },
+  "exportDownloadLinkMissing": "Enlace de descarga no disponible.",
+  "exportDownloadFailed": "No se pudo descargar el archivo."
 }

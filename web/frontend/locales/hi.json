@@ -976,5 +976,22 @@
     "removeTextUpToWord": "शब्द तक पाठ हटाएँ",
     "searchReplace": "खोजें/प्रतिस्थापित करें"
   },
-  "historyEmptyStateTitle": "अभी तक कोई गतिविधि नहीं"
+  "historyEmptyStateTitle": "अभी तक कोई गतिविधि नहीं",
+  "exportColumnTitle": "शीर्षक",
+  "exportColumnProgress": "प्रगति",
+  "exportColumnType": "प्रकार",
+  "exportColumnStatus": "स्थिति",
+  "exportColumnTime": "निर्यात का समय",
+  "exportColumnActions": "कार्रवाई",
+  "exportDownloading": "डाउनलोड हो रहा है...",
+  "exportDownload": "डाउनलोड करना",
+  "exportItems": "सामान",
+  "exportLoadError": "निर्यात इतिहास लोड करने में विफल.",
+  "exportInProgress": "प्रगति पर है",
+  "exportType": {
+    "manual": "मैन्युअल निर्यात",
+    "scheduled": "अनुसूचित निर्यात"
+  },
+  "exportDownloadLinkMissing": "डाउनलोड लिंक उपलब्ध नहीं है.",
+  "exportDownloadFailed": "फ़ाइल डाउनलोड करने में विफल."
 }

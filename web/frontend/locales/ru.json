@@ -955,5 +955,22 @@
     "removeTextUpToWord": "Удалить текст до слова",
     "searchReplace": "Найти/Заменить"
   },
-  "historyEmptyStateTitle": "Пока нет активности"
+  "historyEmptyStateTitle": "Пока нет активности",
+  "exportColumnTitle": "Заголовок",
+  "exportColumnProgress": "Прогресс",
+  "exportColumnType": "Тип",
+  "exportColumnStatus": "Статус",
+  "exportColumnTime": "Время экспорта",
+  "exportColumnActions": "Действия",
+  "exportDownloading": "Загрузка...",
+  "exportDownload": "Скачать",
+  "exportItems": "предметы",
+  "exportLoadError": "Не удалось загрузить историю экспорта.",
+  "exportInProgress": "В ходе выполнения",
+  "exportType": {
+    "manual": "Ручной экспорт",
+    "scheduled": "Запланированный экспорт"
+  },
+  "exportDownloadLinkMissing": "Ссылка на скачивание недоступна.",
+  "exportDownloadFailed": "Не удалось загрузить файл."
 }

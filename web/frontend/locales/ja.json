@@ -954,5 +954,22 @@
     "removeTextUpToWord": "単語までのテキストを削除",
     "searchReplace": "検索/置換"
   },
-  "historyEmptyStateTitle": "まだ活動はありません"
+  "historyEmptyStateTitle": "まだ活動はありません",
+  "exportColumnTitle": "タイトル",
+  "exportColumnProgress": "進捗",
+  "exportColumnType": "タイプ",
+  "exportColumnStatus": "状態",
+  "exportColumnTime": "エクスポート時間",
+  "exportColumnActions": "アクション",
+  "exportDownloading": "ダウンロード中...",
+  "exportDownload": "ダウンロード",
+  "exportItems": "アイテム",
+  "exportLoadError": "エクスポート履歴の読み込みに失敗しました。",
+  "exportInProgress": "進行中",
+  "exportType": {
+    "manual": "手動エクスポート",
+    "scheduled": "スケジュールされたエクスポート"
+  },
+  "exportDownloadLinkMissing": "ダウンロードリンクは利用できません。",
+  "exportDownloadFailed": "ファイルのダウンロードに失敗しました。"
 }

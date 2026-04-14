@@ -23,7 +23,7 @@ function getNormalizedExportType(item) {
     .toLowerCase();
 }
 
-function getPrimaryStatus(item) {
+function getPrimaryStatus(item, t) {
   const statusKey = String(
     item?.primaryStatus?.key || item?.status || "pending",
   ).toLowerCase();
@@ -31,23 +31,25 @@ function getPrimaryStatus(item) {
   if (statusKey === "completed") {
     return {
       key: "completed",
-      label: "Completed",
+      label: t("historyStatus.completed"),
       tone: "success",
       isTerminal: true,
     };
   }
+
   if (statusKey === "failed") {
     return {
       key: "failed",
-      label: "Failed",
+      label: t("historyStatus.failed"),
       tone: "critical",
       isTerminal: true,
     };
   }
+
   if (statusKey === "processing") {
     return {
       key: "processing",
-      label: "Processing",
+      label: t("historyStatus.processing"),
       tone: "info",
       isTerminal: false,
     };
@@ -55,10 +57,24 @@ function getPrimaryStatus(item) {
 
   return {
     key: "pending",
-    label: "Pending",
+    label: t("historyStatus.pending"),
     tone: "attention",
     isTerminal: false,
   };
+}
+
+function getExportTypeLabel(item, t) {
+  const typeKey = getNormalizedExportType(item);
+
+  if (typeKey === "manual export") {
+    return t("exportType.manual");
+  }
+
+  if (typeKey === "scheduled export") {
+    return t("exportType.scheduled");
+  }
+
+  return item?.type || "-";
 }
 
 function getProgressValue(item, primaryStatus) {
@@ -136,31 +152,31 @@ const ExportTable = ({
     };
   }, []);
 
-useEffect(() => {
-  const hasActiveHistory = histories.some(
-    (item) => getPrimaryStatus(item).isTerminal !== true,
-  );
+  useEffect(() => {
+    const hasActiveHistory = histories.some(
+      (item) => getPrimaryStatus(item, t).isTerminal !== true,
+    );
 
-  // ✅ Always poll for scheduled exports, or when there are active items
-  const shouldPoll =
-    String(selectedType).toLowerCase().includes("scheduled") || hasActiveHistory;
+    const shouldPoll =
+      String(selectedType).toLowerCase().includes("scheduled") ||
+      hasActiveHistory;
 
-  if (!shouldPoll) return undefined;
+    if (!shouldPoll) return undefined;
 
-  const interval = setInterval(async () => {
-    try {
-      const res = await fetch("/api/history/get-shop-exporthistory?");
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setHistories(data.data || []);
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch("/api/history/get-shop-exporthistory?");
+        const data = await res.json();
+        if (res.ok && data.success) {
+          setHistories(data.data || []);
+        }
+      } catch {
+        // silent
       }
-    } catch {
-      // silent
-    }
-  }, 4000);
+    }, 4000);
 
-  return () => clearInterval(interval);
-}, [histories, selectedType]); // ✅ add selectedType to deps
+    return () => clearInterval(interval);
+  }, [histories, selectedType, t]);
 
   const filteredHistories = useMemo(() => {
     const normalizedSelectedType = String(selectedType).trim().toLowerCase();
@@ -172,7 +188,7 @@ useEffect(() => {
 
   const handleDownloadClick = async (id, fileUrl, filename) => {
     if (!fileUrl) {
-      onExportError?.("Download link not available.");
+       onExportError?.(t("exportDownloadLinkMissing"));
       return;
     }
 
@@ -189,7 +205,7 @@ useEffect(() => {
 
       onExportSuccess?.();
     } catch {
-      onExportError?.("Failed to download file.");
+       onExportError?.(t("exportDownloadFailed"));
     } finally {
       setDownloadingItems((prev) => {
         const next = new Set(prev);
@@ -200,13 +216,13 @@ useEffect(() => {
   };
 
   const renderTimeCell = (item) => {
-    const primaryStatus = getPrimaryStatus(item);
+    const primaryStatus = getPrimaryStatus(item, t);
     const dateString = item.completedAt || item.createdAt;
 
     if (!primaryStatus.isTerminal) {
       return (
         <Text as="span" variant="bodySm" tone="subdued">
-          {primaryStatus.detail || "In progress"}
+          {primaryStatus.detail || t("exportInProgress")}
         </Text>
       );
     }
@@ -230,7 +246,7 @@ useEffect(() => {
     () =>
       filteredHistories.map((item, index) => {
         const id = item.id || item._id;
-        const primaryStatus = getPrimaryStatus(item);
+        const primaryStatus = getPrimaryStatus(item, t);
         const filename = item.filename || "Untitled export";
         const isDownloading = downloadingItems.has(id);
         const isDownloadable =
@@ -264,8 +280,8 @@ useEffect(() => {
                       primaryStatus.key === "failed"
                         ? "critical"
                         : primaryStatus.key === "partial"
-                        ? "warning"
-                        : "highlight"
+                          ? "warning"
+                          : "highlight"
                     }
                   />
                 </div>
@@ -277,7 +293,7 @@ useEffect(() => {
 
             <IndexTable.Cell>
               <Text as="span" variant="bodyMd">
-                {item.type || "-"}
+                {getExportTypeLabel(item, t)}
               </Text>
             </IndexTable.Cell>
 
@@ -302,13 +318,13 @@ useEffect(() => {
                 variant="plain"
                 onClick={() => handleDownloadClick(id, item.fileUrl, filename)}
               >
-                {isDownloading ? "Downloading..." : "Download"}
+                {isDownloading ? t("exportDownloading") : t("exportDownload")}
               </Button>
             </IndexTable.Cell>
           </IndexTable.Row>
         );
       }),
-    [downloadingItems, filteredHistories],
+    [downloadingItems, filteredHistories, t],
   );
 
   if (historyLoading) {
@@ -325,7 +341,12 @@ useEffect(() => {
   return (
     <Card padding="0">
       <BlockStack gap="0">
-        <Box padding="400" borderBlockEndWidth="025" borderColor="border" paddingInlineStart="800" >
+        <Box
+          padding="400"
+          borderBlockEndWidth="025"
+          borderColor="border"
+          paddingInlineStart="800"
+        >
           <InlineStack align="space-between" blockAlign="center">
             <BlockStack gap="100">
               <Text as="h3" variant="headingLg">
@@ -338,7 +359,7 @@ useEffect(() => {
               </Box>
             </BlockStack>
             <Text as="span" tone="subdued" variant="bodySm">
-              {filteredHistories.length} items
+              {filteredHistories.length} {t("exportItems")}
             </Text>
           </InlineStack>
         </Box>
@@ -347,7 +368,7 @@ useEffect(() => {
           <Box padding="400" borderBlockEndWidth="025" borderColor="border">
             <Banner tone="critical">
               <Text as="p">
-                {historyError.message || "Failed to load export history."}
+                {historyError.message || t("exportLoadError")}
               </Text>
             </Banner>
           </Box>
@@ -361,21 +382,22 @@ useEffect(() => {
           </Box>
         ) : (
           <Box paddingInlineStart="600">
-          <IndexTable
-            resourceName={{ singular: "export", plural: "exports" }}
-            itemCount={filteredHistories.length}
-            selectable={false}
-            headings={[
-              { title: "Title" },
-              { title: "Progress" },
-              { title: "Type" },
-              { title: "Status" },
-              { title: "Export time" },
-              { title: "Actions" },
-            ]}
-          >
-            {historyRowMarkup}
-          </IndexTable></Box>
+            <IndexTable
+              resourceName={{ singular: "export", plural: "exports" }}
+              itemCount={filteredHistories.length}
+              selectable={false}
+              headings={[
+                { title: t("exportColumnTitle") },
+                { title: t("exportColumnProgress") },
+                { title: t("exportColumnType") },
+                { title: t("exportColumnStatus") },
+                { title: t("exportColumnTime") },
+                { title: t("exportColumnActions") },
+              ]}
+            >
+              {historyRowMarkup}
+            </IndexTable>
+          </Box>
         )}
       </BlockStack>
     </Card>

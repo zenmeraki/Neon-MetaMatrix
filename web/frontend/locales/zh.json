@@ -955,5 +955,22 @@
     "removeTextUpToWord": "删除到单词为止的文本",
     "searchReplace": "查找/替换"
   },
-  "historyEmptyStateTitle": "还没有活动"
+  "historyEmptyStateTitle": "还没有活动",
+  "exportColumnTitle": "标题",
+  "exportColumnProgress": "进步",
+  "exportColumnType": "类型",
+  "exportColumnStatus": "地位",
+  "exportColumnTime": "出口时间",
+  "exportColumnActions": "行动",
+  "exportDownloading": "正在下载...",
+  "exportDownload": "下载",
+  "exportItems": "项目",
+  "exportLoadError": "无法加载导出历史记录。",
+  "exportInProgress": "进行中",
+  "exportType": {
+    "manual": "手动导出",
+    "scheduled": "预定出口"
+  },
+  "exportDownloadLinkMissing": "下载链接不可用。",
+  "exportDownloadFailed": "下载文件失败。"
 }

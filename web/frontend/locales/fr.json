@@ -955,5 +955,22 @@
     "removeTextUpToWord": "Supprimer le texte jusqu'au mot",
     "searchReplace": "Rechercher/Remplacer"
   },
-  "historyEmptyStateTitle": "Aucune activité pour le moment"
+  "historyEmptyStateTitle": "Aucune activité pour le moment",
+  "exportColumnTitle": "Titre",
+  "exportColumnProgress": "Progrès",
+  "exportColumnType": "Taper",
+  "exportColumnStatus": "Statut",
+  "exportColumnTime": "Temps d'exportation",
+  "exportColumnActions": "Actes",
+  "exportDownloading": "Téléchargement...",
+  "exportDownload": "Télécharger",
+  "exportItems": "articles",
+  "exportLoadError": "Échec du chargement de l'historique des exportations.",
+  "exportInProgress": "En cours",
+  "exportType": {
+    "manual": "Exportation manuelle",
+    "scheduled": "Exportation programmée"
+  },
+  "exportDownloadLinkMissing": "Lien de téléchargement non disponible.",
+  "exportDownloadFailed": "Échec du téléchargement du fichier."
 }

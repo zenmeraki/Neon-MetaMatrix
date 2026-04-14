@@ -988,5 +988,22 @@
     "removeTextUpToWord": "Remove text up to word",
     "searchReplace": "Search/replace"
   },
-  "historyEmptyStateTitle": "No activity yet"
+  "historyEmptyStateTitle": "No activity yet",
+  "exportColumnTitle": "Title",
+  "exportColumnProgress": "Progress",
+  "exportColumnType": "Type",
+  "exportColumnStatus": "Status",
+  "exportColumnTime": "Export time",
+  "exportColumnActions": "Actions",
+  "exportDownloading": "Downloading...",
+  "exportDownload": "Download",
+  "exportItems": "items",
+  "exportLoadError": "Failed to load export history.",
+  "exportInProgress": "In progress",
+  "exportType": {
+    "manual": "Manual Export",
+    "scheduled": "Scheduled Export"
+  },
+  "exportDownloadLinkMissing": "Download link not available.",
+  "exportDownloadFailed": "Failed to download file."
 }

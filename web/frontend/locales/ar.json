@@ -969,5 +969,22 @@
     "removeTextUpToWord": "إزالة النص حتى الكلمة",
     "searchReplace": "بحث/استبدال"
   },
-  "historyEmptyStateTitle": "لا يوجد نشاط بعد"
+  "historyEmptyStateTitle": "لا يوجد نشاط بعد",
+  "exportColumnTitle": "عنوان",
+  "exportColumnProgress": "تقدم",
+  "exportColumnType": "يكتب",
+  "exportColumnStatus": "حالة",
+  "exportColumnTime": "وقت التصدير",
+  "exportColumnActions": "الإجراءات",
+  "exportDownloading": "جارٍ التنزيل...",
+  "exportDownload": "تحميل",
+  "exportItems": "أغراض",
+  "exportLoadError": "فشل تحميل سجل التصدير.",
+  "exportInProgress": "في تَقَدم",
+  "exportType": {
+    "manual": "التصدير اليدوي",
+    "scheduled": "التصدير المقرر"
+  },
+  "exportDownloadLinkMissing": "رابط التحميل غير متوفر.",
+  "exportDownloadFailed": "فشل تنزيل الملف."
 }
