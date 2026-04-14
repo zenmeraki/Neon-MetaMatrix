@@ -6,10 +6,9 @@ const SCHEDULE_INTERVAL_MS = 10_000;
 async function runSchedulerTick() {
   try {
     // console.log("🔥 Scheduled export tick fired");
-
     const result = await scheduleDueScheduledExportRuns();
     // console.log("📊 Scheduler result:", result);
-
+    
     // logger.info("Scheduled export scheduler tick", {
     //   scheduled: result?.scheduled ?? 0,
     //   skipped: result?.skipped ?? 0,

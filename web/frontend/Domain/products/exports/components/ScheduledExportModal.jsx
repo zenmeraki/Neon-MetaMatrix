@@ -11,6 +11,9 @@ import {
   Toast,
 } from "@shopify/polaris";
 
+import { useTranslation } from "react-i18next";
+
+
 function ScheduledExportModal({
   show,
   onHide,
@@ -18,6 +21,8 @@ function ScheduledExportModal({
   selectedFields,
   filters,
 }) {
+  const { t } = useTranslation();
+
   const navigate = useNavigate();
   const [startExportChecked, setStartExportChecked] = useState(true);
   const [startExportDate, setStartExportDate] = useState("");
@@ -87,7 +92,7 @@ function ScheduledExportModal({
       const data = await response.json();
 
       if (!response.ok) {
-        const message = data?.message || "Failed to create scheduled export";
+        const message = data?.message || t("scheduledExport.failedMessage");
 
         if (
           message.toLowerCase().includes("plan") ||
@@ -103,7 +108,7 @@ function ScheduledExportModal({
 
       setToastState({
         active: true,
-        message: "Export scheduled successfully!",
+         message: t("scheduledExport.successMessage"),
         error: false,
       });
 
@@ -112,10 +117,10 @@ function ScheduledExportModal({
         navigate("/history");
       }, 1000);
     } catch (requestError) {
-      setError(requestError.message || "Failed to schedule export");
+      setError(requestError.message || t("scheduledExport.failedMessage"));
       setToastState({
         active: true,
-        message: requestError.message || "Failed to schedule export",
+        message: requestError.message || t("scheduledExport.failedMessage"),
         error: true,
       });
     } finally {
@@ -147,16 +152,16 @@ function ScheduledExportModal({
       <Modal
         open={show}
         onClose={handleClose}
-        title="Schedule Export"
+         title={t("scheduledExport.modalTitle")}
         primaryAction={{
-          content: "Schedule",
+          content: t("scheduledExport.scheduleButton"),
           onAction: handleScheduleExport,
           loading: submitting,
           disabled: !isFormValid || submitting,
         }}
         secondaryActions={[
           {
-            content: "Cancel",
+            content: t("scheduledExport.cancelButton"),
             onAction: handleClose,
           },
         ]}
@@ -166,10 +171,10 @@ function ScheduledExportModal({
             {upgradeWarning && (
               <Banner
                 tone="warning"
-                title="Upgrade Required"
+                title={t("scheduledExport.upgradeRequiredTitle")}
                 onDismiss={() => setUpgradeWarning(null)}
                 action={{
-                  content: "Upgrade Plan",
+                   content: t("scheduledExport.upgradePlanButton"),
                   onAction: () => navigate("/pricing"),
                 }}
               >
@@ -184,7 +189,7 @@ function ScheduledExportModal({
             )}
 
             <Checkbox
-              label="Start export at scheduled time"
+              label={t("scheduledExport.startExportCheckbox")}
               checked={startExportChecked}
               onChange={(checked) => setStartExportChecked(checked)}
             />
@@ -192,19 +197,19 @@ function ScheduledExportModal({
             {startExportChecked && (
               <FormLayout.Group>
                 <TextField
-                  label="Date"
+                  label={t("scheduledExport.dateLabel")}
                   type="date"
                   value={startExportDate}
                   onChange={setStartExportDate}
-                  helpText="Select the date to run the export"
+                  helpText={t("scheduledExport.dateHelpText")}
                   min={new Date().toISOString().split("T")[0]}
                 />
                 <TextField
-                  label="Time"
+                   label={t("scheduledExport.timeLabel")}
                   type="time"
                   value={startExportTime}
                   onChange={setStartExportTime}
-                  helpText="Select the time to run the export"
+                  helpText={t("scheduledExport.timeHelpText")}
                 />
               </FormLayout.Group>
             )}

@@ -993,5 +993,19 @@
     "scheduled": "अनुसूचित निर्यात"
   },
   "exportDownloadLinkMissing": "डाउनलोड लिंक उपलब्ध नहीं है.",
-  "exportDownloadFailed": "फ़ाइल डाउनलोड करने में विफल."
+  "exportDownloadFailed": "फ़ाइल डाउनलोड करने में विफल.",
+  "scheduledExport": {
+    "failedMessage": "निर्यात शेड्यूल करने में विफल",
+    "successMessage": "निर्यात सफलतापूर्वक शेड्यूल किया गया!",
+    "modalTitle": "निर्यात शेड्यूल करें",
+    "scheduleButton": "अनुसूची",
+    "cancelButton": "रद्द करना",
+    "upgradeRequiredTitle": "अपग्रेड आवश्यक",
+    "upgradePlanButton": "उन्नयन योजना",
+    "startExportCheckbox": "निर्धारित समय पर निर्यात प्रारंभ करें",
+    "dateLabel": "तारीख",
+    "dateHelpText": "निर्यात चलाने के लिए दिनांक का चयन करें",
+    "timeLabel": "समय",
+    "timeHelpText": "निर्यात चलाने के लिए समय का चयन करें"
+  }
 }

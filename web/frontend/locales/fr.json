@@ -972,5 +972,19 @@
     "scheduled": "Exportation programmée"
   },
   "exportDownloadLinkMissing": "Lien de téléchargement non disponible.",
-  "exportDownloadFailed": "Échec du téléchargement du fichier."
+  "exportDownloadFailed": "Échec du téléchargement du fichier.",
+  "scheduledExport": {
+    "failedMessage": "Échec de la planification de l'exportation",
+    "successMessage": "Exportation planifiée avec succès !",
+    "modalTitle": "Planifier l'exportation",
+    "scheduleButton": "Calendrier",
+    "cancelButton": "Annuler",
+    "upgradeRequiredTitle": "Mise à niveau requise",
+    "upgradePlanButton": "Plan de mise à niveau",
+    "startExportCheckbox": "Démarrer l'exportation à l'heure programmée",
+    "dateLabel": "Date",
+    "dateHelpText": "Sélectionnez la date pour exécuter l'export",
+    "timeLabel": "Temps",
+    "timeHelpText": "Sélectionnez l'heure d'exécution de l'exportation"
+  }
 }

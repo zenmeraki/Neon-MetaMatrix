@@ -973,5 +973,19 @@
     "scheduled": "Geplanter Export"
   },
   "exportDownloadLinkMissing": "Download-Link nicht verfügbar.",
-  "exportDownloadFailed": "Datei konnte nicht heruntergeladen werden."
+  "exportDownloadFailed": "Datei konnte nicht heruntergeladen werden.",
+  "scheduledExport": {
+    "failedMessage": "Der Export konnte nicht geplant werden",
+    "successMessage": "Export erfolgreich geplant!",
+    "modalTitle": "Export planen",
+    "scheduleButton": "Zeitplan",
+    "cancelButton": "Stornieren",
+    "upgradeRequiredTitle": "Upgrade erforderlich",
+    "upgradePlanButton": "Upgrade-Plan",
+    "startExportCheckbox": "Starten Sie den Export zum geplanten Zeitpunkt",
+    "dateLabel": "Datum",
+    "dateHelpText": "Wählen Sie das Datum aus, an dem der Export ausgeführt werden soll",
+    "timeLabel": "Zeit",
+    "timeHelpText": "Wählen Sie den Zeitpunkt für die Ausführung des Exports aus"
+  }
 }

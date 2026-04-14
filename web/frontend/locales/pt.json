@@ -972,5 +972,19 @@
     "scheduled": "Exportação agendada"
   },
   "exportDownloadLinkMissing": "Link para download não disponível.",
-  "exportDownloadFailed": "Falha ao baixar o arquivo."
+  "exportDownloadFailed": "Falha ao baixar o arquivo.",
+  "scheduledExport": {
+    "failedMessage": "Falha ao agendar a exportação",
+    "successMessage": "Exportação agendada com sucesso!",
+    "modalTitle": "Agendar exportação",
+    "scheduleButton": "Agendar",
+    "cancelButton": "Cancelar",
+    "upgradeRequiredTitle": "Atualização necessária",
+    "upgradePlanButton": "Plano de atualização",
+    "startExportCheckbox": "Iniciar a exportação no horário agendado",
+    "dateLabel": "Data",
+    "dateHelpText": "Selecione a data para executar a exportação",
+    "timeLabel": "Tempo",
+    "timeHelpText": "Selecione o horário para executar a exportação"
+  }
 }

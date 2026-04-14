@@ -1005,5 +1005,19 @@
     "scheduled": "Scheduled Export"
   },
   "exportDownloadLinkMissing": "Download link not available.",
-  "exportDownloadFailed": "Failed to download file."
+  "exportDownloadFailed": "Failed to download file.",
+  "scheduledExport": {
+  "modalTitle": "Schedule Export",
+  "scheduleButton": "Schedule",
+  "cancelButton": "Cancel",
+  "upgradeRequiredTitle": "Upgrade Required",
+  "upgradePlanButton": "Upgrade Plan",
+  "startExportCheckbox": "Start export at scheduled time",
+  "dateLabel": "Date",
+  "dateHelpText": "Select the date to run the export",
+  "timeLabel": "Time",
+  "timeHelpText": "Select the time to run the export",
+  "successMessage": "Export scheduled successfully!",
+  "failedMessage": "Failed to schedule export"
+}
 }

@@ -986,5 +986,19 @@
     "scheduled": "التصدير المقرر"
   },
   "exportDownloadLinkMissing": "رابط التحميل غير متوفر.",
-  "exportDownloadFailed": "فشل تنزيل الملف."
+  "exportDownloadFailed": "فشل تنزيل الملف.",
+  "scheduledExport": {
+    "failedMessage": "فشل جدولة التصدير",
+    "successMessage": "تمت جدولة التصدير بنجاح!",
+    "modalTitle": "جدولة التصدير",
+    "scheduleButton": "جدول",
+    "cancelButton": "يلغي",
+    "upgradeRequiredTitle": "الترقية مطلوبة",
+    "upgradePlanButton": "خطة الترقية",
+    "startExportCheckbox": "ابدأ التصدير في الوقت المحدد",
+    "dateLabel": "تاريخ",
+    "dateHelpText": "حدد التاريخ لتشغيل التصدير",
+    "timeLabel": "وقت",
+    "timeHelpText": "حدد الوقت لتشغيل التصدير"
+  }
 }

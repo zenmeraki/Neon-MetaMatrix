@@ -972,5 +972,18 @@
     "scheduled": "预定出口"
   },
   "exportDownloadLinkMissing": "下载链接不可用。",
-  "exportDownloadFailed": "下载文件失败。"
+  "exportDownloadFailed": "下载文件失败。",
+  "scheduledExport": {
+    "failedMessage": "无法安排导出",
+    "successMessage": "导出预定成功！",
+    "scheduleButton": "日程",
+    "cancelButton": "取消",
+    "upgradeRequiredTitle": "需要升级",
+    "upgradePlanButton": "升级计划",
+    "startExportCheckbox": "在预定时间开始导出",
+    "dateLabel": "日期",
+    "dateHelpText": "选择运行导出的日期",
+    "timeLabel": "时间",
+    "timeHelpText": "选择运行导出的时间"
+  }
 }

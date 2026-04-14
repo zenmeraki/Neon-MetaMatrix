@@ -971,5 +971,19 @@
     "scheduled": "スケジュールされたエクスポート"
   },
   "exportDownloadLinkMissing": "ダウンロードリンクは利用できません。",
-  "exportDownloadFailed": "ファイルのダウンロードに失敗しました。"
+  "exportDownloadFailed": "ファイルのダウンロードに失敗しました。",
+  "scheduledExport": {
+    "failedMessage": "エクスポートのスケジュールに失敗しました",
+    "successMessage": "エクスポートが正常にスケジュールされました。",
+    "modalTitle": "エクスポートのスケジュール設定",
+    "scheduleButton": "スケジュール",
+    "cancelButton": "キャンセル",
+    "upgradeRequiredTitle": "アップグレードが必要です",
+    "upgradePlanButton": "アップグレードプラン",
+    "startExportCheckbox": "スケジュールされた時間にエクスポートを開始する",
+    "dateLabel": "日付",
+    "dateHelpText": "エクスポートを実行する日付を選択してください",
+    "timeLabel": "時間",
+    "timeHelpText": "エクスポートを実行する時間を選択します"
+  }
 }

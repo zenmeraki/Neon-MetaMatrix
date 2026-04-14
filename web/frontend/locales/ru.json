@@ -972,5 +972,19 @@
     "scheduled": "Запланированный экспорт"
   },
   "exportDownloadLinkMissing": "Ссылка на скачивание недоступна.",
-  "exportDownloadFailed": "Не удалось загрузить файл."
+  "exportDownloadFailed": "Не удалось загрузить файл.",
+  "scheduledExport": {
+    "failedMessage": "Не удалось запланировать экспорт.",
+    "successMessage": "Экспорт запланирован успешно!",
+    "modalTitle": "Расписание экспорта",
+    "scheduleButton": "Расписание",
+    "cancelButton": "Отмена",
+    "upgradeRequiredTitle": "Требуется обновление",
+    "upgradePlanButton": "План обновления",
+    "startExportCheckbox": "Начать экспорт в запланированное время",
+    "dateLabel": "Дата",
+    "dateHelpText": "Выберите дату для запуска экспорта",
+    "timeLabel": "Время",
+    "timeHelpText": "Выберите время для запуска экспорта"
+  }
 }

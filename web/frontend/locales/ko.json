@@ -972,5 +972,19 @@
     "scheduled": "예약된 내보내기"
   },
   "exportDownloadLinkMissing": "다운로드 링크를 사용할 수 없습니다.",
-  "exportDownloadFailed": "파일을 다운로드하지 못했습니다."
+  "exportDownloadFailed": "파일을 다운로드하지 못했습니다.",
+  "scheduledExport": {
+    "failedMessage": "내보내기를 예약하지 못했습니다.",
+    "successMessage": "내보내기가 예약되었습니다!",
+    "modalTitle": "내보내기 예약",
+    "scheduleButton": "일정",
+    "cancelButton": "취소",
+    "upgradeRequiredTitle": "업그레이드 필요",
+    "upgradePlanButton": "업그레이드 계획",
+    "startExportCheckbox": "예정된 시간에 내보내기 시작",
+    "dateLabel": "날짜",
+    "dateHelpText": "내보내기를 실행할 날짜를 선택하세요.",
+    "timeLabel": "시간",
+    "timeHelpText": "내보내기를 실행할 시간을 선택하세요."
+  }
 }
