@@ -899,5 +899,18 @@
   },
   "common": {
     "seconds": "Seconds"
+  },
+  
+  "historyStatus": {
+    "completed": "Completed",
+    "failed": "Failed",
+    "processing": "Processing",
+    "pending": "Pending",
+    "finalizing": "Finalizing",
+    "undo_processing": "Undo processing",
+    "undo_completed": "Undo completed",
+    "undo_failed": "Undo failed",
+    "undo_queued": "Undo queued"
   }
 }
+

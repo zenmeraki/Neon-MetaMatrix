@@ -887,5 +887,19 @@
   },
   "common": {
     "seconds": "सेकंड"
+  },
+
+  "historyStatus": {
+    "completed": "पूर्ण",
+    "failed": "विफल",
+    "processing": "प्रक्रिया में",
+    "pending": "लंबित",
+
+    "finalizing": "अंतिम रूप दिया जा रहा है",
+
+    "undo_processing": "पूर्ववत किया जा रहा है",
+    "undo_completed": "पूर्ववत पूर्ण",
+    "undo_failed": "पूर्ववत विफल",
+    "undo_queued": "पूर्ववत कतार में"
   }
 }

@@ -26,11 +26,9 @@ function getPrimaryStatusSummary(item) {
 
   const status = String(item?.status || "pending").toLowerCase();
 
-
   if (status === "completed") {
     return {
       key: "completed",
-      label: "Completed",
       tone: "success",
       isTerminal: true,
     };
@@ -39,7 +37,6 @@ function getPrimaryStatusSummary(item) {
   if (status === "failed") {
     return {
       key: "failed",
-      label: "Failed",
       tone: "critical",
       isTerminal: true,
     };
@@ -48,7 +45,6 @@ function getPrimaryStatusSummary(item) {
   if (status === "processing") {
     return {
       key: "processing",
-      label: "Processing",
       tone: "info",
       isTerminal: false,
     };
@@ -56,7 +52,6 @@ function getPrimaryStatusSummary(item) {
 
   return {
     key: "pending",
-    label: "Pending",
     tone: "attention",
     isTerminal: false,
   };
@@ -76,7 +71,6 @@ function getUndoStatusSummary(item) {
   if (undoStatus === "completed") {
     return {
       key: "undo_completed",
-      label: "Undo completed",
       tone: "success",
       isTerminal: true,
     };
@@ -85,7 +79,6 @@ function getUndoStatusSummary(item) {
   if (undoStatus === "failed") {
     return {
       key: "undo_failed",
-      label: "Undo failed",
       tone: "critical",
       isTerminal: true,
     };
@@ -93,7 +86,6 @@ function getUndoStatusSummary(item) {
 
   return {
     key: "undo_processing",
-    label: "Undo processing",
     tone: "attention",
     isTerminal: false,
   };
@@ -124,22 +116,38 @@ const HistoryTable = memo(function HistoryTable({
     setLocalHistories(histories || []);
   }, [histories]);
 
+  const getStatusLabel = useCallback(
+    (statusKey) => {
+      return t(`historyStatus.${statusKey}`);
+    },
+    [t],
+  );
+
   const handleCloseUndo = useCallback(() => {
     setShowUndoModal(false);
     setUndoHistoryItem(null);
   }, []);
 
-  const renderStatusBadge = useCallback((item) => {
-    const primaryStatus = getPrimaryStatusSummary(item);
-    const undoStatus = getUndoStatusSummary(item);
+  const renderStatusBadge = useCallback(
+    (item) => {
+      const primaryStatus = getPrimaryStatusSummary(item);
+      const undoStatus = getUndoStatusSummary(item);
 
-    return (
-      <InlineStack gap="150" wrap>
-        <Badge tone={primaryStatus.tone}>{primaryStatus.label}</Badge>
-        {undoStatus ? <Badge tone={undoStatus.tone}>{undoStatus.label}</Badge> : null}
-      </InlineStack>
-    );
-  }, []);
+      return (
+        <InlineStack gap="150" wrap>
+          <Badge tone={primaryStatus.tone}>
+            {getStatusLabel(primaryStatus.key)}
+          </Badge>
+          {undoStatus ? (
+            <Badge tone={undoStatus.tone}>
+              {getStatusLabel(undoStatus.key)}
+            </Badge>
+          ) : null}
+        </InlineStack>
+      );
+    },
+    [getStatusLabel],
+  );
 
   const canUndo = useCallback((item) => {
     const primaryStatus = getPrimaryStatusSummary(item);
@@ -177,20 +185,19 @@ const HistoryTable = memo(function HistoryTable({
         prev.map((history) =>
           history.id === undoHistoryItem.id
             ? {
-              ...history,
-              undo: {
-                ...history.undo,
-                status: "processing",
-                state: "queued",
-                startedAt: new Date().toISOString(),
-              },
-              undoStatusSummary: {
-                key: "undo_queued",
-                label: "Undo queued",
-                tone: "attention",
-                isTerminal: false,
-              },
-            }
+                ...history,
+                undo: {
+                  ...history.undo,
+                  status: "processing",
+                  state: "queued",
+                  startedAt: new Date().toISOString(),
+                },
+                undoStatusSummary: {
+                  key: "undo_queued",
+                  tone: "attention",
+                  isTerminal: false,
+                },
+              }
             : history,
         ),
       );
@@ -331,7 +338,7 @@ const HistoryTable = memo(function HistoryTable({
 
         <InlineStack key={`actions-${id}`} gap="200" wrap={false}>
           <Button size="slim" onClick={() => navigate(`/editDetails/${id}`)}>
-            {t("historyViewButton",)}
+            {t("historyViewButton")}
           </Button>
           <Button
             size="slim"
@@ -343,12 +350,12 @@ const HistoryTable = memo(function HistoryTable({
             }}
             disabled={undoDisabled}
           >
-            {t("historyUndoButton",)}
+            {t("historyUndoButton")}
           </Button>
         </InlineStack>,
       ];
     });
-  }, [localHistories, canUndo, isSyncInProgress, navigate, renderStatusBadge, handleUndo]);
+  }, [localHistories, canUndo, isSyncInProgress, navigate, renderStatusBadge, handleUndo, t]);
 
   if (isLoading) {
     return (
@@ -392,16 +399,16 @@ const HistoryTable = memo(function HistoryTable({
               <Box paddingInlineStart="500">
                 <BlockStack gap="100">
                   <Text as="h3" variant="headingMd">
-                    {t("historyEditActivityTitle",)}
+                    {t("historyEditActivityTitle")}
                   </Text>
 
                   <Text tone="subdued" variant="bodySm">
-                    {t("historyEditActivityText",)}
+                    {t("historyEditActivityText")}
                   </Text>
 
                   {isSyncInProgress ? (
                     <Text tone="subdued" variant="bodySm">
-                      {t("historyUndoDisabledSync",)}
+                      {t("historyUndoDisabledSync")}
                     </Text>
                   ) : null}
                 </BlockStack>
@@ -409,10 +416,18 @@ const HistoryTable = memo(function HistoryTable({
             </BlockStack>
 
             <InlineStack gap="200" wrap>
-              <Badge>{summary.total} {t("historySummaryTotal")}</Badge>
-              <Badge tone="info">{summary.processing} {t("historySummaryActive")}</Badge>
-              <Badge tone="success">{summary.completed} {t("historySummaryCompleted")}</Badge>
-              <Badge tone="critical">{summary.failed} {t("historySummaryFailed")}</Badge>
+              <Badge>
+                {summary.total} {t("historySummaryTotal")}
+              </Badge>
+              <Badge tone="info">
+                {summary.processing} {t("historySummaryActive")}
+              </Badge>
+              <Badge tone="success">
+                {summary.completed} {t("historySummaryCompleted")}
+              </Badge>
+              <Badge tone="critical">
+                {summary.failed} {t("historySummaryFailed")}
+              </Badge>
             </InlineStack>
           </InlineStack>
 
@@ -424,12 +439,12 @@ const HistoryTable = memo(function HistoryTable({
               paddingInlineStart="800"
             >
               <Text tone="subdued" variant="bodySm" as="p">
-                {t("historyLiveStatusHint",)}
+                {t("historyLiveStatusHint")}
               </Text>
             </Box>
 
             <Text tone="subdued" variant="bodySm">
-              {localHistories.length}  {t("historyItemsCount")}
+              {localHistories.length} {t("historyItemsCount")}
             </Text>
           </InlineStack>
         </BlockStack>
@@ -450,17 +465,18 @@ const HistoryTable = memo(function HistoryTable({
           rows={rows}
         />
       </Box>
+
       {hasMore ? (
         <>
           <Divider />
           <Box padding="400">
             <InlineStack align="space-between" blockAlign="center" wrap gap="300">
               <Text tone="subdued" variant="bodySm">
-                {t("historyLoadMoreHint",)}
+                {t("historyLoadMoreHint")}
               </Text>
 
               <Button loading={isLoadingMore} onClick={onLoadMore}>
-                {t("historyLoadMoreButton",)}
+                {t("historyLoadMoreButton")}
               </Button>
             </InlineStack>
           </Box>
