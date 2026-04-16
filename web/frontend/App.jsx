@@ -1,10 +1,9 @@
 import { BrowserRouter } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { NavMenu } from "@shopify/app-bridge-react";
 import { useEffect, useMemo } from "react";
 import Routes from "./Routes";
 import { QueryProvider, PolarisProvider } from "./components";
-import { Link } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import {
   selectIsSyncing,
   selectSetIsSyncing,
@@ -14,6 +13,16 @@ import {
 import "./app.css";
 
 const pages = import.meta.glob("./pages/**/!(*.test.[jt]sx)*.([jt]sx)");
+
+const APP_NAV_ITEMS = [
+  { to: "/", labelKey: "Home", end: true },
+  { to: "/products", labelKey: "Products" },
+  { to: "/history", labelKey: "History" },
+  { to: "/refresh", labelKey: "SyncData" },
+  { to: "/spreadsheet", labelKey: "Spreadsheet Edit" },
+  { to: "/suggestionPage", labelKey: "Suggestion" },
+  { to: "/pricing", labelKey: "Pricing" },
+];
 
 export default function App() {
   const isSyncing = useAppUiStore(selectIsSyncing);
@@ -32,19 +41,22 @@ export default function App() {
     <PolarisProvider>
       <BrowserRouter>
         <QueryProvider>
-         <NavMenu>
-  <Link to="/" rel="home">{t("Home")}</Link>
-  {!isSyncing && (
-    <>
-      <Link to="/products">{t("Products")}</Link>
-      <Link to="/history">{t("History")}</Link>
-      <Link to="/refresh">{t("SyncData")}</Link>
-      <Link to="/spreadsheet">{t("Spreadsheet Edit")}</Link>
-      <Link to="/suggestionpage">{t("Suggestion")}</Link>
-      <Link to="/pricing">{t("Pricing")}</Link>
-    </>
-  )}
-</NavMenu>
+          <nav className="app-page-nav" aria-label="App pages">
+            {APP_NAV_ITEMS.filter(({ end }) => end || !isSyncing).map(
+              ({ to, labelKey, end }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  end={end}
+                  className={({ isActive }) =>
+                    `app-page-nav-link${isActive ? " app-page-nav-link-active" : ""}`
+                  }
+                >
+                  {t(labelKey)}
+                </NavLink>
+              ),
+            )}
+          </nav>
 
           <Routes pages={pages} data={routeData} />
         </QueryProvider>
