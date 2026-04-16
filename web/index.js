@@ -127,7 +127,20 @@ app.get("/healthz", (_req, res) => {
 /*  Shopify Auth & Webhooks                                            */
 /* ------------------------------------------------------------------ */
 
-app.get(shopify.config.auth.path, shopPreInstallation, shopify.auth.begin());
+app.get(
+  shopify.config.auth.path,
+  (req, res, next) => {
+    const shop = String(req.query.shop || "").trim();
+
+    if (!shop || shop === "undefined" || shop === "null") {
+      return res.status(400).send("No valid shop provided");
+    }
+
+    return next();
+  },
+  shopPreInstallation,
+  shopify.auth.begin()
+);
 
 app.get(
   shopify.config.auth.callbackPath,
@@ -186,7 +199,19 @@ app.use(
   })
 );
 
-app.get("/*", shopify.ensureInstalledOnShop(), (_req, res) => {
+app.get("/*", (req, res, next) => {
+  const shop = String(req.query.shop || "").trim();
+
+  // 🔒 HARD GUARD
+  if (!shop || shop === "undefined" || shop === "null") {
+    return res.status(400).send(
+      "Missing shop parameter. Open app from Shopify Admin."
+    );
+  }
+
+  // ✅ only now call Shopify middleware
+  return shopify.ensureInstalledOnShop()(req, res, next);
+}, (_req, res) => {
   res.status(200).type("html").send(indexHTML);
 });
 

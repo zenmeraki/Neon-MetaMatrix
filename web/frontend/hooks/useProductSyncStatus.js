@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 function isActiveSyncStatus(syncStatus) {
   if (!syncStatus) {
@@ -21,20 +21,72 @@ function isActiveSyncStatus(syncStatus) {
   );
 }
 
+function normalizeMirrorNotReadyResponse(result) {
+  const details = result?.details || {};
+
+  return {
+    shopifyBulkJobCompleted: false,
+    isProductSyncing: false,
+    isProductInitialySyning: false,
+    syncProgressStage: "IDLE",
+    mirrorReady: false,
+    mirrorNotReady: true,
+    mirrorNotReadyReason: details.reason || "active_catalog_snapshot_missing",
+    catalogBatchId: details.catalogBatchId || null,
+    snapshotId: details.snapshotId || null,
+    isConsistent: details.isConsistent === true,
+    shop: details.shop || null,
+  };
+}
+
 export default function useProductSyncStatus() {
   const [syncStatus, setSyncStatus] = useState(null);
   const [syncStatusLoading, setSyncStatusLoading] = useState(true);
+  const [syncStatusError, setSyncStatusError] = useState(null);
+  const [mirrorNotReady, setMirrorNotReady] = useState(false);
 
   const fetchSyncStatus = useCallback(async () => {
     try {
+      setSyncStatusError(null);
+
       const response = await fetch("/api/sync/sync-status");
-      const result = await response.json();
+
+      let result = null;
+      try {
+        result = await response.json();
+      } catch {
+        result = null;
+      }
 
       if (response.ok && result?.syncStatus) {
-        setSyncStatus(result.syncStatus);
+        const mirrorReady = result.syncStatus.mirrorReady !== false;
+        setSyncStatus({
+          ...result.syncStatus,
+          mirrorReady,
+          mirrorNotReady: !mirrorReady,
+          mirrorNotReadyReason: mirrorReady
+            ? null
+            : result.syncStatus.mirrorNotReadyReason ||
+              "active_catalog_snapshot_missing",
+        });
+        setMirrorNotReady(!mirrorReady);
+        return result.syncStatus;
       }
-    } catch {
-      // Keep consuming pages usable if sync status cannot be loaded.
+
+      if (
+        response.status === 409 &&
+        result?.error === "MIRROR_NOT_READY"
+      ) {
+        const normalized = normalizeMirrorNotReadyResponse(result);
+        setSyncStatus(normalized);
+        setMirrorNotReady(true);
+        return normalized;
+      }
+
+      throw new Error(result?.message || "Failed to load sync status");
+    } catch (error) {
+      setSyncStatusError(error?.message || "Failed to load sync status");
+      return null;
     } finally {
       setSyncStatusLoading(false);
     }
@@ -44,24 +96,26 @@ export default function useProductSyncStatus() {
     fetchSyncStatus();
   }, [fetchSyncStatus]);
 
-  useEffect(() => {
-    const isSyncRunning = isActiveSyncStatus(syncStatus);
+  const isSyncInProgress = useMemo(
+    () => isActiveSyncStatus(syncStatus),
+    [syncStatus]
+  );
 
-    if (!isSyncRunning) {
+  useEffect(() => {
+    if (!isSyncInProgress) {
       return undefined;
     }
 
     const interval = setInterval(fetchSyncStatus, 4000);
     return () => clearInterval(interval);
-  }, [
-    syncStatus?.isProductSyncing,
-    syncStatus?.isProductInitialySyning,
-    fetchSyncStatus,
-  ]);
+  }, [isSyncInProgress, fetchSyncStatus]);
 
   return {
     syncStatus,
     syncStatusLoading,
-    isSyncInProgress: isActiveSyncStatus(syncStatus),
+    syncStatusError,
+    mirrorNotReady,
+    isSyncInProgress,
+    fetchSyncStatus,
   };
 }

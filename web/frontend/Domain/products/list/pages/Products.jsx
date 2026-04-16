@@ -11,7 +11,7 @@ import {
   SkeletonBodyText,
   Badge,
 } from "@shopify/polaris";
-import { useMemo, useEffect, useState, useCallback,useRef  } from "react";
+import { useMemo, useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { t } from "i18next";
 
@@ -33,6 +33,35 @@ import {
   useProductStore,
 } from "../../../../store/productStore";
 
+function normalizeMirrorNotReadySyncStatus(result) {
+  const details = result?.details || {};
+
+  return {
+    shopifyBulkJobCompleted: false,
+    isProductSyncing: false,
+    isProductInitialySyning: false,
+    syncProgressStage: "IDLE",
+    mirrorReady: false,
+    mirrorNotReady: true,
+    mirrorNotReadyReason: details.reason || "active_catalog_snapshot_missing",
+    catalogBatchId: details.catalogBatchId || null,
+    snapshotId: details.snapshotId || null,
+    isConsistent: details.isConsistent === true,
+    shop: details.shop || null,
+  };
+}
+
+function isSyncRunning(syncStatus) {
+  if (!syncStatus) return false;
+
+  return (
+    syncStatus?.isProductSyncing === true ||
+    syncStatus?.isProductInitialySyning === true ||
+    syncStatus?.syncProgressStage === "SHOPIFY_BULK_RUNNING" ||
+    syncStatus?.syncProgressStage === "MIRROR_STAGING"
+  );
+}
+
 export default function ProductsPage() {
   const navigate = useNavigate();
 
@@ -46,27 +75,58 @@ export default function ProductsPage() {
   const setSearch = useProductStore(selectSetSearch);
   const clearFilters = useProductStore(selectClearFilters);
 
-  const { loading, error, hasFetched, fetchProducts } = useProducts();
+  const {
+    loading,
+    error,
+    errorCode,
+    hasFetched,
+    mirrorNotReady,
+    fetchProducts,
+  } = useProducts();
 
   const [syncStatus, setSyncStatus] = useState(null);
   const [syncStatusLoading, setSyncStatusLoading] = useState(true);
-
-   const [syncCompleted, setSyncCompleted] = useState(false);
-   const wasSyncingRef = useRef(false);
-
+  const [syncCompleted, setSyncCompleted] = useState(false);
+  const [syncStatusError, setSyncStatusError] = useState(null);
+  const wasSyncingRef = useRef(false);
 
   const fetchSyncStatus = useCallback(async () => {
     try {
+      setSyncStatusError(null);
+
       const response = await fetch("/api/sync/sync-status");
-      const result = await response.json();
+
+      let result = null;
+      try {
+        result = await response.json();
+      } catch {
+        result = null;
+      }
 
       if (response.ok && result?.syncStatus) {
-        setSyncStatus(result.syncStatus);
+        const mirrorReady = result.syncStatus.mirrorReady !== false;
+        setSyncStatus({
+          ...result.syncStatus,
+          mirrorReady,
+          mirrorNotReady: !mirrorReady,
+          mirrorNotReadyReason: mirrorReady
+            ? null
+            : result.syncStatus.mirrorNotReadyReason ||
+              "active_catalog_snapshot_missing",
+        });
         return result.syncStatus;
-
       }
-    } catch {
-      // Keep the page usable if the sync-status call fails.
+
+      if (response.status === 409 && result?.error === "MIRROR_NOT_READY") {
+        const normalized = normalizeMirrorNotReadySyncStatus(result);
+        setSyncStatus(normalized);
+        return normalized;
+      }
+
+      throw new Error(result?.message || "Failed to load sync status");
+    } catch (err) {
+      setSyncStatusError(err?.message || "Failed to load sync status");
+      return null;
     } finally {
       setSyncStatusLoading(false);
     }
@@ -95,66 +155,63 @@ export default function ProductsPage() {
   }, [search, setFilters]);
 
   useEffect(() => {
-    fetchProducts(1, filterState);
-  }, [filterState, fetchProducts]);
-
- useEffect(() => {
-  fetchSyncStatus().then((status) => {
-    const neverSynced =
-      !status?.shopifyBulkJobCompleted &&
-      !status?.isProductSyncing &&
-      !status?.isProductInitialySyning;
-    if (neverSynced) {
-      fetch("/api/sync/products").catch(() => {});
+    if (syncStatus?.mirrorReady !== true) {
+      return;
     }
-  });
-}, []);
+
+    fetchProducts(1, filterState);
+  }, [filterState, fetchProducts, syncStatus?.mirrorReady]);
 
   useEffect(() => {
-    const isSyncRunning =
-      syncStatus?.isProductSyncing || syncStatus?.isProductInitialySyning;
+    fetchSyncStatus();
+  }, [fetchSyncStatus]);
 
-    if (!isSyncRunning) {
+  useEffect(() => {
+    if (!isSyncRunning(syncStatus)) {
       return undefined;
     }
 
     const interval = setInterval(fetchSyncStatus, 4000);
     return () => clearInterval(interval);
-  }, [
-    syncStatus?.isProductSyncing,
-    syncStatus?.isProductInitialySyning,
-    fetchSyncStatus,
-  ]);
+  }, [syncStatus, fetchSyncStatus]);
 
- useEffect(() => {
-   const isSyncing =
-     syncStatus?.isProductSyncing || syncStatus?.isProductInitialySyning;
-   if (wasSyncingRef.current && !isSyncing && syncStatus) {
-     setSyncCompleted(true);
-   }
-   wasSyncingRef.current = Boolean(isSyncing);
-}, [syncStatus?.isProductSyncing, syncStatus?.isProductInitialySyning, syncStatus]);
+  useEffect(() => {
+    const currentlySyncing = isSyncRunning(syncStatus);
 
-  const onFilterChange = useCallback((field, nextFilter) => {
-    const updated = (() => {
-      const index = filterState.findIndex((f) => f.field === field);
+    if (wasSyncingRef.current && !currentlySyncing && syncStatus?.mirrorReady !== false) {
+      setSyncCompleted(true);
+      fetchProducts(1, useProductStore.getState().filters);
+    }
 
-      if (index !== -1) {
-        const copy = [...filterState];
-        copy[index] = { field, ...nextFilter };
-        return copy;
-      }
+    wasSyncingRef.current = Boolean(currentlySyncing);
+  }, [syncStatus, fetchProducts]);
 
-      return [...filterState, { field, ...nextFilter }];
-    })();
+  const onFilterChange = useCallback(
+    (field, nextFilter) => {
+      const updated = (() => {
+        const index = filterState.findIndex((f) => f.field === field);
 
-    setFilters(updated);
-  }, [filterState, setFilters]);
+        if (index !== -1) {
+          const copy = [...filterState];
+          copy[index] = { field, ...nextFilter };
+          return copy;
+        }
+
+        return [...filterState, { field, ...nextFilter }];
+      })();
+
+      setFilters(updated);
+    },
+    [filterState, setFilters],
+  );
 
   const onClearAll = useCallback(() => {
     clearFilters();
-    fetchProducts(1, []);
-  }, [clearFilters, fetchProducts]);
+
+    if (syncStatus?.mirrorReady === true) {
+      fetchProducts(1, []);
+    }
+  }, [clearFilters, fetchProducts, syncStatus?.mirrorReady]);
 
   const appliedFilters = useMemo(
     () =>
@@ -174,28 +231,51 @@ export default function ProductsPage() {
   );
 
   const handleNextPage = useCallback(() => {
+    if (syncStatus?.mirrorReady !== true) {
+      return;
+    }
+
     fetchProducts(page + 1, filterState);
-  }, [fetchProducts, filterState, page]);
+  }, [fetchProducts, filterState, page, syncStatus?.mirrorReady]);
 
   const handlePreviousPage = useCallback(() => {
-    fetchProducts(page - 1, filterState);
-  }, [fetchProducts, filterState, page]);
+    if (syncStatus?.mirrorReady !== true) {
+      return;
+    }
 
-  const isSyncInProgress =
-    Boolean(syncStatus?.isProductSyncing) ||
-    Boolean(syncStatus?.isProductInitialySyning);
+    fetchProducts(page - 1, filterState);
+  }, [fetchProducts, filterState, page, syncStatus?.mirrorReady]);
+
+  const isSyncInProgress = isSyncRunning(syncStatus);
+  const hasAnyProducts = products.length > 0;
+  const syncMirrorNotReady = syncStatus?.mirrorNotReady === true;
+
+  const neverSynced =
+    syncStatus &&
+    syncMirrorNotReady &&
+    !isSyncInProgress;
 
   const shouldShowLoadingState =
     loading ||
-    !hasFetched ||
-    (!products.length && (syncStatusLoading || isSyncInProgress));
+    (syncStatusLoading && !syncStatus) ||
+    (!hasFetched && syncStatus?.mirrorReady === true) ||
+    (!hasAnyProducts && (syncStatusLoading || isSyncInProgress));
 
   const shouldShowEmptyState =
     !shouldShowLoadingState &&
     !error &&
+    !mirrorNotReady &&
+    !syncMirrorNotReady &&
     hasFetched &&
     !isSyncInProgress &&
     totalCount === 0;
+
+  const shouldSuppressCriticalError =
+    mirrorNotReady ||
+    syncMirrorNotReady ||
+    isSyncInProgress ||
+    errorCode === "MIRROR_NOT_READY" ||
+    (errorCode === "PRODUCT_LIST_FAILED" && syncMirrorNotReady);
 
   const resultSummary = useMemo(() => {
     if (shouldShowLoadingState) {
@@ -229,8 +309,24 @@ export default function ProductsPage() {
       );
     }
 
+    if (mirrorNotReady || syncMirrorNotReady || neverSynced) {
+      return (
+        <Text variant="bodySm" tone="subdued">
+          Product mirror is not ready yet.
+        </Text>
+      );
+    }
+
     return null;
-  }, [isSyncInProgress, shouldShowEmptyState, shouldShowLoadingState, totalCount]);
+  }, [
+    shouldShowLoadingState,
+    totalCount,
+    shouldShowEmptyState,
+    isSyncInProgress,
+    mirrorNotReady,
+    syncMirrorNotReady,
+    neverSynced,
+  ]);
 
   return (
     <Page
@@ -252,7 +348,12 @@ export default function ProductsPage() {
         <Layout.Section>
           <Card>
             <Box padding="500">
-              <InlineStack align="space-between" blockAlign="center" gap="300" wrap>
+              <InlineStack
+                align="space-between"
+                blockAlign="center"
+                gap="300"
+                wrap
+              >
                 <BlockStack gap="100">
                   <Text as="h2" variant="headingMd">
                     {t("productTargeting")}
@@ -261,6 +362,7 @@ export default function ProductsPage() {
                     {t("productTargetingDescription")}
                   </Text>
                 </BlockStack>
+
                 <InlineStack gap="200" blockAlign="center">
                   {resultSummary}
                   <Button variant="plain" onClick={() => navigate("/refresh")}>
@@ -271,18 +373,41 @@ export default function ProductsPage() {
             </Box>
           </Card>
         </Layout.Section>
-  {syncCompleted && (
-         <Layout.Section>
-             <Banner
-               tone="success"
-               title="Sync complete"
-               onDismiss={() => setSyncCompleted(false)}
-             >
-               <p>Products have been synced successfully.</p>
-             </Banner>
-           </Layout.Section>
-      )}   
-        {error && (
+
+        {syncCompleted && (
+          <Layout.Section>
+            <Banner
+              tone="success"
+              title="Sync complete"
+              onDismiss={() => setSyncCompleted(false)}
+            >
+              <p>Products have been synced successfully.</p>
+            </Banner>
+          </Layout.Section>
+        )}
+
+        {(mirrorNotReady || syncMirrorNotReady || neverSynced) &&
+          !isSyncInProgress &&
+          !hasAnyProducts && (
+            <Layout.Section>
+              <Banner tone="info" title="Product sync required">
+                <p>
+                  Your product mirror is not ready yet. Start a sync to load
+                  products, counts, filters, and targeting results.
+                </p>
+              </Banner>
+            </Layout.Section>
+          )}
+
+        {syncStatusError && !isSyncInProgress && (
+          <Layout.Section>
+            <Banner tone="warning" title="Sync status unavailable">
+              <Text>{syncStatusError}</Text>
+            </Banner>
+          </Layout.Section>
+        )}
+
+        {error && !shouldSuppressCriticalError && (
           <Layout.Section>
             <Banner tone="critical" title="Error loading products">
               <Text>{error}</Text>
@@ -290,10 +415,13 @@ export default function ProductsPage() {
           </Layout.Section>
         )}
 
-        {isSyncInProgress && !products.length && (
+        {isSyncInProgress && !hasAnyProducts && (
           <Layout.Section>
             <Banner tone="info" title="Sync in progress">
-              <p>Products are still syncing. Counts and rows will fill in automatically as the mirror updates.</p>
+              <p>
+                Products are still syncing. Counts and rows will fill in
+                automatically as the mirror updates.
+              </p>
             </Banner>
           </Layout.Section>
         )}

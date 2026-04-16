@@ -123,6 +123,24 @@ const getDomainFreshnessByDomain = async (shop) => {
 const isRunningFreshness = (freshness) =>
   freshness?.status === RUNNING_FRESHNESS_STATUS;
 
+const resolveActiveCatalogBatchForStatus = async (shop) => {
+  try {
+    return await getActiveCatalogBatchId({ shop });
+  } catch (error) {
+    if (error?.code !== "MIRROR_NOT_READY") {
+      throw error;
+    }
+
+    return {
+      catalogBatchId: error.details?.catalogBatchId || null,
+      snapshotId: error.details?.snapshotId || null,
+      isConsistent: error.details?.isConsistent === true,
+      reason: error.details?.reason || "active_catalog_snapshot_missing",
+      mirrorNotReady: true,
+    };
+  }
+};
+
 const getAuthoritativeSyncContext = async (shop) => {
   const [
     latestSync,
@@ -148,7 +166,7 @@ const getAuthoritativeSyncContext = async (shop) => {
       runType: DOMAIN_REPAIR_RUN_TYPE,
       domain: PRODUCT_TYPE_DOMAIN,
     }),
-    getActiveCatalogBatchId({ shop }),
+    resolveActiveCatalogBatchForStatus(shop),
     getDomainFreshnessByDomain(shop),
   ]);
 
@@ -185,8 +203,18 @@ const buildBaseSyncDetails = ({
     activeProductSyncRun?.rowCount ??
     latestSync?.recordCount ??
     store.productInitialSyncProgress;
+  const mirrorNotReady = activeCatalogBatch?.mirrorNotReady === true;
 
   return {
+    mirrorReady: !mirrorNotReady && Boolean(activeCatalogBatch?.catalogBatchId),
+    mirrorNotReady,
+    mirrorNotReadyReason: mirrorNotReady
+      ? activeCatalogBatch?.reason || "active_catalog_snapshot_missing"
+      : null,
+    catalogBatchId: activeCatalogBatch?.catalogBatchId || null,
+    snapshotId: activeCatalogBatch?.snapshotId || null,
+    isConsistent: activeCatalogBatch?.isConsistent === true,
+
     isCollectionSyncing:
       Boolean(activeCollectionSyncRun) || isRunningFreshness(collectionFreshness),
     lastCollectionSyncAt:

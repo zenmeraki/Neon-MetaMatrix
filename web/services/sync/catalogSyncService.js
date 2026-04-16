@@ -376,12 +376,10 @@ const resolveActiveCatalogBatchForDomainRepair = async ({ shop }) => {
 
   if (
     productCount <= 0 ||
-    variantCount <= 0 ||
-    collectionMembershipCount <= 0 ||
-    inventoryLevelCount <= 0
+    variantCount <= 0
   ) {
     const error = new Error(
-      "Cannot repair catalog domain for an incomplete active catalog snapshot",
+      "Cannot repair catalog domain without an active product/variant catalog baseline",
     );
     error.code = "ACTIVE_CATALOG_BATCH_INCOMPLETE";
     error.httpStatus = 409;

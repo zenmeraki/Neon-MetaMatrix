@@ -87,13 +87,26 @@ export const buildApp = (_server, io) => {
     });
   });
 
-  app.get(shopify.config.auth.path, shopPreInstallation, shopify.auth.begin());
-  app.get(
-    shopify.config.auth.callbackPath,
-    shopify.auth.callback(),
-    appInstallMiddleware,
-    shopify.redirectToShopifyOrAppRoot(),
-  );
+ app.get(
+  shopify.config.auth.path,
+  (req, res, next) => {
+    const shop = String(req.query.shop || "").trim();
+
+    if (!shop || shop === "undefined" || shop === "null") {
+      return res.status(400).send("No valid shop provided");
+    }
+
+    return next();
+  },
+  shopPreInstallation,
+  shopify.auth.begin(),
+);
+   app.get(
+  shopify.config.auth.callbackPath,
+  shopify.auth.callback(),
+  appInstallMiddleware,
+  shopify.redirectToShopifyOrAppRoot(),
+);
 
   const userSessionAuth = shopify.validateAuthenticatedSession();
   app.use("/api", apiLimiter);
@@ -127,9 +140,23 @@ export const buildApp = (_server, io) => {
     process.env.SHOPIFY_API_KEY,
   );
 
-  app.get("/*", shopify.ensureInstalledOnShop(), (_req, res) =>
-    res.status(200).type("html").send(indexHTML),
-  );
+app.get(
+  "/*",
+  (req, res, next) => {
+    const shop = String(req.query.shop || "").trim();
+
+    if (!shop || shop === "undefined" || shop === "null") {
+      return res
+        .status(400)
+        .send("Missing shop parameter. Open app from Shopify Admin.");
+    }
+
+    return shopify.ensureInstalledOnShop()(req, res, next);
+  },
+  (_req, res) => {
+    res.status(200).type("html").send(indexHTML);
+  },
+);
 
   app.use((err, req, res, _next) => {
     logger.error({

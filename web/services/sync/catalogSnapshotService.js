@@ -261,20 +261,12 @@ const validateCatalogBatchForActivation = async ({
     missingRequiredDomains.push("variants");
   }
 
-  if (collectionMembershipCount <= 0) {
-    missingRequiredDomains.push("collection_memberships");
-  }
-
-  if (collectionCount <= 0) {
+  if (collectionMembershipCount > 0 && collectionCount <= 0) {
     missingRequiredDomains.push("collections");
   }
 
   if (details.orphanCollectionMembershipCount > 0) {
     missingRequiredDomains.push("collection_membership_authority");
-  }
-
-  if (inventoryLevelCount <= 0) {
-    missingRequiredDomains.push("inventory_levels");
   }
 
   if (missingRequiredDomains.length > 0) {

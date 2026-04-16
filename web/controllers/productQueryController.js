@@ -18,12 +18,12 @@ function successEnvelope(message, data = null, meta = null) {
   };
 }
 
-function errorEnvelope(error, message, data = null) {
+function errorEnvelope(error, message, details = null) {
   return {
     success: false,
     error,
     message,
-    ...(data ? { data } : {}),
+    ...(details ? { details } : {}),
   };
 }
 
@@ -32,6 +32,49 @@ function normalizeSearch(value) {
     .normalize("NFKC")
     .trim()
     .replace(/\s+/g, " ");
+}
+
+function getHttpStatusFromError(error) {
+  return error?.httpStatus || error?.statusCode || error?.status || 500;
+}
+
+function buildProductListErrorResponse(error) {
+  const status = getHttpStatusFromError(error);
+  const code = error?.code || "PRODUCT_LIST_FAILED";
+  const details = error?.details || null;
+
+  if (code === "MIRROR_NOT_READY" || status === 409) {
+    return {
+      status: 409,
+      body: errorEnvelope(
+        "MIRROR_NOT_READY",
+        error?.message || "Active catalog snapshot is not ready for mirror reads",
+        details,
+      ),
+    };
+  }
+
+  if (status >= 400 && status < 500) {
+    return {
+      status,
+      body: errorEnvelope(
+        code,
+        error?.message || "Failed to fetch products",
+        details,
+      ),
+    };
+  }
+
+  return {
+    status: 500,
+    body: errorEnvelope(
+      "PRODUCT_LIST_FAILED",
+      process.env.NODE_ENV === "development"
+        ? error?.message || "Failed to fetch products"
+        : "Failed to fetch products",
+      details,
+    ),
+  };
 }
 
 async function getFilterOptionsPayload({ shop, field, search }) {
@@ -57,7 +100,7 @@ export const getProductsWithQuery = async (req, res) => {
   const session = res.locals?.shopify?.session;
 
   try {
-    if (!session) {
+    if (!session?.shop) {
       return res
         .status(401)
         .json(errorEnvelope("AUTH_REQUIRED", "Shopify session missing"));
@@ -80,9 +123,8 @@ export const getProductsWithQuery = async (req, res) => {
       source: "POST /api/products/get-all",
     });
 
-    return res
-      .status(500)
-      .json(errorEnvelope("PRODUCT_LIST_FAILED", "Failed to fetch products"));
+    const { status, body } = buildProductListErrorResponse(err);
+    return res.status(status).json(body);
   }
 };
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo , useRef} from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   Badge,
   Banner,
@@ -75,23 +75,25 @@ export default function DataSyncPage() {
   }, [fetchSyncStatus, shouldPoll]);
 
   const isAnySyncRunning =
-    dataSources?.isProductSyncing ||
-    dataSources?.isProductTypeSyncing ||
-    dataSources?.isCollectionSyncing;
-
-useEffect(() => {
-  if (dataSources && syncingItem && !isAnySyncRunning) {
-    setSyncingItem("");
-  }
-}, [dataSources, isAnySyncRunning, syncingItem]);
+    Boolean(dataSources?.isProductSyncing) ||
+    Boolean(dataSources?.isProductTypeSyncing) ||
+    Boolean(dataSources?.isCollectionSyncing);
 
   useEffect(() => {
-   const isSyncing = isAnySyncRunning || waitingForSync;
-   if (wasSyncingRef.current && !isSyncing && dataSources) {
-     showToast("Sync completed successfully ✓");
-   }
-   wasSyncingRef.current = Boolean(isSyncing);
- }, [isAnySyncRunning, waitingForSync, dataSources]);
+    if (dataSources && syncingItem && !isAnySyncRunning) {
+      setSyncingItem("");
+    }
+  }, [dataSources, isAnySyncRunning, syncingItem]);
+
+  useEffect(() => {
+    const isSyncing = isAnySyncRunning || waitingForSync;
+
+    if (wasSyncingRef.current && !isSyncing && dataSources) {
+      showToast("Sync completed successfully ✓");
+    }
+
+    wasSyncingRef.current = Boolean(isSyncing);
+  }, [isAnySyncRunning, waitingForSync, dataSources]);
 
   const handleRefresh = async (row) => {
     if (isAnySyncRunning || syncingItem) {
@@ -106,8 +108,21 @@ useEffect(() => {
     try {
       const response = await fetch(`${row.api}?force=true`);
       const result = await response.json();
-      if (!response.ok) throw new Error(result?.error);
+
+      if (response.status === 409 && result?.error === "SYNC_RUN_ALREADY_ACTIVE") {
+        setWaitingForSync(false);
+        setShouldPoll(true);
+        showToast("A product sync is already running");
+        await fetchSyncStatus();
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(result?.error || `Failed with status ${response.status}`);
+      }
+
       showToast(`${row.name} sync started`);
+      await fetchSyncStatus();
     } catch {
       showToast(`Failed to sync ${row.name}`, true);
       setSyncingItem("");
@@ -119,6 +134,7 @@ useEffect(() => {
   const getDate = useCallback(
     (name) => {
       if (!dataSources) return null;
+
       const map = {
         Products: dataSources.lastProductSyncAt,
         "Product Types": dataSources.lastProductTypeSyncAt,
@@ -133,24 +149,35 @@ useEffect(() => {
   const getStatus = useCallback(
     (name) => {
       if (!dataSources) return null;
+
       const map = {
-        Products: dataSources.isProductSyncing || waitingForSync || syncingItem === "Products",
+        Products:
+          dataSources.isProductSyncing ||
+          waitingForSync ||
+          syncingItem === "Products",
         "Product Types": dataSources.isProductTypeSyncing,
         Collections: dataSources.isCollectionSyncing,
       };
-     return map[name] ? t("syncing") : t("synced");
+
+      return map[name] ? t("syncing") : t("synced");
     },
     [dataSources, waitingForSync, syncingItem, t],
   );
 
-  const summaryTone = isAnySyncRunning || waitingForSync ? "warning" : "success";
+  const summaryTone =
+    isAnySyncRunning || waitingForSync ? "warning" : "success";
 
   const syncCards = useMemo(
     () =>
       rows.map((item) => (
         <Card key={item.name} roundedAbove="sm">
           <Box padding="500">
-            <InlineStack align="space-between" blockAlign="center" wrap gap="400">
+            <InlineStack
+              align="space-between"
+              blockAlign="center"
+              wrap
+              gap="400"
+            >
               <BlockStack gap="150">
                 <Text as="h3" variant="headingMd">
                   {item.name}
@@ -181,14 +208,14 @@ useEffect(() => {
                   disabled={isAnySyncRunning || Boolean(syncingItem)}
                   onClick={() => handleRefresh(item)}
                 >
-                  {t("refreshButton",)}
+                  {t("refreshButton")}
                 </Button>
               </InlineStack>
             </InlineStack>
           </Box>
         </Card>
       )),
-    [dataSources, getDate, getStatus, isAnySyncRunning, syncingItem, waitingForSync, t],
+    [dataSources, getDate, getStatus, isAnySyncRunning, syncingItem, t],
   );
 
   return (
@@ -216,22 +243,27 @@ useEffect(() => {
                 }}
               >
                 <BlockStack gap="400">
-                  <InlineStack align="space-between" blockAlign="start" wrap gap="400">
+                  <InlineStack
+                    align="space-between"
+                    blockAlign="start"
+                    wrap
+                    gap="400"
+                  >
                     <BlockStack gap="150">
                       <Text as="h2" variant="headingLg">
-                        {t("syncHeroTitle",)}
+                        {t("syncHeroTitle")}
                       </Text>
                       <Box maxWidth="720px">
                         <Text as="p" tone="subdued" variant="bodyMd">
-                          {t("syncHeroText",)}
+                          {t("syncHeroText")}
                         </Text>
                       </Box>
                     </BlockStack>
 
                     <Badge tone={summaryTone}>
                       {isAnySyncRunning || waitingForSync
-                        ? t("syncBadgeInProgress",)
-                        : t("syncBadgeReady",)}
+                        ? t("syncBadgeInProgress")
+                        : t("syncBadgeReady")}
                     </Badge>
                   </InlineStack>
 
@@ -243,19 +275,22 @@ useEffect(() => {
                     borderStyle="solid"
                     borderColor="border-secondary"
                   >
-                    <InlineStack align="space-between" blockAlign="center" wrap gap="400">
+                    <InlineStack
+                      align="space-between"
+                      blockAlign="center"
+                      wrap
+                      gap="400"
+                    >
                       <BlockStack gap="100">
                         <Text as="h3" variant="headingSm">
-                          {t("syncGuidanceTitle",)}
+                          {t("syncGuidanceTitle")}
                         </Text>
                         <Text as="p" tone="subdued" variant="bodyMd">
-                          {t("syncGuidanceText",)}
+                          {t("syncGuidanceText")}
                         </Text>
                       </BlockStack>
 
-                      <Badge tone="info">
-                        {t("syncWorkflowBadge",)}
-                      </Badge>
+                      <Badge tone="info">{t("syncWorkflowBadge")}</Badge>
                     </InlineStack>
                   </Box>
                 </BlockStack>
@@ -263,9 +298,7 @@ useEffect(() => {
             </Card>
 
             {(waitingForSync || isAnySyncRunning) && (
-              <Banner tone="warning">
-                {t("syncRunningBanner",)}
-              </Banner>
+              <Banner tone="warning">{t("syncRunningBanner")}</Banner>
             )}
 
             <BlockStack gap="300">{syncCards}</BlockStack>
@@ -277,11 +310,11 @@ useEffect(() => {
             <Box padding="500">
               <BlockStack gap="300">
                 <Text as="h3" variant="headingMd">
-                  {t("mirrorDetailsTitle",)}
+                  {t("mirrorDetailsTitle")}
                 </Text>
 
                 <Text as="p" tone="subdued" variant="bodyMd">
-                  {t("mirrorDetailsText",)}
+                  {t("mirrorDetailsText")}
                 </Text>
 
                 <Divider />
@@ -296,7 +329,7 @@ useEffect(() => {
                 >
                   <BlockStack gap="200">
                     <Text as="p" variant="bodyMd">
-                      {t("syncRefreshHint",)}
+                      {t("syncRefreshHint")}
                     </Text>
                   </BlockStack>
                 </Box>
