@@ -303,7 +303,7 @@ export default function DashboardPage() {
                   title="Free access active"
                   action={{
                     content: "Request extension",
-                    onAction: () => navigate("/suggestionpage"),
+                    onAction: () => navigate("/suggestionPage"),
                   }}
                 >
                  <p>{t("freeAccessMessage")}</p>

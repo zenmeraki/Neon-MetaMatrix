@@ -1,8 +1,5 @@
 //web/frontend/Domain/Dashboard/hooks/useStoreAccess.js
 import { useReducer, useEffect, useCallback, useRef, useMemo } from 'react';
-import { useAppBridge } from '@shopify/app-bridge-react';
-import { authenticatedFetch } from '@shopify/app-bridge-utils';
-import { Toast } from '@shopify/app-bridge/actions';
 import { dashboardService } from '../services/dashboardService';
 
 // -- Reducer & initial state --
@@ -26,23 +23,12 @@ function reducer(state, action) {
 }
 
 export function useStoreAccess() {
-  // App Bridge fetch & error toast
-  const app = useAppBridge();
-  const fetchWithAuth = authenticatedFetch(app);
-  const toastError = Toast.create(app, { duration: 5000 });
-
   const [state, dispatch] = useReducer(reducer, initialState);
   const controllerRef = useRef(null);
   const pendingRef = useRef(null);
   const cacheRef = useRef({ data: null, ts: 0 });
 
   const CACHE_TTL = 30 * 1000; // 30s for webhook status freshness
-
-  // Detect slow connections
-  const connection = navigator.connection || {};
-  const isSlow =
-    connection.saveData === true ||
-    /(2g)/.test(connection.effectiveType || '');
 
   // Memoized derived alert flag
   const computedAlert = useMemo(
@@ -72,11 +58,15 @@ export function useStoreAccess() {
     }
   }, []);
 
+  const showErrorToast = useCallback((message) => {
+    const shopifyToast = globalThis.shopify?.toast;
+    if (typeof shopifyToast?.show === 'function') {
+      shopifyToast.show(message, { isError: true });
+    }
+  }, []);
+
   // Core fetch, with dedupe, cache, and cancellation
   const verifyStoreAccess = useCallback(() => {
-    // Skip auto-fetch on very slow networks
-    // if (isSlow) return Promise.resolve();
-
     // Cancel previous
     controllerRef.current?.abort();
     controllerRef.current = new AbortController();
@@ -93,9 +83,7 @@ export function useStoreAccess() {
 
     scheduleLoading();
     const promise = retryFetch(
-      () =>
-        dashboardService
-          .getStoreAccessData({ fetch: fetchWithAuth, signal }),
+      () => dashboardService.getStoreAccessData({ signal }),
       3,
       500
     )
@@ -104,20 +92,20 @@ export function useStoreAccess() {
         dispatch({ type: 'FETCH_SUCCESS', payload: data });
         return data;
       })
-.catch(err => {
-  if (err.name === 'AbortError') {
-    // Silently ignore AbortError
-    return;
-  }
+      .catch(err => {
+        if (err.name === 'AbortError') {
+          // Silently ignore AbortError
+          return;
+        }
 
-  dispatch({
-    type: 'FETCH_ERROR',
-    payload: err.message || 'Failed to load store data',
-  });
-  toastError.dispatch(Toast.Action.SlideDown(err.message || 'Error'));
+        dispatch({
+          type: 'FETCH_ERROR',
+          payload: err.message || 'Failed to load store data',
+        });
+        showErrorToast(err.message || 'Error');
 
-  throw err;
-})
+        throw err;
+      })
 
       .finally(() => {
         pendingRef.current = null;
@@ -125,7 +113,7 @@ export function useStoreAccess() {
 
     pendingRef.current = promise;
     return promise;
-  }, [fetchWithAuth, isSlow, retryFetch, scheduleLoading, toastError]);
+  }, [retryFetch, scheduleLoading, showErrorToast]);
 
   // Auto‑fetch on mount
   useEffect(() => {
@@ -134,7 +122,7 @@ export function useStoreAccess() {
       controllerRef.current?.abort();
       clearTimeout(startTimeout.current);
     };
-  }, []);
+  }, [verifyStoreAccess]);
 
   return useMemo(
     () => ({

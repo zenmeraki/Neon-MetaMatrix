@@ -372,7 +372,7 @@ export default function PricingPage() {
                   </BlockStack>
                   <InlineStack gap="300" align="center">
                     <Button variant="primary" size="large"
-                      onClick={() => navigate("/suggestionpage")}
+                      onClick={() => navigate("/suggestionPage")}
                     >
                       Contact Support
                     </Button>
