@@ -9,45 +9,47 @@ export async function markProductSyncStarted({ shop }) {
   await markFullSyncStarted(shop);
 }
 
-export async function createProductSyncHistory({
+export async function queueProductSyncStart({
   shop,
   bulkOperationId,
   isInitialSync = false,
 }) {
   const syncBatchId = createMirrorBatchId("product_sync");
 
-  return prisma.syncHistory.create({
-    data: {
-      shop,
-      bulkOperationId,
-      syncBatchId,
-      status: "processing",
-      stage: "SHOPIFY_BULK_RUNNING",
-      operationType: "Product",
-      isInitialProductSync: isInitialSync,
-      recordCount: 0,
-      duration: 0,
-    },
+  const syncHistory = await prisma.$transaction(async (tx) => {
+    await tx.store.update({
+      where: { shopUrl: shop },
+      data: {
+        isProductSyncing: true,
+        isProductInitialySyning: isInitialSync,
+        shopifyBulkJobCompleted: false,
+        syncProgressStage: "SHOPIFY_BULK_RUNNING",
+        staleReason: "FULL_SYNC_RUNNING",
+        lastSyncErrorSummary: null,
+        mirrorUnsafeSince: new Date(),
+      },
+    });
+
+    return tx.syncHistory.create({
+      data: {
+        shop,
+        bulkOperationId,
+        syncBatchId,
+        status: "processing",
+        stage: "SHOPIFY_BULK_RUNNING",
+        operationType: "Product",
+        isInitialProductSync: isInitialSync,
+        recordCount: 0,
+        duration: 0,
+      },
+    });
   });
+
+  return syncHistory;
 }
 
 export async function clearProductSyncCache(shop) {
   await clearKeyCaches(`${shop}:sync_details`);
-}
-
-export async function setStoreSyncQueued({ shop, isInitialSync = false }) {
-  await prisma.store.update({
-    where: { shopUrl: shop },
-    data: {
-      isProductSyncing: true,
-      isProductInitialySyning: isInitialSync,
-      shopifyBulkJobCompleted: false,
-      syncProgressStage: "SHOPIFY_BULK_RUNNING",
-      staleReason: "FULL_SYNC_RUNNING",
-      lastSyncErrorSummary: null,
-      mirrorUnsafeSince: new Date(),
-    },
-  });
 }
 
 export async function stageProductMirrorBatch({
@@ -100,6 +102,7 @@ export async function insertProductMirrorBatch({
       skipDuplicates: true,
     });
   }
+
   if (variantRows.length > 0) {
     await prisma.variant.createMany({
       data: variantRows.map((row) => ({ ...row, mirrorBatchId: syncBatchId })),
@@ -108,12 +111,20 @@ export async function insertProductMirrorBatch({
   }
 }
 
-export async function markSyncHistoryFailed({ shop, syncHistoryId, errorMessage }) {
+export async function markSyncHistoryFailed({
+  shop,
+  syncHistoryId,
+  errorMessage,
+}) {
   await prisma.$transaction(async (tx) => {
     if (syncHistoryId) {
       await tx.syncHistory.update({
         where: { id: syncHistoryId },
-        data: { status: "failed", stage: "FAILED", errorMessage },
+        data: {
+          status: "failed",
+          stage: "FAILED",
+          errorMessage,
+        },
       });
     }
 
@@ -132,11 +143,17 @@ export async function markSyncHistoryFailed({ shop, syncHistoryId, errorMessage 
   });
 }
 
-export async function activateProductMirrorBatch({ shop, syncBatchId, totalProductsProcessed, syncHistoryId }) {
+export async function activateProductMirrorBatch({
+  shop,
+  syncBatchId,
+  totalProductsProcessed,
+  syncHistoryId,
+}) {
   const store = await prisma.store.findUnique({
     where: { shopUrl: shop },
     select: { activeMirrorBatchId: true },
   });
+
   const previousBatchId = store?.activeMirrorBatchId || null;
   const completedAt = new Date();
 
@@ -173,10 +190,13 @@ export async function activateProductMirrorBatch({ shop, syncBatchId, totalProdu
       });
     }
 
-    // ← MOVED INSIDE TRANSACTION
     if (previousBatchId && previousBatchId !== syncBatchId) {
-      await tx.variant.deleteMany({ where: { shop, mirrorBatchId: previousBatchId } });
-      await tx.product.deleteMany({ where: { shop, mirrorBatchId: previousBatchId } });
+      await tx.variant.deleteMany({
+        where: { shop, mirrorBatchId: previousBatchId },
+      });
+      await tx.product.deleteMany({
+        where: { shop, mirrorBatchId: previousBatchId },
+      });
     }
   });
 }

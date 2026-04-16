@@ -2,11 +2,10 @@ import readline from "readline";
 import {
   activateProductMirrorBatch,
   clearProductSyncCache,
-  createProductSyncHistory,
   insertProductMirrorBatch,
   markProductSyncStarted,
   markSyncHistoryFailed,
-  setStoreSyncQueued,
+  queueProductSyncStart,
   stageProductMirrorBatch,
   updateInitialSyncProgress,
 } from "./productSyncRepository.js";
@@ -30,19 +29,27 @@ export async function startBulkOperationToFetchProducts({
   console.log(`[sync:start] shop=${session.shop} isInitialSync=${isInitialSync}`);
 
   const { bulkOperationId, responseBody } = await runProductBulkFetch({ session });
-  console.log(`[sync:bulk_created] shop=${session.shop} bulkOperationId=${bulkOperationId}`);
-  await markProductSyncStarted({ shop: session.shop });
-  await setStoreSyncQueued({ shop: session.shop, isInitialSync });
-  await clearProductSyncCache(session.shop);
+  console.log(
+    `[sync:bulk_created] shop=${session.shop} bulkOperationId=${bulkOperationId}`,
+  );
 
-  const syncHistory = await createProductSyncHistory({
+  await markProductSyncStarted({ shop: session.shop });
+
+  console.log(
+    `[sync:queue_start] shop=${session.shop} bulkOperationId=${bulkOperationId}`,
+  );
+
+  const syncHistory = await queueProductSyncStart({
     shop: session.shop,
     bulkOperationId,
     isInitialSync,
   });
 
-  console.log(`[sync:history_created] shop=${session.shop} syncHistoryId=${syncHistory.id} syncBatchId=${syncHistory.syncBatchId}`);
+  console.log(
+    `[sync:history_created] shop=${session.shop} syncHistoryId=${syncHistory.id} syncBatchId=${syncHistory.syncBatchId}`,
+  );
 
+  await clearProductSyncCache(session.shop);
 
   return {
     message: "Bulk product sync started",

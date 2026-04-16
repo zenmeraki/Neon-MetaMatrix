@@ -124,14 +124,31 @@ export default function ProductsPage() {
     fetchSyncStatus,
   ]);
 
- useEffect(() => {
-   const isSyncing =
-     syncStatus?.isProductSyncing || syncStatus?.isProductInitialySyning;
-   if (wasSyncingRef.current && !isSyncing && syncStatus) {
-     setSyncCompleted(true);
-   }
-   wasSyncingRef.current = Boolean(isSyncing);
-}, [syncStatus?.isProductSyncing, syncStatus?.isProductInitialySyning, syncStatus]);
+useEffect(() => {
+  const isSyncing =
+    Boolean(syncStatus?.isProductSyncing) ||
+    Boolean(syncStatus?.isProductInitialySyning);
+
+  const justCompleted =
+    wasSyncingRef.current &&
+    !isSyncing &&
+    Boolean(syncStatus?.shopifyBulkJobCompleted) &&
+    Boolean(syncStatus?.activeMirrorBatchId);
+
+  if (justCompleted) {
+    setSyncCompleted(true);
+    fetchProducts(1, filterState);
+  }
+
+  wasSyncingRef.current = isSyncing;
+}, [
+  syncStatus?.isProductSyncing,
+  syncStatus?.isProductInitialySyning,
+  syncStatus?.shopifyBulkJobCompleted,
+  syncStatus?.activeMirrorBatchId,
+  fetchProducts,
+  filterState,
+]);
 
   const onFilterChange = (field, nextFilter) => {
     const updated = (() => {

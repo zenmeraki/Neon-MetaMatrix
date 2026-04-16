@@ -8,7 +8,6 @@ async function runSchedulerTick() {
     // console.log("🔥 Scheduled export tick fired");
     const result = await scheduleDueScheduledExportRuns();
     // console.log("📊 Scheduler result:", result);
-    
     // logger.info("Scheduled export scheduler tick", {
     //   scheduled: result?.scheduled ?? 0,
     //   skipped: result?.skipped ?? 0,
@@ -16,6 +15,7 @@ async function runSchedulerTick() {
     //   reason: result?.reason ?? null, // ← this will show "scheduler_locked" if stuck
     //   timestamp: new Date().toISOString(),
     // });
+    
 
   } catch (error) {
     logger.error("Scheduled export scheduler tick failed", {

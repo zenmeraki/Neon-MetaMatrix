@@ -33,10 +33,12 @@ export default function useProducts() {
                         body: JSON.stringify({ filterParams }),
                     }
                 );
-
-                if (!res.ok) throw new Error("Failed to fetch products");
-
                 const json = await res.json();
+
+
+                if (!res.ok) {
+                    throw new Error(json?.message || json?.error || "Failed to fetch products");
+                }
 
                 const products = json?.data?.products || [];
                 const pagination = json?.data?.pagination || null;
