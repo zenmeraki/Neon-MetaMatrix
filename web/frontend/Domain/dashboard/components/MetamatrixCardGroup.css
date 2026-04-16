@@ -1,0 +1,19 @@
+.metamatrix-card-group {
+  width: 100%;
+}
+
+.metamatrix-card-grid {
+  align-items: stretch;
+}
+
+.metamatrix-card-wrapper,
+.metamatrix-card-skeleton {
+  height: 100%;
+}
+
+.metamatrix-card-icon-skeleton {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  background: var(--p-color-bg-surface-secondary);
+}

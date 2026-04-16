@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+
+    <!-- Ensures that the UI is properly scaled in the Shopify Mobile app -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="preconnect" href="https://cdn.shopify.com" crossorigin>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #f6f6f7;
+        color: #202223;
+        scrollbar-gutter: stable;
+      }
+
+      body {
+        margin: 0;
+        background: #f6f6f7;
+        min-width: 320px;
+      }
+
+      .app-shell {
+        box-sizing: border-box;
+        min-height: 100vh;
+        padding: 24px;
+      }
+
+      #app {
+        min-height: 100vh;
+      }
+
+      .app-shell__panel {
+        max-width: 1180px;
+        margin: 0 auto;
+        background: #ffffff;
+        border: 1px solid #dfe3e8;
+        border-radius: 8px;
+        padding: 24px;
+      }
+
+      .app-shell__title {
+        width: min(420px, 75vw);
+        height: 32px;
+        margin-bottom: 16px;
+        border-radius: 6px;
+        background: #dfe3e8;
+      }
+
+      .app-shell__line,
+      .app-shell__card {
+        border-radius: 6px;
+        background: linear-gradient(90deg, #eef0f2 0%, #f7f8f9 50%, #eef0f2 100%);
+        background-size: 200% 100%;
+        animation: app-shell-pulse 1.4s ease-in-out infinite;
+      }
+
+      .app-shell__line {
+        width: min(680px, 88vw);
+        height: 16px;
+        margin-bottom: 28px;
+      }
+
+      .app-shell__grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+        min-height: 132px;
+      }
+
+      .app-shell__card {
+        height: 132px;
+      }
+
+      @media (max-width: 720px) {
+        .app-shell {
+          padding: 16px;
+        }
+
+        .app-shell__grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @keyframes app-shell-pulse {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .app-shell__line,
+        .app-shell__card {
+          animation: none;
+        }
+      }
+    </style>
+
+    <script type="module">
+      if (!import.meta.env || !import.meta.env.PROD) {
+        // Because the base HTML is rendered in the server side, we need to manually embed the code to enable HMR in our
+        // code, so that the vite server is properly enabled to run HMR
+        const script = document.createElement('script');
+        script.setAttribute('type', "module");
+        script.setAttribute('src', "./dev_embed.js");
+        document.getElementsByTagName('head')[0].append(script);
+      }
+    </script>
+
+    <meta name="shopify-api-key" content="%VITE_SHOPIFY_API_KEY%" />
+    <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js" defer></script>
+  </head>
+  <body>
+    <div id="app">
+      <main class="app-shell" aria-label="Loading app">
+        <section class="app-shell__panel">
+          <div class="app-shell__title"></div>
+          <div class="app-shell__line"></div>
+          <div class="app-shell__grid">
+            <div class="app-shell__card"></div>
+            <div class="app-shell__card"></div>
+            <div class="app-shell__card"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+    <script type="module" src="/index.jsx"></script>
+  </body>
+</html>

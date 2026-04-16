@@ -1,0 +1,6 @@
+<svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Product">
+  <rect width="80" height="80" rx="8" fill="#F1F2F4"/>
+  <path d="M24 28.5C24 26.0147 26.0147 24 28.5 24H51.5C53.9853 24 56 26.0147 56 28.5V51.5C56 53.9853 53.9853 56 51.5 56H28.5C26.0147 56 24 53.9853 24 51.5V28.5Z" fill="#FFFFFF" stroke="#C9CCCF" stroke-width="2"/>
+  <path d="M30 49L36.5 41.5L42 47L45.5 43L51 49H30Z" fill="#8C9196"/>
+  <circle cx="34" cy="34" r="3" fill="#8C9196"/>
+</svg>

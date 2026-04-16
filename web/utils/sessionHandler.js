@@ -1,0 +1,73 @@
+// web/utils/sessionHandler.js
+import { prisma } from "../Config/database.js";
+import { adminGraphqlWithRetry } from "./shopifyAdminApi.js";
+
+
+// Legacy reference (kept as a comment for context)
+// export const getSession = async (shop) => {
+//   try {
+//     const sessions = await shopify.config.sessionStorage.findSessionsByShop(shop);
+//     if (!sessions || sessions.length === 0) {
+//       throw new Error(`No active session found for shop: ${shop}`);
+//     }
+//     return sessions[0];
+//   } catch (error) {
+//     throw new Error("Failed to retrieve session");
+//   }
+// };
+
+export const getSession = async (shop) => {
+  try {
+    const store = await prisma.store.findUnique({
+      where: { shopUrl: shop },
+      select: {
+        shopUrl: true,
+        accessToken: true,
+      },
+    });
+
+    if (!store || !store.accessToken) {
+      throw new Error(`No active session found for shop: ${shop}`);
+    }
+
+    // Shape compatible with how you use `session` elsewhere
+    return {
+      shop: store.shopUrl,
+      accessToken: store.accessToken,
+    };
+  } catch (error) {
+    // Optional: log error for debugging
+    console.error("[getSession] Failed to retrieve session for shop:", shop, error);
+    throw new Error("Failed to retrieve session");
+  }
+};
+
+export const getShopOwnerEmailAddress = async (session) => {
+  try {
+    const response = await adminGraphqlWithRetry({
+      session,
+      shop: session?.shop,
+      operationName: "getShopOwnerEmailAddress",
+      data: {
+        query: `
+          {
+            shop {
+              email
+              shopOwnerName
+            }
+          }
+        `,
+      },
+    });
+
+    const shopData = response.body.data.shop;
+    return {
+      email: shopData.email,
+      shopOwner: shopData.shopOwnerName,
+    };
+  } catch (error) {
+    throw new Error(
+      error.message || "Failed to retrieve shop owner email address"
+    );
+  }
+};

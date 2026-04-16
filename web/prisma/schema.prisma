@@ -1,0 +1,1606 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Schema naming contract:
+// - timestamps use createdAt, updatedAt, startedAt, completedAt, activatedAt,
+//   or scheduledFor.
+// - durations use durationMs.
+// - counts use rowCount for input/output rows, targetCount for targeted
+//   entities, processedCount for attempted executions, and affectedCount for
+//   successful mutations.
+// - status fields must be backed by explicit enum vocabularies or DB-level
+//   check constraints in raw migrations.
+// - generic "type" fields are legacy only; new control-plane fields must use
+//   domain-specific names such as runType, artifactType, triggerType,
+//   mutationType, and scopeType.
+
+model Product {
+  shop                        String
+  id                          String
+  // Legacy storage/PK bridge only. New read-plane targeting must use
+  // catalogBatchId, not mirrorBatchId.
+  mirrorBatchId               String
+  // Nullable only for staging/legacy rows. Active query-plane reads require
+  // catalogBatchId IS NOT NULL through the active batch resolver.
+  catalogBatchId              String?
+  title                       String
+  handle                      String?
+  status                      String
+  productType                 String?
+  vendor                      String?
+  tags                        String[]
+  templateSuffix              String?
+
+  // split raw html from filterable text
+  descriptionHtml             String?
+  descriptionText             String?
+
+  createdAt                   DateTime?
+  updatedAt                   DateTime?
+  publishedAt                 DateTime?
+  seoTitle                    String?
+  seoDescription              String?
+  totalInventory              Int?
+  totalInventoryAuthority     String?
+  totalInventoryComputedAt    DateTime?
+  categoryId                  String?
+  categoryName                String?
+  googleShoppingEnabled       Boolean?
+  googleShoppingAgeGroup      String?
+  googleShoppingCategory      String?
+  googleShoppingColor         String?
+  googleShoppingCondition     String?
+  googleShoppingCustomLabel0  String?
+  googleShoppingCustomLabel1  String?
+  googleShoppingCustomLabel2  String?
+  googleShoppingCustomLabel3  String?
+  googleShoppingCustomLabel4  String?
+  googleShoppingCustomProduct Boolean?
+  googleShoppingGender        String?
+  googleShoppingMpn           String?
+  googleShoppingMaterial      String?
+  googleShoppingSize          String?
+  googleShoppingSizeSystem    String?
+  googleShoppingSizeType      String?
+  categoryAgeGroup            String?
+  categoryColor               String?
+  categoryFabric              String?
+  categoryFit                 String?
+  categorySize                String?
+  categoryTargetGender        String?
+  categoryWaistRise           String?
+  featuredImageUrl            String?
+  featuredImageAltText        String?
+  // CAPTURE ONLY — payload snapshot of raw Shopify options at ingest time.
+  // Must never be used for filtering, targeting, export, or any trust-critical
+  // query-plane read. Use option1Name/option2Name/option3Name (normalized columns)
+  // for all filter and targeting operations.
+  optionsJson                 Json?
+  // CAPTURE ONLY — payload snapshot of raw Shopify collection memberships at
+  // ingest time. Must never be used for filtering, targeting, export, or any
+  // trust-critical query-plane read. Use ProductCollectionMembership (scoped
+  // by catalogBatchId) for all collection filter and targeting operations.
+  collectionsJson             Json?
+  option1Name                 String?
+  option2Name                 String?
+  option3Name                 String?
+  variantCount                Int?      @default(0)
+  visibleOnlineStore          Boolean?
+  lastSourceUpdatedAt         DateTime?
+  lastSourceEventAt           DateTime?
+  lastSourceKind              String?
+  lastReconciledAt            DateTime?
+  variants                    Variant[]
+
+  @@id([shop, id, mirrorBatchId])
+  @@index([shop, catalogBatchId])
+  @@index([shop, catalogBatchId, status])
+  @@index([shop, catalogBatchId, vendor])
+  @@index([shop, catalogBatchId, productType])
+  @@index([shop, catalogBatchId, title])
+  @@index([shop, catalogBatchId, handle])
+  @@index([shop, catalogBatchId, categoryName])
+  @@index([shop, catalogBatchId, option1Name])
+  @@index([shop, catalogBatchId, option2Name])
+  @@index([shop, catalogBatchId, option3Name])
+  @@index([shop, catalogBatchId, variantCount])
+  @@index([shop, catalogBatchId, visibleOnlineStore])
+  @@index([shop, mirrorBatchId])
+  @@index([shop, mirrorBatchId, status])
+  @@index([shop, mirrorBatchId, title])
+  @@index([shop, mirrorBatchId, handle])
+  @@index([shop, mirrorBatchId, createdAt])
+  @@index([shop, mirrorBatchId, updatedAt])
+  @@index([shop, mirrorBatchId, publishedAt])
+  @@index([shop, mirrorBatchId, googleShoppingEnabled])
+  @@index([shop, mirrorBatchId, googleShoppingCondition])
+  @@index([shop, mirrorBatchId, templateSuffix])
+  @@index([shop, mirrorBatchId, variantCount])
+  @@index([shop, mirrorBatchId, visibleOnlineStore])
+  @@index([shop, mirrorBatchId, lastReconciledAt])
+  @@index([shop, mirrorBatchId, lastSourceEventAt])
+  @@index([shop, mirrorBatchId, lastSourceKind])
+  @@index([shop, mirrorBatchId, lastSourceUpdatedAt])
+  @@index([shop, mirrorBatchId, categoryAgeGroup])
+  @@index([shop, mirrorBatchId, categoryColor])
+  @@index([shop, mirrorBatchId, categoryFabric])
+  @@index([shop, mirrorBatchId, categoryFit])
+  @@index([shop, mirrorBatchId, categoryName])
+  @@index([shop, mirrorBatchId, categorySize])
+  @@index([shop, mirrorBatchId, categoryTargetGender])
+  @@index([shop, mirrorBatchId, categoryWaistRise])
+  @@index([shop, mirrorBatchId, googleShoppingCategory])
+  @@index([shop, mirrorBatchId, googleShoppingColor])
+  @@index([shop, mirrorBatchId, googleShoppingCustomLabel0])
+  @@index([shop, mirrorBatchId, googleShoppingCustomLabel1])
+  @@index([shop, mirrorBatchId, googleShoppingCustomLabel2])
+  @@index([shop, mirrorBatchId, googleShoppingCustomLabel3])
+  @@index([shop, mirrorBatchId, googleShoppingCustomLabel4])
+  @@index([shop, mirrorBatchId, googleShoppingMaterial])
+  @@index([shop, mirrorBatchId, googleShoppingMpn])
+  @@index([shop, mirrorBatchId, googleShoppingSize])
+  @@index([shop, mirrorBatchId, option1Name])
+  @@index([shop, mirrorBatchId, option2Name])
+  @@index([shop, mirrorBatchId, option3Name])
+  @@index([shop, mirrorBatchId, productType])
+  @@index([shop, mirrorBatchId, vendor])
+
+  // tags and descriptionText search are indexed by raw GIN migrations.
+}
+
+model Variant {
+  shop                String
+  id                  String
+  productId           String
+  // Legacy Product relation/PK bridge only. New read-plane targeting must use
+  // catalogBatchId, not mirrorBatchId.
+  mirrorBatchId       String
+  // Nullable only for staging/legacy rows. Active query-plane reads require
+  // catalogBatchId IS NOT NULL through the active batch resolver.
+  catalogBatchId      String?
+  title               String?
+  sku                 String?
+  barcode             String?
+  price               Decimal? @db.Decimal(18, 6)
+  compareAtPrice      Decimal? @db.Decimal(18, 6)
+  inventoryQuantity   Int?
+  inventoryPolicy     String?
+  taxable             Boolean?
+  taxCode             String?
+  position            Int?
+  // CAPTURE ONLY — payload snapshot of raw Shopify selected options at ingest
+  // time. Must never be used for filtering, targeting, export, or any trust-
+  // critical query-plane read. Use option1Value/option2Value/option3Value
+  // (normalized columns) for all filter and targeting operations.
+  selectedOptionsJson Json?
+  cost                Decimal? @db.Decimal(18, 6)
+  costDecimal         Decimal? @db.Decimal(18, 6)
+  countryOfOrigin     String?
+  hsTariffCode        String?
+  weight              Decimal? @db.Decimal(18, 6)
+  weightDecimal       Decimal? @db.Decimal(18, 6)
+  weightUnit          String?
+  option1Value        String?
+  option2Value        String?
+  option3Value        String?
+  physicalProduct     Boolean?
+  profitMargin        Decimal? @db.Decimal(18, 6)
+  profitMarginDecimal Decimal? @db.Decimal(9, 4)
+  priceDecimal        Decimal? @db.Decimal(18, 6)
+  compareAtPriceDecimal Decimal? @db.Decimal(18, 6)
+  tracked             Boolean?
+  product             Product  @relation(fields: [shop, productId, mirrorBatchId], references: [shop, id, mirrorBatchId])
+
+  @@id([shop, id, mirrorBatchId])
+  @@index([shop, catalogBatchId])
+  @@index([shop, productId, catalogBatchId])
+  @@index([shop, catalogBatchId, sku])
+  @@index([shop, catalogBatchId, barcode])
+  @@index([shop, catalogBatchId, price])
+  @@index([shop, catalogBatchId, priceDecimal])
+  @@index([shop, catalogBatchId, compareAtPrice])
+  @@index([shop, catalogBatchId, compareAtPriceDecimal])
+  @@index([shop, catalogBatchId, costDecimal])
+  @@index([shop, catalogBatchId, weightDecimal])
+  @@index([shop, catalogBatchId, inventoryQuantity])
+  @@index([shop, catalogBatchId, inventoryPolicy])
+  @@index([shop, catalogBatchId, option1Value])
+  @@index([shop, catalogBatchId, option2Value])
+  @@index([shop, catalogBatchId, option3Value])
+  @@index([shop, mirrorBatchId])
+  @@index([shop, mirrorBatchId, sku])
+  @@index([shop, mirrorBatchId, productId])
+  @@index([shop, mirrorBatchId, barcode])
+  @@index([shop, mirrorBatchId, title])
+  @@index([shop, mirrorBatchId, inventoryQuantity])
+  @@index([shop, mirrorBatchId, price])
+  @@index([shop, mirrorBatchId, compareAtPrice])
+  @@index([shop, mirrorBatchId, cost])
+  @@index([shop, mirrorBatchId, weight])
+  @@index([shop, mirrorBatchId, profitMargin])
+  @@index([shop, mirrorBatchId, countryOfOrigin])
+  @@index([shop, mirrorBatchId, hsTariffCode])
+  @@index([shop, mirrorBatchId, inventoryPolicy])
+  @@index([shop, mirrorBatchId, taxable])
+  @@index([shop, mirrorBatchId, option1Value])
+  @@index([shop, mirrorBatchId, option2Value])
+  @@index([shop, mirrorBatchId, option3Value])
+  @@index([shop, mirrorBatchId, weightUnit])
+  @@index([shop, mirrorBatchId, tracked])
+  @@index([shop, mirrorBatchId, physicalProduct])
+}
+
+model SpreadsheetFile {
+  id             String   @id @default(cuid())
+  shop           String
+  editHistoryId  String
+  fileUrl        String?
+  columnMappings Json?
+  totalRows      Int?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  editHistory    EditHistory @relation(fields: [editHistoryId], references: [id], onDelete: Cascade)
+
+  @@index([shop])
+  @@index([editHistoryId])
+}
+
+model Store {
+  id                              String            @id @default(cuid())
+  shopUrl                         String            @unique
+  shopEmail                       String
+  accessToken                     String?
+  // LEGACY COMPATIBILITY CACHE ONLY.
+  // Runtime sync truth lives in SyncRun, CatalogSnapshot,
+  // ActiveCatalogSnapshot, and DomainFreshness. Do not use these Store fields
+  // as operational authority for new reads, writes, or targeting decisions.
+  activeMirrorBatchId             String?
+  activeCollectionBatchId         String?
+  isCollectionSyncing             Boolean           @default(false)
+  lastCollectionSyncAt            DateTime?
+  isProductTypeSyncing            Boolean           @default(false)
+  lastProductTypeSyncAt           DateTime?
+  isProductInitialySyning         Boolean           @default(false)
+  productInitialSyncProgress      Int               @default(0)
+  syncProgressStage               SyncProgressStage @default(IDLE)
+  shopifyBulkJobCompleted         Boolean           @default(false)
+  storeTotalProducts              Int               @default(0)
+  isProductSyncing                Boolean           @default(false)
+  lastProductSyncAt               DateTime?
+  mirrorHealthState               MirrorHealthState @default(HEALTHY)
+  staleReason                     String?
+  repairRequired                  Boolean           @default(false)
+  lastFullSyncAt                  DateTime?
+  lastIncrementalSyncAt           DateTime?
+  lastWebhookProcessedAt          DateTime?
+  lastReconcileAt                 DateTime?
+  lastInventoryReconcileAt        DateTime?
+  lastCollectionReconcileAt       DateTime?
+  mirrorUnsafeSince               DateTime?
+  lastSyncErrorSummary            String?
+  catalogSnapshotReadEnabled      Boolean           @default(false)
+  catalogSnapshotExecutionEnabled Boolean           @default(false)
+  catalogSnapshotSchedulerEnabled Boolean           @default(false)
+  scope                           String?           @default("")
+  installedAt                     DateTime?
+  unInstalledAt                   DateTime?
+  isUnInstalled                   Boolean           @default(false)
+  referralCode                    String?           @unique
+  referralLink                    String?           @unique
+  referredBy                      String?
+  refIsFirstSubscriptionCompleted Boolean           @default(false)
+  refSubscribedDate               DateTime?
+  refRewardExpiresAt              DateTime?
+  refRewarded                     Boolean           @default(false)
+  refSubscribedPlanDetails        Json?
+  refEarnedPrice                  Decimal           @default(0) @db.Decimal(18, 6)
+  isCreditAvailable               Boolean           @default(false)
+  lastActivityAt                  DateTime?
+  createdAt                       DateTime          @default(now())
+  updatedAt                       DateTime          @updatedAt
+
+  @@index([referralCode])
+  @@index([referredBy])
+  @@index([lastActivityAt])
+  @@index([isUnInstalled])
+  @@index([installedAt])
+  @@index([createdAt])
+}
+
+model Subscription {
+  id                    String             @id @default(cuid())
+  shop                  String             @unique
+  planKey               String?
+  planName              String?
+  subscriptionId        String?
+  status                SubscriptionStatus @default(FREE)
+  pendingSubscriptionId String?
+  pendingPlanKey        String?
+  pendingPlanName       String?
+  trialEndsAt           DateTime?
+  currentPeriodEnd      DateTime?
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  @@index([shop])
+}
+
+model Suggestion {
+  id         String   @id @default(cuid())
+  email      String
+  suggestion String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([email])
+}
+
+model SyncHistory {
+  id                   String             @id @default(cuid())
+  shop                 String
+  bulkOperationId      String?
+  syncBatchId          String?
+  supersededBySyncRunId String?
+  responseUrl          String?
+  status               SyncStatus         @default(processing)
+  stage                String?
+  errorMessage         String?
+  // LEGACY NAME: use durationMs on new durable lifecycle models.
+  duration             Int?               @default(0)
+  // LEGACY NAME: use rowCount for input/output rows.
+  recordCount          Int?
+  operationType        SyncOperationType?
+  isInitialProductSync Boolean            @default(false)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  executionState       String             @default("planned")
+  executionIdentity    String?
+  lastHeartbeatAt      DateTime?
+  completedAt          DateTime?
+  isLegacyCompatibilityOnly Boolean       @default(true)
+  deprecatedAt         DateTime           @default(now())
+  deprecationReason    String             @default("Superseded by SyncRun; retained only for legacy compatibility reads and writes")
+  supersededBySyncRun  SyncRun?           @relation(fields: [supersededBySyncRunId], references: [id], onDelete: SetNull)
+
+  @@index([shop, createdAt])
+  @@index([shop, status])
+  @@index([shop, operationType])
+  @@index([shop, executionState])
+  @@index([supersededBySyncRunId])
+}
+
+model SyncRun {
+  id              String   @id @default(cuid())
+  shop            String
+  runType         String
+  domain          String?
+  status          String   @default("PENDING")
+  stage           String?
+  catalogBatchId  String?
+  bulkOperationId String?
+  triggerSource   String?
+  responseUrl     String?
+  rowCount        Int?
+  durationMs      Int?
+  isInitialSync   Boolean  @default(false)
+  failureCode     String?
+  failureMessage  String?
+  startedAt       DateTime?
+  completedAt     DateTime?
+  lastHeartbeatAt DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  artifacts       SyncArtifact[]
+  legacySyncHistories SyncHistory[]
+
+  @@index([shop, createdAt])
+  @@index([shop, runType, createdAt])
+  @@index([shop, domain, createdAt])
+  @@index([shop, status, createdAt])
+  @@index([shop, runType, status, createdAt])
+  @@index([bulkOperationId])
+  @@index([catalogBatchId])
+}
+
+model SyncArtifact {
+  id              String   @id @default(cuid())
+  syncRunId       String
+  shop            String
+  artifactType    String
+  storageUrl      String?
+  sourceUrl       String?
+  checksum        String?
+  rowCount        Int?
+  contentType     String?
+  pipelineVersion String?
+  schemaVersion   String?
+  createdAt       DateTime @default(now())
+  syncRun         SyncRun  @relation(fields: [syncRunId], references: [id], onDelete: Cascade)
+
+  @@index([syncRunId, createdAt])
+  @@index([shop, createdAt])
+  @@index([shop, artifactType, createdAt])
+  @@index([syncRunId, artifactType, createdAt])
+}
+
+model ShopWorkLease {
+  shop      String   @id
+  activity  String
+  token     String
+  worker    String?
+  queue     String?
+  jobId     String?
+  entityType String?
+  entityId  String?
+  executionId String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([expiresAt])
+  @@index([activity, expiresAt])
+}
+
+model CatalogSnapshot {
+  id                                String    @id @default(cuid())
+  shop                              String
+  catalogBatchId                    String
+  syncRunId                         String?
+  schemaVersion                     String    @default("catalog-snapshot-v1")
+  status                            String    @default("BUILDING")
+  reason                            String?
+  expectedProductCount              Int?
+  actualProductCount                Int?
+  expectedVariantCount              Int?
+  actualVariantCount                Int?
+  expectedCollectionMembershipCount Int?
+  actualCollectionMembershipCount   Int?
+  expectedInventoryLevelCount       Int?
+  actualInventoryLevelCount         Int?
+  createdAt                         DateTime  @default(now())
+  activatedAt                       DateTime?
+  supersededAt                      DateTime?
+  updatedAt                         DateTime  @updatedAt
+
+  @@unique([shop, catalogBatchId])
+  @@index([syncRunId])
+  @@index([schemaVersion])
+  @@index([shop, status, activatedAt])
+  @@index([shop, createdAt])
+  @@index([catalogBatchId])
+}
+
+model ActiveCatalogSnapshot {
+  shop                 String    @id
+  catalogBatchId       String
+  snapshotId           String?
+  isConsistent         Boolean   @default(false)
+  consistencyCheckedAt DateTime?
+  reason               String?
+  activatedAt          DateTime  @default(now())
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  @@index([catalogBatchId])
+}
+
+model DomainFreshness {
+  id             String    @id @default(cuid())
+  shop           String
+  domain         String
+  status         String    @default("UNKNOWN")
+  lastFreshAt    DateTime?
+  staleReason    String?
+  repairRequired Boolean   @default(false)
+  source         String?
+  sourceRunId    String?
+  catalogBatchId String?
+  details        Json?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([shop, domain])
+  @@index([shop, status, updatedAt])
+  @@index([shop, domain, updatedAt])
+  @@index([catalogBatchId])
+}
+
+model FieldAuthorityRegistry {
+  id              String   @id @default(cuid())
+  fieldKey        String
+  authorityDomain String
+  status          String   @default("ACTIVE")
+  sourceQuery     String?
+  description     String?
+  metadata        Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([fieldKey])
+  @@index([authorityDomain, fieldKey])
+  @@index([status, updatedAt])
+}
+
+model ProductCollectionMembership {
+  id             String   @id @default(cuid())
+  shop           String
+  catalogBatchId String
+  productId      String
+  collectionId   String
+  collectionTitle String?
+  collectionHandle String?
+  sourceUpdatedAt DateTime?
+  sourceEventAt   DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([shop, catalogBatchId, productId, collectionId])
+  @@index([shop, catalogBatchId])
+  @@index([shop, catalogBatchId, collectionId])
+  @@index([shop, catalogBatchId, productId])
+  @@index([shop, catalogBatchId, sourceUpdatedAt])
+}
+
+model VariantInventoryLevel {
+  id              String   @id @default(cuid())
+  shop            String
+  catalogBatchId  String
+  variantId       String?
+  productId       String?
+  inventoryItemId String
+  locationId      String
+  available       Int?
+  committed       Int?
+  incoming        Int?
+  onHand          Int?
+  sourceUpdatedAt DateTime?
+  sourceEventAt   DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([shop, catalogBatchId, inventoryItemId, locationId])
+  @@index([shop, catalogBatchId])
+  @@index([shop, catalogBatchId, variantId])
+  @@index([shop, catalogBatchId, locationId])
+  @@index([shop, catalogBatchId, sourceUpdatedAt])
+  @@index([inventoryItemId])
+}
+
+model ProductTrackedMetafield {
+  id             String   @id @default(cuid())
+  shop           String
+  catalogBatchId String
+  productId      String
+  namespace      String
+  key            String
+  type           String?
+  value          String?
+  sourceUpdatedAt DateTime?
+  sourceEventAt   DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([shop, catalogBatchId, productId, namespace, key])
+  @@index([shop, catalogBatchId])
+  @@index([shop, catalogBatchId, productId])
+  @@index([shop, catalogBatchId, sourceUpdatedAt])
+  @@index([namespace, key])
+}
+
+model VariantTrackedMetafield {
+  id             String   @id @default(cuid())
+  shop           String
+  catalogBatchId String
+  variantId      String
+  productId      String?
+  namespace      String
+  key            String
+  type           String?
+  value          String?
+  sourceUpdatedAt DateTime?
+  sourceEventAt   DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([shop, catalogBatchId, variantId, namespace, key])
+  @@index([shop, catalogBatchId])
+  @@index([shop, catalogBatchId, variantId])
+  @@index([shop, catalogBatchId, productId])
+  @@index([shop, catalogBatchId, sourceUpdatedAt])
+  @@index([namespace, key])
+}
+
+model TargetSnapshotSet {
+  id             String               @id @default(cuid())
+  shop           String
+  ownerType      String
+  ownerId        String
+  // Authoritative batch identity for frozen targeting.
+  catalogBatchId String?
+  // Legacy compatibility alias only; must match catalogBatchId when present.
+  mirrorBatchId  String?
+  sourceType     String?
+  status         String               @default("BUILDING")
+  targetCount    Int                  @default(0)
+  targetLevel    String               @default("PRODUCT")
+  filterVersion  Int?
+  canonicalFilterKey String?
+  compiledWhereHash String?
+  rulesHash      String?
+  ruleEngineVersion String?
+  filterAnchorTime DateTime?
+  reason         String?
+  activatedAt    DateTime?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  items          TargetSnapshotItem[]
+
+  @@index([shop, ownerType, ownerId])
+  @@index([shop, status, createdAt])
+  @@index([catalogBatchId])
+  @@index([shop, ownerType, ownerId, status])
+  @@index([shop, canonicalFilterKey])
+}
+
+model TargetSnapshotItem {
+  id                  String            @id @default(cuid())
+  targetSnapshotSetId String
+  shop                String
+  targetKey           String
+  productId           String
+  variantId           String?
+  catalogBatchId      String?
+  batchSequenceNumber Int?
+  reason              String?
+  createdAt           DateTime          @default(now())
+  targetSnapshotSet   TargetSnapshotSet @relation(fields: [targetSnapshotSetId], references: [id], onDelete: Cascade)
+
+  @@unique([targetSnapshotSetId, productId, variantId])
+  @@unique([targetSnapshotSetId, targetKey])
+  @@index([targetSnapshotSetId, batchSequenceNumber])
+  @@index([shop, productId])
+  @@index([shop, variantId])
+  @@index([shop, catalogBatchId])
+}
+
+model BulkMutationSubmission {
+  id              String                @id @default(cuid())
+  shop            String
+  syncRunId       String?
+  editHistoryId   String?
+  targetSnapshotSetId String?
+  bulkOperationId String?
+  mutationType    String
+  status          String                @default("SUBMITTED")
+  batchId         String?
+  inputArtifactSha256 String?
+  inputRowHash    String?
+  submittedAt     DateTime              @default(now())
+  completedAt     DateTime?
+  rowCount        Int?
+  failureCode     String?
+  failureMessage  String?
+  failureCategory String?
+  failureStage    String?
+  retryable       Boolean?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  outcomes        BulkMutationOutcome[]
+
+  @@index([shop, status, createdAt])
+  @@index([bulkOperationId])
+  @@index([shop, bulkOperationId])
+  @@index([syncRunId])
+  @@index([editHistoryId])
+  @@index([targetSnapshotSetId])
+  @@unique([editHistoryId, batchId])
+}
+
+model BulkMutationOutcome {
+  id                       String                 @id @default(cuid())
+  bulkMutationSubmissionId String
+  shop                     String
+  targetSnapshotSetId      String?
+  catalogBatchId           String?
+  dedupeKey                String?
+  targetId                 String?
+  productId                String?
+  variantId                String?
+  status                   String
+  code                     String?
+  message                  String?
+  raw                      Json?
+  createdAt                DateTime               @default(now())
+  bulkMutationSubmission   BulkMutationSubmission @relation(fields: [bulkMutationSubmissionId], references: [id], onDelete: Cascade)
+
+  @@index([bulkMutationSubmissionId, status])
+  @@index([shop, status, createdAt])
+  @@index([targetSnapshotSetId])
+  @@index([catalogBatchId])
+  @@index([productId])
+  @@index([variantId])
+  @@unique([bulkMutationSubmissionId, dedupeKey])
+}
+
+model EditHistory {
+  id                        String                 @id @default(cuid())
+  shop                      String
+  bulkOperationId           String?
+  executionState            String                 @default("planned")
+  executionIdentity         String?                @unique
+  targetSnapshotCount       Int                    @default(0)
+  // Authoritative batch identity for edit targeting/execution.
+  targetCatalogBatchId      String?
+  // Legacy compatibility alias only; must match targetCatalogBatchId when present.
+  targetMirrorBatchId       String?
+  failureStage              String?
+  title                     Json?
+  queryFilter               String                 @default("")
+  editedType                String?
+  rules                     Json?
+  affectedFields            Json?
+  locationId                String?
+  status                    String                 @default("pending")
+  targetSnapshotSetId       String?
+  targetLevel               String?
+  skippedItems              Json?
+  scheduledAt               DateTime?
+  scheduledUndoAt           DateTime?
+  processedCount            Int                    @default(0)
+  totalItems                Int                    @default(0)
+  totalRows                 Int                    @default(0)
+  durationMs                Int                    @default(0)
+  editTime                  DateTime               @default(now())
+  startedAt                 DateTime?
+  completedAt               DateTime?
+  undo                      Json?
+  batch                     Json?
+  // LEGACY UI label. New workflow discriminators must use triggerType,
+  // mutationType, scopeType, runType, or another domain-specific *Type.
+  type                      String?                @default("Manual edit")
+  processingBatchId         String?
+  scheduledTask             String?
+  user                      String?
+  isFavourite               Boolean                @default(false)
+  isSpreadsheetEdit         Boolean                @default(false)
+  isRecurring               Boolean                @default(false)
+  recurringEditId           String?
+  recurringRunId            String?
+  automaticProductRuleId    String?
+  automaticProductRuleRunId String?                @unique
+  triggerType               EditHistoryTriggerType @default(MANUAL)
+  error                     Json?
+  createdAt                 DateTime               @default(now())
+  updatedAt                 DateTime               @updatedAt
+  filterVersion             Int?
+  canonicalFilterKey        String?
+  idempotencyKey            String?
+  rulesHash                 String?
+  ruleEngineVersion         String?
+  executionSummary          EditExecutionSummary?
+  changeRecords             ChangeRecord[]
+  spreadsheetFiles          SpreadsheetFile[]
+
+  @@index([shop, status, type, updatedAt], map: "shop_status_type_recent")
+  @@index([shop])
+  @@index([shop, executionState])
+  @@index([isSpreadsheetEdit])
+  @@index([recurringEditId])
+  @@index([recurringRunId])
+  @@index([automaticProductRuleId])
+  @@index([automaticProductRuleRunId])
+  @@index([shop, canonicalFilterKey])
+  @@index([targetSnapshotSetId])
+  @@index([targetCatalogBatchId])
+  @@unique([shop, idempotencyKey])
+}
+
+model EditExecutionSummary {
+  id                   String      @id @default(cuid())
+  editHistoryId        String      @unique
+  shop                 String
+  executionState       String      @default("planned")
+  status               String      @default("pending")
+  executionIdentity    String?     @unique
+  targetSnapshotCount  Int         @default(0)
+  targetCatalogBatchId String?
+  targetMirrorBatchId  String?
+  targetSnapshotSetId  String?
+  targetLevel          String?
+  bulkOperationId      String?
+  failureStage         String?
+  processedCount       Int         @default(0)
+  totalItems           Int         @default(0)
+  totalRows            Int         @default(0)
+  durationMs           Int         @default(0)
+  startedAt            DateTime?
+  completedAt          DateTime?
+  scheduledAt          DateTime?
+  scheduledUndoAt      DateTime?
+  recurringEditId      String?
+  recurringRunId       String?
+  automaticProductRuleId String?
+  automaticProductRuleRunId String?
+  idempotencyKey       String?
+  queryFilter          String      @default("")
+  rules                Json?
+  batch                Json?
+  undo                 Json?
+  error                Json?
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+  editHistory          EditHistory @relation(fields: [editHistoryId], references: [id], onDelete: Cascade)
+
+  @@index([shop, status, updatedAt])
+  @@index([shop, executionState])
+  @@index([targetSnapshotSetId])
+  @@index([targetCatalogBatchId])
+  @@index([recurringEditId])
+  @@index([recurringRunId])
+  @@index([automaticProductRuleId])
+  @@index([automaticProductRuleRunId])
+  @@unique([shop, idempotencyKey])
+}
+
+model BulkEditJobOutbox {
+  id                String    @id @default(cuid())
+  shop              String
+  editHistoryId     String
+  executionIdentity String
+  source            String
+  payload           Json
+  status            String    @default("PENDING")
+  attempts          Int       @default(0)
+  lastError         String?
+  claimedAt         DateTime?
+  dispatchedAt      DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@unique([editHistoryId])
+  @@index([status, createdAt])
+  @@index([shop, status])
+}
+
+model RecurringEdit {
+  id                 String                @id @default(cuid())
+  shop               String
+  title              String
+  status             RecurringEditStatus   @default(ACTIVE)
+  scheduleType       RecurringScheduleType
+  timezone           String
+  scheduleConfig     Json
+  cronExpression     String?
+  intervalMinutes    Int?
+  startAt            DateTime?
+  endAt              DateTime?
+  filterParams       Json
+  rules              Json
+  runCount           Int                   @default(0)
+  lastRunAt          DateTime?
+  nextRunAt          DateTime?
+  lastSuccessAt      DateTime?
+  lastFailureAt      DateTime?
+  lastFailureReason  String?
+  isDeleted          Boolean               @default(false)
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+  filterVersion      Int                   @default(1)
+  canonicalFilterKey String?
+  runs               RecurringEditRun[]
+
+  @@index([shop])
+  @@index([shop, status])
+  @@index([shop, nextRunAt])
+  @@index([nextRunAt])
+  @@index([shop, canonicalFilterKey])
+}
+
+model RecurringEditRun {
+  id              String                 @id @default(cuid())
+  recurringEditId String
+  shop            String
+  scheduledFor    DateTime
+  startedAt       DateTime?
+  completedAt     DateTime?
+  status          RecurringEditRunStatus @default(PENDING)
+  executionKey    String                 @unique
+  errorMessage    String?
+  editHistoryId   String?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  recurringEdit   RecurringEdit          @relation(fields: [recurringEditId], references: [id], onDelete: Cascade)
+
+  @@index([recurringEditId])
+  @@index([shop, status])
+  @@index([shop, scheduledFor])
+  @@index([editHistoryId])
+}
+
+model AutomaticProductRule {
+  id                 String                             @id @default(cuid())
+  shop               String
+  title              String
+  status             AutomaticProductRuleStatus         @default(ACTIVE)
+  triggerType        AutomaticProductRuleTriggerType
+  scheduleType       AutomaticRuleScheduleType?
+  timezone           String?
+  scheduleConfig     Json?
+  cronExpression     String?
+  intervalMinutes    Int?
+  startAt            DateTime?
+  endAt              DateTime?
+  scopeType          AutomaticProductRuleScopeType
+  conditions         Json
+  actions            Json
+  applyMode          String
+  priority           Int                                @default(100)
+  cooldownMinutes    Int?
+  maxAffectedPerRun  Int?
+  runCount           Int                                @default(0)
+  lastRunAt          DateTime?
+  nextRunAt          DateTime?
+  lastSuccessAt      DateTime?
+  lastFailureAt      DateTime?
+  lastFailureReason  String?
+  createdBy          String?
+  updatedBy          String?
+  isDeleted          Boolean                            @default(false)
+  createdAt          DateTime                           @default(now())
+  updatedAt          DateTime                           @updatedAt
+  filterVersion      Int                                @default(1)
+  canonicalFilterKey String?
+  productStates      AutomaticProductRuleProductState[]
+  runs               AutomaticProductRuleRun[]
+
+  @@index([shop, status])
+  @@index([shop, nextRunAt])
+  @@index([shop, triggerType])
+  @@index([shop, priority, status])
+  @@index([shop, createdAt])
+  @@index([shop, canonicalFilterKey])
+}
+
+model AutomaticProductRuleRun {
+  id                     String                               @id @default(cuid())
+  automaticProductRuleId String
+  shop                   String
+  triggerSource          AutomaticProductRuleRunTriggerSource
+  triggerReference       String?
+  scheduledFor           DateTime?
+  startedAt              DateTime?
+  completedAt            DateTime?
+  status                 AutomaticProductRuleRunStatus        @default(PENDING)
+  executionKey           String                               @unique
+  matchedCount           Int                                  @default(0)
+  affectedCount          Int                                  @default(0)
+  errorMessage           String?
+  editHistoryId          String?
+  createdAt              DateTime                             @default(now())
+  updatedAt              DateTime                             @updatedAt
+  automaticProductRule   AutomaticProductRule                 @relation(fields: [automaticProductRuleId], references: [id], onDelete: Cascade)
+
+  @@index([shop, status, createdAt])
+  @@index([automaticProductRuleId, createdAt])
+  @@index([automaticProductRuleId, scheduledFor])
+  @@index([editHistoryId])
+}
+
+model AutomaticProductRuleProductState {
+  id                     String               @id @default(cuid())
+  automaticProductRuleId String
+  shop                   String
+  productId              String
+  lastMatchedAt          DateTime?
+  lastAppliedAt          DateTime?
+  lastFingerprint        String?
+  suppressedUntil        DateTime?
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+  automaticProductRule   AutomaticProductRule @relation(fields: [automaticProductRuleId], references: [id], onDelete: Cascade)
+
+  @@unique([automaticProductRuleId, shop, productId])
+  @@index([shop, productId])
+  @@index([automaticProductRuleId, suppressedUntil])
+}
+
+model ProductCodeSnippet {
+  id                   String                              @id @default(cuid())
+  shop                 String
+  title                String
+  status               ProductCodeSnippetStatus            @default(DRAFT)
+  language             ProductCodeSnippetLanguage          @default(SNIPPET_DSL)
+  code                 String
+  normalizedAst        Json?
+  lastValidationStatus ProductCodeSnippetValidationStatus?
+  lastValidationError  String?
+  lastPreviewedAt      DateTime?
+  createdBy            String?
+  updatedBy            String?
+  isDeleted            Boolean                             @default(false)
+  createdAt            DateTime                            @default(now())
+  updatedAt            DateTime                            @updatedAt
+
+  @@index([shop, status])
+  @@index([shop, createdAt])
+  @@index([shop, updatedAt])
+}
+
+model Collection {
+  id            String   @id @default(cuid())
+  shop          String
+  shopifyId     String
+  // Authoritative collection batch identity. Must match mirrorBatchId while
+  // mirrorBatchId remains for legacy compatibility.
+  catalogBatchId String
+  // Legacy compatibility alias only; do not use for new collection reads.
+  mirrorBatchId String
+  title         String?
+  handle        String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([shop, catalogBatchId, shopifyId])
+  @@unique([shop, mirrorBatchId, shopifyId])
+  @@index([updatedAt])
+  @@index([shop, catalogBatchId])
+  @@index([shop, catalogBatchId, title])
+  @@index([shop, mirrorBatchId])
+  @@index([shop, mirrorBatchId, title])
+}
+
+model ExportHistory {
+  id            String    @id @default(cuid())
+  shop          String
+  filename      String
+  filters       Json
+  exportedData  String?
+  status        String
+  // LEGACY NAME: use durationMs on new export/run tables.
+  duration      Int       @default(0)
+  totalItems    Int?
+  errorMessage  String?
+  exportTime    DateTime?
+  // LEGACY UI label. New export discriminators must use triggerType.
+  type          String    @default("Manual export")
+  isFavourite   Boolean   @default(false)
+  scheduledTask String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  @@unique([scheduledTask])
+
+  @@index([shop, createdAt])
+  @@index([shop, status])
+  @@index([shop, isFavourite])
+  @@index([shop, type])
+  @@index([shop, exportTime])
+}
+
+model ScheduledExport {
+  id                 String                @id @default(cuid())
+  shop               String
+  title              String
+  status             ScheduledExportStatus @default(ACTIVE)
+  scheduleType       RecurringScheduleType
+  timezone           String
+  scheduleConfig     Json
+  cronExpression     String?
+  intervalMinutes    Int?
+  startAt            DateTime?
+  endAt              DateTime?
+  filterParams       Json
+  fields             String[]
+  filename           String
+  runCount           Int                   @default(0)
+  lastRunAt          DateTime?
+  nextRunAt          DateTime?
+  lastSuccessAt      DateTime?
+  lastFailureAt      DateTime?
+  lastFailureReason  String?
+  isDeleted          Boolean               @default(false)
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+  filterVersion      Int                   @default(1)
+  canonicalFilterKey String?
+  runs               ScheduledExportRun[]
+
+  @@index([shop])
+  @@index([shop, status])
+  @@index([shop, nextRunAt])
+  @@index([nextRunAt])
+  @@index([shop, canonicalFilterKey])
+}
+
+model ScheduledExportRun {
+  id                String                   @id @default(cuid())
+  scheduledExportId String
+  shop              String
+  scheduledFor      DateTime
+  startedAt         DateTime?
+  completedAt       DateTime?
+  status            ScheduledExportRunStatus @default(PENDING)
+  executionKey      String                   @unique
+  errorMessage      String?
+  exportJobId       String?
+  fileUrl           String?
+  totalItems        Int?
+  durationMs        Int?
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+  scheduledExport   ScheduledExport          @relation(fields: [scheduledExportId], references: [id], onDelete: Cascade)
+
+  @@index([scheduledExportId])
+  @@index([shop, status])
+  @@index([shop, scheduledFor])
+  @@index([exportJobId])
+}
+
+model ExportJob {
+  id                   String               @id @default(cuid())
+  shop                 String
+  filterQuery          String               @default("{}")
+  executionState       String               @default("planned")
+  targetSnapshotCount  Int                  @default(0)
+  // Authoritative batch identity for export targeting/execution.
+  targetCatalogBatchId String?
+  // Legacy compatibility alias only; must match targetCatalogBatchId when present.
+  targetMirrorBatchId  String?
+  targetSnapshotSetId  String?
+  failureStage         String?
+  filename             String
+  fields               String[]
+  status               String               @default("PENDING")
+  fileUrl              String?
+  // LEGACY UI label. New export discriminators must use triggerType.
+  type                 String               @default("Manual export")
+  isScheduled          Boolean              @default(false)
+  scheduledExportId    String?
+  scheduledExportRunId String?
+  triggerType          ExportJobTriggerType @default(MANUAL)
+  totalItems           Int?
+  durationMs           Int?
+  startedAt            DateTime?
+  completedAt          DateTime?
+  error                String?
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  filterVersion        Int?
+  canonicalFilterKey   String?
+  idempotencyKey       String?
+
+  @@index([shop])
+  @@index([shop, executionState])
+  @@index([status])
+  @@index([scheduledExportId])
+  @@index([scheduledExportRunId])
+  @@index([shop, canonicalFilterKey])
+  @@index([targetSnapshotSetId])
+  @@index([targetCatalogBatchId])
+  @@unique([shop, idempotencyKey])
+}
+
+model ChangeRecord {
+  id                  String      @id @default(cuid())
+  sequenceId          BigInt      @unique @default(autoincrement())
+  editHistoryId       String
+  productId           String
+  variantId           String?
+  targetKey           String?
+  bulkMutationSubmissionId String?
+  shop                String
+  options             Json?
+  productFieldChanges Json?
+  variantFieldChanges Json?
+  fieldChanges        ChangeRecordFieldChange[]
+  image               String?
+  title               String
+  scope               String
+  status              String      @default("pending")
+  batchId             String?
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  editHistory         EditHistory @relation(fields: [editHistoryId], references: [id])
+
+  @@index([editHistoryId])
+  @@index([productId])
+  @@index([variantId])
+  @@index([targetKey])
+  @@index([bulkMutationSubmissionId])
+  @@index([shop])
+  @@index([status])
+  @@index([batchId])
+}
+
+model ChangeRecordFieldChange {
+  id             BigInt       @id @default(autoincrement())
+  changeRecordId String
+  shop           String
+  editHistoryId  String
+  productId      String
+  variantId      String?
+  targetKey      String?
+  scope          String
+  field          String
+  oldValue       Json?
+  newValue       Json?
+  revertValue    Json?
+  createdAt      DateTime     @default(now())
+  changeRecord   ChangeRecord @relation(fields: [changeRecordId], references: [id], onDelete: Cascade)
+
+  @@index([changeRecordId])
+  @@index([shop, field])
+  @@index([shop, editHistoryId, field])
+  @@index([shop, productId, field])
+  @@index([shop, variantId, field])
+}
+
+model FilterTrack {
+  id                  String          @id @default(cuid())
+  shop                String
+  filterParams        Json?
+  previewFilterParams Json?
+  respondProductCount Int?
+  previewResCount     Int?
+  type                FilterTrackType @default(filter)
+  field               String?
+  editOption          String?
+  searchKey           String?
+  replaceText         String?
+  supportValue        String?
+  value               Json?
+  en                  String?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  @@index([shop])
+  @@index([type])
+}
+
+model ReferralCode {
+  id           String   @id @default(cuid())
+  shop         String
+  referralCode String
+  createdAt    DateTime @default(now())
+
+  @@index([shop])
+}
+
+model AffiliateUser {
+  id                       String   @id @default(cuid())
+  name                     String
+  email                    String   @unique
+  referralCode             String   @unique
+  referralLink             String   @unique
+  numberOfReferrals        Int      @default(0)
+  numberOfStoresSubscribed Int      @default(0)
+  totalAmountEarned        Decimal  @default(0) @db.Decimal(18, 6)
+  phone                    String?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  @@index([referralCode])
+}
+
+model Location {
+  shop String
+  id   String
+  name String
+
+  @@id([shop, id])
+  @@index([shop])
+}
+
+model ErrorLog {
+  id        BigInt   @id @default(autoincrement())
+  shop      String
+  // Legacy log category. New operational workflows should use domain-specific
+  // *Type fields instead of a generic type column.
+  type      String
+  level     String   @default("error")
+  message   String
+  stack     String?
+  source    String?
+  request   Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([shop])
+  @@index([type])
+  @@index([level])
+  @@index([source])
+  @@index([createdAt])
+}
+
+model MirrorAnomaly {
+  id         String   @id @default(cuid())
+  shop       String
+  severity   String
+  // Legacy anomaly category. New anomaly producers should use anomalyType in a
+  // future additive migration, then map this column for compatibility.
+  type       String
+  entityType String?
+  entityId   String?
+  message    String
+  details    Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([shop, createdAt])
+  @@index([shop, severity, createdAt])
+  @@index([shop, type, createdAt])
+}
+
+model ShopifySession {
+  id               String  @id @db.VarChar(255)
+  shop             String  @db.VarChar(255)
+  state            String  @db.VarChar(255)
+  isOnline         Boolean
+  scope            String? @db.VarChar(1024)
+  expires          Int?
+  onlineAccessInfo String? @db.VarChar(255)
+  accessToken      String? @db.VarChar(255)
+
+  @@map("shopify_sessions")
+}
+
+model ShopifySessionMigration {
+  migrationName String @id @map("migration_name") @db.VarChar(255)
+
+  @@map("shopify_sessions_migrations")
+}
+
+model MirrorReconcileSignal {
+  id                    String    @id
+  shop                  String
+  entityType            String
+  entityId              String
+  topic                 String?
+  status                String    @default("pending")
+  signalCount           Int       @default(1)
+  latestWebhookId       String?
+  latestPayloadHash     String?
+  latestEventAt         DateTime?
+  latestSourceUpdatedAt DateTime?
+  latestSourceKind      String?
+  processingToken       String?
+  processingStartedAt   DateTime?
+  reconciledAt          DateTime?
+  lastError             String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @default(now())
+
+  @@unique([shop, entityType, entityId])
+  @@index([shop, status, updatedAt])
+  @@index([status, updatedAt])
+}
+
+model OperationFingerprint {
+  id            String   @id
+  shop          String
+  operationType String
+  fingerprint   String
+  resourceType  String
+  resourceId    String?
+  status        String   @default("RESERVED")
+  lastError     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now())
+
+  @@unique([shop, operationType, fingerprint])
+  @@index([resourceType, resourceId], map: "OperationFingerprint_resource_idx")
+  @@index([shop, status, createdAt])
+}
+
+model ProductTombstone {
+  id               String    @id
+  shop             String
+  productId        String
+  sourceUpdatedAt  DateTime?
+  sourceEventAt    DateTime?
+  deletedAt        DateTime?
+  sourceKind       String?
+  lastReconciledAt DateTime?
+  purgeAfter       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @default(now())
+
+  @@unique([shop, productId])
+  @@index([shop, deletedAt])
+  @@index([shop, purgeAfter])
+  @@index([shop, updatedAt])
+}
+
+model VariantTombstone {
+  id               String    @id
+  shop             String
+  variantId        String
+  productId        String?
+  sourceUpdatedAt  DateTime?
+  sourceEventAt    DateTime?
+  deletedAt        DateTime?
+  sourceKind       String?
+  lastReconciledAt DateTime?
+  purgeAfter       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @default(now())
+
+  @@unique([shop, variantId])
+  @@index([shop, productId])
+  @@index([shop, deletedAt])
+  @@index([shop, purgeAfter])
+  @@index([shop, updatedAt])
+}
+
+model WebhookDelivery {
+  id           String    @id
+  topic        String
+  shop         String
+  webhookId    String?
+  entityId     String?
+  dedupeKey    String    @unique
+  payloadHash  String?
+  status       String    @default("RECEIVED")
+  processedAt  DateTime?
+  lastError    String?
+  attemptCount Int       @default(1)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @default(now())
+
+  @@index([shop, topic, createdAt])
+  @@index([status, createdAt])
+}
+
+enum SubscriptionStatus {
+  FREE
+  PENDING
+  ACTIVE
+  CANCELLED
+  EXPIRED
+}
+
+enum SyncStatus {
+  completed
+  processing
+  failed
+}
+
+enum MirrorHealthState {
+  HEALTHY
+  DEGRADED
+  UNSAFE
+  REPAIR_REQUIRED
+}
+
+enum SyncProgressStage {
+  IDLE
+  SHOPIFY_BULK_RUNNING
+  MIRROR_STAGING
+  RECONCILING
+}
+
+enum SyncOperationType {
+  Collection
+  ProductType
+  Product
+}
+
+enum FilterTrackType {
+  filter
+  preview
+}
+
+enum RecurringEditStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum RecurringScheduleType {
+  ONE_TIME
+  CRON
+  DAILY
+  WEEKLY
+  MONTHLY
+  EVERY_X_MINUTES
+}
+
+enum RecurringEditRunStatus {
+  PENDING
+  PROCESSING
+  SUCCESS
+  FAILED
+  SKIPPED
+}
+
+enum AutomaticProductRuleStatus {
+  ACTIVE
+  PAUSED
+  FAILED
+  CANCELLED
+}
+
+enum AutomaticProductRuleTriggerType {
+  EVENT
+  SCHEDULED
+  HYBRID
+}
+
+enum AutomaticRuleScheduleType {
+  CRON
+  DAILY
+  WEEKLY
+  MONTHLY
+  EVERY_X_MINUTES
+}
+
+enum AutomaticProductRuleScopeType {
+  PRODUCT
+  VARIANT
+}
+
+enum AutomaticProductRuleRunStatus {
+  PENDING
+  PROCESSING
+  SUCCESS
+  FAILED
+  SKIPPED
+}
+
+enum AutomaticProductRuleRunTriggerSource {
+  SCHEDULE
+  WEBHOOK
+  MANUAL
+  REINDEX
+}
+
+enum ProductCodeSnippetStatus {
+  ACTIVE
+  DRAFT
+  ARCHIVED
+}
+
+enum ProductCodeSnippetLanguage {
+  SNIPPET_DSL
+}
+
+enum ProductCodeSnippetValidationStatus {
+  VALID
+  INVALID
+}
+
+enum EditHistoryTriggerType {
+  MANUAL
+  SCHEDULED_ONCE
+  RECURRING
+  AUTOMATIC_RULE
+}
+
+enum ScheduledExportStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum ScheduledExportRunStatus {
+  PENDING
+  PROCESSING
+  SUCCESS
+  FAILED
+  SKIPPED
+}
+
+enum ExportJobTriggerType {
+  MANUAL
+  SCHEDULED
+}

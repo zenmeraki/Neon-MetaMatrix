@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+html {
+  scrollbar-gutter: stable;
+  background: #f6f6f7;
+}
+
+body {
+  min-width: 320px;
+  background: #f6f6f7;
+}
+
+#app {
+  min-height: 100vh;
+}
+
+img,
+svg,
+video,
+iframe {
+  max-width: 100%;
+}
+
+.route-stability-frame {
+  min-height: calc(100vh - 32px);
+}
+
+.page-loader-shell {
+  min-height: calc(100vh - 32px);
+}
+
+.page-loader-panel {
+  min-height: 680px;
+  padding: 24px;
+}
+
+.products-table-frame {
+  min-height: 520px;
+}
+
+.products-table-header {
+  min-height: 88px;
+}
+
+.products-table-body {
+  min-height: 360px;
+}
+
+.products-table-footer {
+  min-height: 72px;
+}
+
+.dashboard-metric-card,
+.dashboard-metric-skeleton,
+.dashboard-quick-action-card {
+  min-height: 148px;
+}
+
+.dashboard-promo-slot {
+  min-height: 860px;
+}
+
+.dashboard-promo-placeholder {
+  min-height: 860px;
+}
+
+.demo-video-shell {
+  aspect-ratio: 16 / 9;
+  min-height: 280px;
+}
+
+.embedded-widget-frame {
+  min-height: 280px;
+}
+
+@media (max-width: 720px) {
+  .page-loader-panel {
+    min-height: 760px;
+    padding: 16px;
+  }
+
+  .dashboard-promo-slot,
+  .dashboard-promo-placeholder {
+    min-height: 980px;
+  }
+}

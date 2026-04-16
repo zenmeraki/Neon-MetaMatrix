@@ -1,0 +1,6 @@
+ALTER TABLE "Variant"
+  ALTER COLUMN "price" TYPE DECIMAL(18, 6) USING "price"::DECIMAL(18, 6),
+  ALTER COLUMN "compareAtPrice" TYPE DECIMAL(18, 6) USING "compareAtPrice"::DECIMAL(18, 6),
+  ALTER COLUMN "cost" TYPE DECIMAL(18, 6) USING "cost"::DECIMAL(18, 6),
+  ALTER COLUMN "weight" TYPE DECIMAL(18, 6) USING "weight"::DECIMAL(18, 6),
+  ALTER COLUMN "profitMargin" TYPE DECIMAL(18, 6) USING "profitMargin"::DECIMAL(18, 6);

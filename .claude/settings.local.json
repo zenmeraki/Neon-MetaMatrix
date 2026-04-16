@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs ls:*)",
+      "Bash(xargs grep:*)",
+      "Bash(grep -r \"resolveCanonicalProductTarget\\\\|getProductsWithFilters\\\\|freezeTargetSnapshot\" --include=\"*.js\" ! -path \"./node_modules/*\" ! -path \"./frontend/dist/*\")",
+      "Bash(find . -name \"*.js\" -type f ! -path \"./node_modules/*\" ! -path \"./frontend/dist/*\" -exec grep -l \"freezeTargetSnapshot\\\\|resolveCanonicalProductTarget\" {} \\\\;)",
+      "Bash(find . -name \"*.js\" -type f ! -path \"./node_modules/*\" ! -path \"./frontend/dist/*\" -exec grep -l \"MirrorReconcileSignal\" {} \\\\;)",
+      "Bash(grep -r \"filterParams\\\\|queryFilter\" --include=\"*.js\" ! -path \"./node_modules/*\" ! -path \"./frontend/dist/*\")"
+    ]
+  }
+}
