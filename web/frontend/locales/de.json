@@ -1058,9 +1058,80 @@
   "editExecutionErrors": "Bei der Bearbeitung wurden Ausführungsfehler erfasst.",
   "undoFinishedWithIssues": "Rückgängig gemacht mit aufgezeichneten Problemen",
   "undoEncounteredErrors": "Festgestellte Fehler rückgängig machen",
-  "failureStage": "Fehlerstadium",
   "loadingHistoryDetailsSpinner": "Verlaufsdetails werden geladen...",
   "scheduled_for": "Geplant für",
   "at": "bei",
-  "undo_scheduled_for": "Rückgängigmachen geplant für"
+  "undo_scheduled_for": "Rückgängigmachen geplant für",
+  "failureStage": "Fehlerstadium",
+  "IncreaseValue": "Wert steigern",
+  "search_multiple": "Mehrere suchen und auswählen...",
+  "location": "Standort",
+  "permanent_action": "Diese Aktion ist dauerhaft und kann nicht rückgängig gemacht werden.",
+  "select_category": "Kategorie auswählen",
+"collectionActions": {
+  "addToCollection": "Zur Sammlung hinzufügen",
+  "removeFromCollection": "Aus Sammlung entfernen"
+},
+"collectionSearch": {
+  "label": "Sammlungen suchen und auswählen"
+},
+"tagActions": {
+  "add": "Tags zum Produkt hinzufügen",
+  "remove": "Tags vom Produkt entfernen",
+  "rename": "Tag umbenennen",
+  "searchReplace": "Suchen/Ersetzen im Tag-Namen",
+  "setAll": "Tags festlegen (überschreibt vorhandene)"
+},
+"tagInput": {
+  "commaSeparated": "Kommagetrennte Tags",
+  "rename": "Alter Tag → Neuer Tag",
+  "old": "Alter Tag",
+  "new": "Neuer Tag",
+  "searchReplace": "Suchen → Ersetzen",
+  "search": "In Tags suchen",
+  "replace": "Ersetzen durch"
+},
+"textInput": {
+  "enterText": "Text eingeben",
+  "enterTextToAdd": "Text zum Hinzufügen eingeben",
+  "enterTextToRemove": "Text zum Entfernen eingeben",
+  "enterMaxCharacterLength": "Maximale Zeichenlänge eingeben",
+  "enterSearchAndReplaceValues": "Such- und Ersetzungswerte eingeben",
+  "enterWord": "Wort eingeben"
+},
+"statusActions": {
+  "setStatus": "Status festlegen"
+},
+"statusInput": {
+  "selectProductStatus": "Produktstatus auswählen"
+},
+"statusChoices": {
+  "active": "Aktiv",
+  "draft": "Entwurf",
+  "archived": "Archiviert"
+},
+"categorySearch": {
+  "label": "Suchen und auswählen"
+},
+"taxActions": {
+  "setTaxApplicability": "Steuer anwenden"
+},
+"taxInput": {
+  "shouldProductBeTaxable": "Soll dieses Produkt steuerpflichtig sein?"
+},
+"commonChoices": {
+  "yes": "Ja",
+  "no": "Nein"
+},
+
+"inventoryPolicyActions": {
+  "setInventoryPolicy": "Bestandsrichtlinie festlegen"
+},
+"inventoryPolicyInput": {
+  "shouldContinueSellingOutOfStock": "Soll dieses Produkt weiterhin verkauft werden, wenn der Bestand aufgebraucht ist?"
+},
+"inventoryPolicyChoices": {
+  "continueSelling": "Weiterverkaufen, wenn nicht auf Lager",
+  "denySelling": "Nicht weiterverkaufen, wenn nicht auf Lager"
+}
 }

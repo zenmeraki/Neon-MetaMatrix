@@ -1057,9 +1057,79 @@
   "editExecutionErrors": "La edición registró errores de ejecución.",
   "undoFinishedWithIssues": "Deshacer completado con problemas grabados",
   "undoEncounteredErrors": "Deshacer errores encontrados",
-  "failureStage": "Etapa de fracaso",
   "loadingHistoryDetailsSpinner": "Cargando detalles del historial...",
   "scheduled_for": "Programado para",
   "at": "en",
-  "undo_scheduled_for": "Deshacer programado para"
+  "undo_scheduled_for": "Deshacer programado para",
+  "failureStage": "etapa de fracaso",
+  "IncreaseValue": "Aumentar valor",
+  "search_multiple": "Busca y selecciona varios...",
+  "location": "Ubicación",
+  "permanent_action": "Esta acción es permanente y no se puede deshacer.",
+  "select_category": "Seleccionar categoría",
+"collectionActions": {
+  "addToCollection": "Agregar a la colección",
+  "removeFromCollection": "Eliminar de la colección"
+},
+"collectionSearch": {
+  "label": "Buscar y seleccionar colecciones"
+},
+"tagActions": {
+  "add": "Agregar etiquetas al producto",
+  "remove": "Eliminar etiquetas del producto",
+  "rename": "Renombrar etiqueta",
+  "searchReplace": "Buscar/reemplazar en nombre de etiqueta",
+  "setAll": "Establecer etiquetas (sobrescribe existentes)"
+},
+"tagInput": {
+  "commaSeparated": "Etiquetas separadas por comas",
+  "rename": "Etiqueta antigua → Nueva etiqueta",
+  "old": "Etiqueta antigua",
+  "new": "Nueva etiqueta",
+  "searchReplace": "Buscar → Reemplazar",
+  "search": "Buscar en etiquetas",
+  "replace": "Reemplazar con"
+},
+"textInput": {
+  "enterText": "Ingresar texto",
+  "enterTextToAdd": "Ingresar el texto a agregar",
+  "enterTextToRemove": "Ingresar el texto a eliminar",
+  "enterMaxCharacterLength": "Ingresar longitud máxima",
+  "enterSearchAndReplaceValues": "Ingresar valores de búsqueda y reemplazo",
+  "enterWord": "Ingresar palabra"
+},
+"statusActions": {
+  "setStatus": "Establecer estado"
+},
+"statusInput": {
+  "selectProductStatus": "Seleccionar estado del producto"
+},
+"statusChoices": {
+  "active": "Activo",
+  "draft": "Borrador",
+  "archived": "Archivado"
+},
+"categorySearch": {
+  "label": "Buscar y seleccionar"
+},
+"taxActions": {
+  "setTaxApplicability": "Aplicar impuesto"
+},
+"taxInput": {
+  "shouldProductBeTaxable": "¿Este producto debe ser gravable?"
+},
+"commonChoices": {
+  "yes": "Sí",
+  "no": "No"
+},
+"inventoryPolicyActions": {
+  "setInventoryPolicy": "Establecer política de inventario"
+},
+"inventoryPolicyInput": {
+  "shouldContinueSellingOutOfStock": "¿Este producto debe seguir vendiéndose cuando esté sin stock?"
+},
+"inventoryPolicyChoices": {
+  "continueSelling": "Seguir vendiendo cuando no haya stock",
+  "denySelling": "No seguir vendiendo cuando no haya stock"
+}
 }

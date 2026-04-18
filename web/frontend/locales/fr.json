@@ -1057,9 +1057,81 @@
   "editExecutionErrors": "Le montage a enregistré des erreurs d’exécution.",
   "undoFinishedWithIssues": "Annulation terminée avec les problèmes enregistrés",
   "undoEncounteredErrors": "Annuler les erreurs rencontrées",
-  "failureStage": "Étape d'échec",
   "loadingHistoryDetailsSpinner": "Chargement des détails de l'historique...",
   "scheduled_for": "Prévu pour",
   "at": "à",
-  "undo_scheduled_for": "Annulation prévue pour"
+  "undo_scheduled_for": "Annulation prévue pour",
+  "failureStage": "Étape d'échec",
+  "IncreaseValue": "Augmenter la valeur",
+  "search_multiple": "Recherchez et sélectionnez plusieurs...",
+  "location": "Emplacement",
+  "permanent_action": "Cette action est permanente et ne peut être annulée.",
+  "select_category": "Sélectionner une catégorie",
+"collectionActions": {
+  "addToCollection": "Ajouter à la collection",
+  "removeFromCollection": "Supprimer de la collection"
+},
+"collectionSearch": {
+  "label": "Rechercher et sélectionner des collections"
+},
+
+"tagActions": {
+  "add": "Ajouter des tags au produit",
+  "remove": "Supprimer les tags du produit",
+  "rename": "Renommer le tag",
+  "searchReplace": "Rechercher/remplacer dans le nom du tag",
+  "setAll": "Définir les tags (remplace les existants)"
+},
+"tagInput": {
+  "commaSeparated": "Tags séparés par des virgules",
+  "rename": "Ancien tag → Nouveau tag",
+  "old": "Ancien tag",
+  "new": "Nouveau tag",
+  "searchReplace": "Rechercher → Remplacer",
+  "search": "Rechercher dans les tags",
+  "replace": "Remplacer par"
+},
+"textInput": {
+  "enterText": "Saisir le texte",
+  "enterTextToAdd": "Saisir le texte à ajouter",
+  "enterTextToRemove": "Saisir le texte à supprimer",
+  "enterMaxCharacterLength": "Saisir la longueur maximale",
+  "enterSearchAndReplaceValues": "Saisir les valeurs de recherche et remplacement",
+  "enterWord": "Saisir le mot"
+},
+"statusActions": {
+  "setStatus": "Définir le statut"
+},
+"statusInput": {
+  "selectProductStatus": "Sélectionner le statut du produit"
+},
+"statusChoices": {
+  "active": "Actif",
+  "draft": "Brouillon",
+  "archived": "Archivé"
+},
+"categorySearch": {
+  "label": "Rechercher et sélectionner"
+},
+"taxActions": {
+  "setTaxApplicability": "Appliquer la taxe"
+},
+"taxInput": {
+  "shouldProductBeTaxable": "Ce produit doit-il être taxé ?"
+},
+"commonChoices": {
+  "yes": "Oui",
+  "no": "Non"
+},
+
+"inventoryPolicyActions": {
+  "setInventoryPolicy": "Définir la politique d'inventaire"
+},
+"inventoryPolicyInput": {
+  "shouldContinueSellingOutOfStock": "Ce produit doit-il continuer à être vendu lorsqu'il est en rupture de stock ?"
+},
+"inventoryPolicyChoices": {
+  "continueSelling": "Continuer à vendre en cas de rupture de stock",
+  "denySelling": "Ne pas continuer à vendre en cas de rupture de stock"
+}
 }

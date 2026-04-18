@@ -1056,9 +1056,80 @@
   "editExecutionErrors": "編集では実行エラーが記録されました。",
   "undoFinishedWithIssues": "記録された問題で元に戻すが完了しました",
   "undoEncounteredErrors": "発生したエラーを元に戻す",
-  "failureStage": "失敗段階",
   "loadingHistoryDetailsSpinner": "履歴の詳細を読み込んでいます...",
   "scheduled_for": "予定されている",
   "at": "で",
-  "undo_scheduled_for": "予定を元に戻す"
+  "undo_scheduled_for": "予定を元に戻す",
+  "failureStage": "故障段階",
+  "IncreaseValue": "価値を高める",
+  "search_multiple": "検索して複数選択...",
+  "location": "位置",
+  "permanent_action": "このアクションは永続的であり、元に戻すことはできません。",
+  "select_category": "カテゴリを選択",
+"collectionActions": {
+  "addToCollection": "コレクションに追加",
+  "removeFromCollection": "コレクションから削除"
+},
+"collectionSearch": {
+  "label": "コレクションを検索して選択"
+},
+"tagActions": {
+  "add": "商品にタグを追加",
+  "remove": "商品からタグを削除",
+  "rename": "タグ名を変更",
+  "searchReplace": "タグ名内を検索/置換",
+  "setAll": "タグを設定（既存を上書き）"
+},
+"tagInput": {
+  "commaSeparated": "カンマ区切りのタグ",
+  "rename": "旧タグ → 新タグ",
+  "old": "旧タグ",
+  "new": "新タグ",
+  "searchReplace": "検索 → 置換",
+  "search": "タグ内検索",
+  "replace": "置換"
+},
+"textInput": {
+  "enterText": "テキストを入力",
+  "enterTextToAdd": "追加するテキストを入力",
+  "enterTextToRemove": "削除するテキストを入力",
+  "enterMaxCharacterLength": "最大文字数を入力",
+  "enterSearchAndReplaceValues": "検索と置換の値を入力",
+  "enterWord": "単語を入力"
+},
+"statusActions": {
+  "setStatus": "ステータスを設定"
+},
+"statusInput": {
+  "selectProductStatus": "商品ステータスを選択"
+},
+"statusChoices": {
+  "active": "有効",
+  "draft": "下書き",
+  "archived": "アーカイブ"
+},
+"categorySearch": {
+  "label": "検索して選択"
+},
+"taxActions": {
+  "setTaxApplicability": "税を適用"
+},
+"taxInput": {
+  "shouldProductBeTaxable": "この商品に課税しますか？"
+},
+"commonChoices": {
+  "yes": "はい",
+  "no": "いいえ"
+},
+
+"inventoryPolicyActions": {
+  "setInventoryPolicy": "在庫ポリシーを設定"
+},
+"inventoryPolicyInput": {
+  "shouldContinueSellingOutOfStock": "在庫切れの場合でもこの商品を販売し続けますか？"
+},
+"inventoryPolicyChoices": {
+  "continueSelling": "在庫切れでも販売を続ける",
+  "denySelling": "在庫切れの場合は販売しない"
+}
 }

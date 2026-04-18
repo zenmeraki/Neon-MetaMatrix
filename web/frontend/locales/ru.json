@@ -1036,29 +1036,5 @@
     "scheduled": "Запланированный экспорт"
   },
   "exportDownloadLinkMissing": "Ссылка на скачивание недоступна.",
-  "exportDownloadFailed": "Не удалось загрузить файл.",
-  "scheduledExport": {
-    "failedMessage": "Не удалось запланировать экспорт.",
-    "successMessage": "Экспорт запланирован успешно!",
-    "modalTitle": "Расписание экспорта",
-    "scheduleButton": "Расписание",
-    "cancelButton": "Отмена",
-    "upgradeRequiredTitle": "Требуется обновление",
-    "upgradePlanButton": "План обновления",
-    "startExportCheckbox": "Начать экспорт в запланированное время",
-    "dateLabel": "Дата",
-    "dateHelpText": "Выберите дату для запуска экспорта",
-    "timeLabel": "Время",
-    "timeHelpText": "Выберите время для запуска экспорта"
-  },
-  "UndoProgress": "Отменить прогресс",
-  "errorPageTitle": "Ошибка",
-  "editFinishedWithIssues": "Редактирование завершилось с зафиксированными проблемами.",
-  "editExecutionErrors": "В правке зафиксированы ошибки выполнения.",
-  "undoFinishedWithIssues": "Отмена завершена с зарегистрированными проблемами",
-  "undoEncounteredErrors": "Отменить обнаруженные ошибки",
-  "loadingHistoryDetailsSpinner": "Загрузка подробностей истории...",
-  "scheduled_for": "Запланировано на",
-  "at": "в",
-  "undo_scheduled_for": "Отмена запланирована на"
+  "exportDownloadFailed": "Не удалось загрузить файл."
 }

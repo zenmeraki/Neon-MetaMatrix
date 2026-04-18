@@ -467,6 +467,7 @@ const RecurringEditModal = ({ open, onClose, data, isLoading, error, onUpdated }
           },
         ]}
       >
+        
         <Modal.Section>
           <Banner tone="critical">
             <Text as="p">

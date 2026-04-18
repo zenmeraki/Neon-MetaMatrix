@@ -1075,5 +1075,77 @@
   "loadingHistoryDetailsSpinner": "جارٍ تحميل تفاصيل السجل...",
   "scheduled_for": "المقرر ل",
   "at": "في",
-  "undo_scheduled_for": "التراجع عن المقرر ل"
+  "undo_scheduled_for": "التراجع عن المقرر ل",
+  "IncreaseValue": "زيادة القيمة",
+  "search_multiple": "بحث واختيار عدة...",
+  "location": "موقع",
+  "permanent_action": "هذا الإجراء دائم ولا يمكن التراجع عنه.",
+  "select_category": "اختر الفئة",
+"collectionActions": {
+  "addToCollection": "إضافة إلى المجموعة",
+  "removeFromCollection": "إزالة من المجموعة"
+},
+"collectionSearch": {
+  "label": "ابحث وحدد المجموعات"
+},
+
+"tagActions": {
+  "add": "إضافة علامات إلى المنتج",
+  "remove": "إزالة العلامات من المنتج",
+  "rename": "إعادة تسمية العلامة",
+  "searchReplace": "بحث/استبدال داخل اسم العلامة",
+  "setAll": "تعيين العلامات (سيتم استبدال الحالية)"
+},
+"tagInput": {
+  "commaSeparated": "علامات مفصولة بفواصل",
+  "rename": "العلامة القديمة → العلامة الجديدة",
+  "old": "العلامة القديمة",
+  "new": "العلامة الجديدة",
+  "searchReplace": "بحث → استبدال",
+  "search": "بحث داخل العلامات",
+  "replace": "استبدال بـ"
+},
+"textInput": {
+  "enterText": "أدخل النص",
+  "enterTextToAdd": "أدخل النص لإضافته",
+  "enterTextToRemove": "أدخل النص لإزالته",
+  "enterMaxCharacterLength": "أدخل الحد الأقصى لطول النص",
+  "enterSearchAndReplaceValues": "أدخل قيم البحث والاستبدال",
+  "enterWord": "أدخل الكلمة"
+},
+"statusActions": {
+  "setStatus": "تعيين الحالة"
+},
+"statusInput": {
+  "selectProductStatus": "اختر حالة المنتج"
+},
+"statusChoices": {
+  "active": "نشط",
+  "draft": "مسودة",
+  "archived": "مؤرشف"
+},
+"categorySearch": {
+  "label": "ابحث وحدد"
+},
+"taxActions": {
+  "setTaxApplicability": "تطبيق الضريبة"
+},
+"taxInput": {
+  "shouldProductBeTaxable": "هل يجب فرض ضريبة على هذا المنتج؟"
+},
+"commonChoices": {
+  "yes": "نعم",
+  "no": "لا"
+},
+
+"inventoryPolicyActions": {
+  "setInventoryPolicy": "تعيين سياسة المخزون"
+},
+"inventoryPolicyInput": {
+  "shouldContinueSellingOutOfStock": "هل يجب الاستمرار في بيع هذا المنتج عند نفاد المخزون؟"
+},
+"inventoryPolicyChoices": {
+  "continueSelling": "الاستمرار في البيع عند نفاد المخزون",
+  "denySelling": "عدم الاستمرار في البيع عند نفاد المخزون"
+}
 }

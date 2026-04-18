@@ -10,7 +10,7 @@ export const FieldType = {
   ENUM: "enum",
   LOCATION: "location",
   DANGER: "danger",
-  API_AUTOCOMPLETE: "api_autocomplete", // NEW: For API-driven autocomplete
+  API_AUTOCOMPLETE: "api_autocomplete",
 };
 
 /**
@@ -22,7 +22,7 @@ export const InputType = {
   CHOICE_LIST: "choiceList",
   LOCATION_SELECT: "locationSelect",
   NONE: "none",
-  API_AUTOCOMPLETE: "apiAutocomplete", // NEW: For API-driven autocomplete
+  API_AUTOCOMPLETE: "apiAutocomplete",
 };
 
 /**
@@ -48,7 +48,6 @@ const createAction = (
  * Reusable Action Templates
  */
 const ActionTemplates = {
-  // Numeric operations
   numeric: {
     decreaseByPercent: () =>
       createAction(
@@ -96,6 +95,7 @@ const ActionTemplates = {
         { max: 100, suffix: "%" }
       ),
   },
+
   danger: {
     deleteProducts: () =>
       createAction(
@@ -108,89 +108,87 @@ const ActionTemplates = {
       ),
   },
 
-  // Text operations
   text: {
     setValue: () =>
       createAction(
+        "setTextToValue",
         "Set text to value",
-        "Set text to value",
-        "Enter the text",
+        "textInput.enterText",
         FieldType.TEXT
       ),
 
     append: () =>
       createAction(
+        "addTextToEnd",
         "Add text to end",
-        "Add text to end",
-        "Enter the text to add",
+       "textInput.enterTextToAdd",
         FieldType.TEXT
       ),
 
     prepend: () =>
       createAction(
+        "addTextToBeginning",
         "Add text to beginning",
-        "Add text to beginning",
-        "Enter the text to add",
+         "textInput.enterTextToAdd",
         FieldType.TEXT
       ),
 
     removeFromEnd: () =>
       createAction(
+        "removeTextFromEnd",
         "Remove text from end",
-        "Remove text from end",
-        "Enter the text to remove",
+         "textInput.enterTextToRemove",
         FieldType.TEXT
       ),
 
     removeFromStart: () =>
       createAction(
+        "removeTextFromBeginning",
         "Remove text from beginning",
-        "Remove text from beginning",
-        "Enter the text to remove",
+         "textInput.enterTextToRemove",
         FieldType.TEXT
       ),
 
     limitLength: () =>
       createAction(
+        "limitTextLength",
         "Limit length of text",
-        "Limit length of text",
-        "Enter max character length",
+         "textInput.enterMaxCharacterLength",
         FieldType.NUMERIC
       ),
 
     searchReplace: () =>
       createAction(
+        "searchReplace",
         "Search/Replace",
-        "Search/Replace",
-        "Enter search and replace values",
+         "textInput.enterSearchAndReplaceValues",
         FieldType.TEXT,
         InputType.SEARCH_REPLACE
       ),
 
     removeFromWord: () =>
       createAction(
+        "removeTextToEndFromWord",
         "Remove text from a word to the end",
-        "Remove text from a word to the end",
-        "Enter the word",
+       "textInput.enterWord",
         FieldType.TEXT
       ),
 
     removeUpToWord: () =>
       createAction(
+        "removeTextUpToWord",
         "Remove text up to and including a word",
-        "Remove text up to and including a word",
-        "Enter the word",
+        "textInput.enterWord",
         FieldType.TEXT
       ),
   },
 
-  // Add new array template for API autocomplete with multiple selection
   array: {
     add: (placeholder = "item1, item2, item3") =>
       createAction(
+        "tagActions.add",
         "Add tag(s) to product",
-        "Add tag(s) to product",
-        "Comma-separated tags",
+        "tagInput.commaSeparated",
         FieldType.ARRAY,
         InputType.SINGLE,
         { placeholder }
@@ -198,9 +196,9 @@ const ActionTemplates = {
 
     remove: (placeholder = "item1, item2, item3") =>
       createAction(
+        "tagActions.remove",
         "Remove tag(s) from product",
-        "Remove tag(s) from product",
-        "Comma-separated tags",
+        "tagInput.commaSeparated",
         FieldType.ARRAY,
         InputType.SINGLE,
         { placeholder }
@@ -208,43 +206,48 @@ const ActionTemplates = {
 
     rename: () =>
       createAction(
+        "tagActions.rename",
         "Rename tag",
-        "Rename tag",
-        "Old tag → New tag",
+        "tagInput.rename",
         FieldType.ARRAY,
         InputType.SEARCH_REPLACE,
-        { searchLabel: "Old tag", replaceLabel: "New tag" }
+        {
+          searchLabel: "tagInput.old",
+          replaceLabel: "tagInput.new",
+        }
       ),
 
     searchReplaceInItems: () =>
       createAction(
+        "tagActions.searchReplace",
         "Search/replace within tag name",
-        "Search/replace within tag name",
-        "Search → Replace",
+        "tagInput.searchReplace",
         FieldType.ARRAY,
         InputType.SEARCH_REPLACE,
-        { searchLabel: "Search in tags", replaceLabel: "Replace with" }
+        {
+          searchLabel: "tagInput.search",
+          replaceLabel: "tagInput.replace",
+        }
       ),
 
     setAll: (placeholder = "item1, item2, item3") =>
       createAction(
+        "tagActions.setAll",
         "Set tags (overwrites existing)",
-        "Set tags (overwrites existing)",
-        "Comma-separated tags",
+        "tagInput.commaSeparated",
         FieldType.ARRAY,
         InputType.SINGLE,
         { placeholder }
       ),
 
-    // NEW: API autocomplete for arrays (multiple selection)
     addFromApi: (
       apiEndpoint,
       labelKey = "label",
       valueKey = "value",
-      inputHelperLabel = "Search and select"
+      inputHelperLabel = "collectionSearch.label"
     ) =>
       createAction(
-        "Add to collection",
+        "collectionActions.addToCollection",
         "Add to collection",
         inputHelperLabel,
         FieldType.ARRAY,
@@ -262,10 +265,10 @@ const ActionTemplates = {
       apiEndpoint,
       labelKey = "label",
       valueKey = "value",
-      inputHelperLabel = "Search and select"
+      inputHelperLabel = "collectionSearch.label"
     ) =>
       createAction(
-        "Remove from collection",
+        "collectionActions.removeFromCollection",
         "Remove from collection",
         inputHelperLabel,
         FieldType.ARRAY,
@@ -280,7 +283,6 @@ const ActionTemplates = {
       ),
   },
 
-  // Enum operations (status, etc.)
   enum: {
     setValue: ({
       actionLabel = "Set value",
@@ -338,13 +340,12 @@ const ActionTemplates = {
       ),
   },
 
-  // NEW: API Autocomplete operations
   apiAutocomplete: {
     setValue: (apiEndpoint, labelKey = "label", valueKey = "value") =>
       createAction(
         "Set value",
         "Set value",
-        "Search and select",
+        "categorySearch.label",
         FieldType.API_AUTOCOMPLETE,
         InputType.API_AUTOCOMPLETE,
         {
@@ -361,10 +362,6 @@ const ActionTemplates = {
  * Field Definitions
  */
 export const fieldDefinitions = {
-  // ============================================
-  // PRODUCT FIELDS
-  // ============================================
-
   title: {
     label: "Title",
     value: "title",
@@ -454,6 +451,7 @@ export const fieldDefinitions = {
       ActionTemplates.text.removeUpToWord(),
     ],
   },
+
   option2Name: {
     label: "Option 2 Name",
     value: "option2Name",
@@ -471,6 +469,7 @@ export const fieldDefinitions = {
       ActionTemplates.text.removeUpToWord(),
     ],
   },
+
   option3Name: {
     label: "Option 3 Name",
     value: "option3Name",
@@ -488,7 +487,7 @@ export const fieldDefinitions = {
       ActionTemplates.text.removeUpToWord(),
     ],
   },
-  
+
   metaTitle: {
     label: "Seo Meta Title",
     value: "metaTitle",
@@ -506,6 +505,7 @@ export const fieldDefinitions = {
       ActionTemplates.text.removeUpToWord(),
     ],
   },
+
   metaDescription: {
     label: "Seo Meta Description",
     value: "metaDescription",
@@ -542,23 +542,23 @@ export const fieldDefinitions = {
   },
 
   status: {
-    label: "Status",
-    value: "status",
-    type: FieldType.ENUM,
-    category: "product",
-    actions: [
-      ActionTemplates.enum.setValue({
-        actionLabel: "Set status",
-        actionValue: "Set status",
-        helperLabel: "Select product status",
-        choices: [
-          { label: "Active", value: "ACTIVE" },
-          { label: "Draft", value: "DRAFT" },
-          { label: "Archived", value: "ARCHIVED" },
-        ],
-      }),
-    ],
-  },
+  label: "Status",
+  value: "status",
+  type: FieldType.ENUM,
+  category: "product",
+  actions: [
+    ActionTemplates.enum.setValue({
+      actionLabel: "statusActions.setStatus",
+      actionValue: "Set status",
+      helperLabel: "statusInput.selectProductStatus",
+      choices: [
+        { label: "statusChoices.active", value: "ACTIVE" },
+        { label: "statusChoices.draft", value: "DRAFT" },
+        { label: "statusChoices.archived", value: "ARCHIVED" },
+      ],
+    }),
+  ],
+},
 
   tags: {
     label: "Tags",
@@ -581,21 +581,20 @@ export const fieldDefinitions = {
     category: "product",
     actions: [
       ActionTemplates.array.addFromApi(
-        "/api/collection/get-all", // Your API endpoint
-        "title", // Key for label in API response
-        "id", // Key for value in API response
-        "Search and select collections"
+        "/api/collection/get-all",
+        "title",
+        "id",
+        "collectionSearch.label"
       ),
       ActionTemplates.array.removeFromApi(
-        "/api/collection/get-all", // Your API endpoint
-        "title", // Key for label in API response
-        "id", // Key for value in API response
-        "Search and select collections"
+        "/api/collection/get-all",
+        "title",
+        "id",
+        "collectionSearch.label"
       ),
     ],
   },
 
-  // NEW: Category field with API-driven autocomplete
   category: {
     label: "Category",
     value: "category",
@@ -603,9 +602,9 @@ export const fieldDefinitions = {
     category: "product",
     actions: [
       ActionTemplates.apiAutocomplete.setValue(
-        "/api/category/get-all", // Your API endpoint
-        "title", // Key for label in API response
-        "id" // Key for value in API response
+        "/api/category/get-all",
+        "title",
+        "id"
       ),
     ],
   },
@@ -627,6 +626,7 @@ export const fieldDefinitions = {
       allowDecimal: true,
     },
   },
+
   compareAtPrice: {
     label: "Compare at price",
     value: "compareAtPrice",
@@ -663,7 +663,7 @@ export const fieldDefinitions = {
   },
 
   barcode: {
-    label: "Barcode",
+    label: "barcode",
     value: "barcode",
     type: FieldType.TEXT,
     category: "variant",
@@ -687,13 +687,13 @@ export const fieldDefinitions = {
     category: "variant",
     actions: [
       ActionTemplates.enum.setValue({
-        actionLabel: "Set tax applicability",
+        actionLabel: "taxActions.setTaxApplicability",
         actionValue: "Set taxable",
-        helperLabel: "Should this product be taxable?",
+       helperLabel: "taxInput.shouldProductBeTaxable",   // ✅ FIX
         choices: [
-          { label: "Yes", value: "true" },
-          { label: "No", value: "false" },
-        ],
+        { label: "commonChoices.yes", value: "true" },
+        { label: "commonChoices.no", value: "false" },
+      ],
       }),
     ],
   },
@@ -705,13 +705,19 @@ export const fieldDefinitions = {
     category: "variant",
     actions: [
       ActionTemplates.enum.setValue({
-        actionLabel: "Set inventory policy",
+        actionLabel: "inventoryPolicyActions.setInventoryPolicy",
         actionValue: "SET_INVENTORY_POLICY",
-        helperLabel: "Should this product continue selling when inventory is out of stock?",
-        choices: [
-          { label: "Continue selling when out of stock", value: "CONTINUE" },
-          { label: "Don't continue selling when out of stock", value: "DENY" },
-        ],
+         helperLabel: "inventoryPolicyInput.shouldContinueSellingOutOfStock",
+       choices: [
+        {
+          label: "inventoryPolicyChoices.continueSelling",
+          value: "CONTINUE",
+        },
+        {
+          label: "inventoryPolicyChoices.denySelling",
+          value: "DENY",
+        },
+      ],
       }),
     ],
   },
@@ -722,7 +728,6 @@ export const fieldDefinitions = {
     type: FieldType.TEXT,
     category: "variant",
     actions: [
-      // ActionTemplates.text.setValue(),
       ActionTemplates.text.append(),
       ActionTemplates.text.prepend(),
       ActionTemplates.text.removeFromEnd(),
@@ -733,13 +738,13 @@ export const fieldDefinitions = {
       ActionTemplates.text.removeUpToWord(),
     ],
   },
+
   option2Values: {
     label: "Option 2 Values",
     value: "option2Values",
     type: FieldType.TEXT,
     category: "variant",
     actions: [
-      // ActionTemplates.text.setValue(),
       ActionTemplates.text.append(),
       ActionTemplates.text.prepend(),
       ActionTemplates.text.removeFromEnd(),
@@ -750,13 +755,13 @@ export const fieldDefinitions = {
       ActionTemplates.text.removeUpToWord(),
     ],
   },
+
   option3Values: {
     label: "Option 3 Values",
     value: "option3Values",
     type: FieldType.TEXT,
     category: "variant",
     actions: [
-      // ActionTemplates.text.setValue(),
       ActionTemplates.text.append(),
       ActionTemplates.text.prepend(),
       ActionTemplates.text.removeFromEnd(),
@@ -767,31 +772,14 @@ export const fieldDefinitions = {
       ActionTemplates.text.removeUpToWord(),
     ],
   },
+
   deleteProducts: {
     label: "Delete products",
     value: "deleteProducts",
     type: FieldType.DANGER,
     category: "danger",
-    actions: [
-      ActionTemplates.danger.deleteProducts(),
-    ],
+    actions: [ActionTemplates.danger.deleteProducts()],
   },
-  // inventory: {
-  //   label: "Inventory Level",
-  //   value: "inventory",
-  //   type: FieldType.NUMERIC, // Changed to NUMERIC like price
-  //   category: "variant",
-  //   actions: [
-  //     ActionTemplates.location.increaseByPercent(),
-  //     ActionTemplates.location.changeByAmount(),
-  //     ActionTemplates.location.setToValue(),
-  //     ActionTemplates.location.decreaseByPercent(),
-  //   ],
-  //   validation: {
-  //     min: 0,
-  //     allowDecimal: false, // Inventory is typically whole numbers
-  //   },
-  // },
 };
 
 /**

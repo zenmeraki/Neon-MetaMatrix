@@ -195,6 +195,7 @@ const PreviewTable = ({
           />
         </Box>
 
+
         <Box
           background="bg-surface-secondary"
           padding="400"
