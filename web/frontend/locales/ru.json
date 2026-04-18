@@ -974,6 +974,7 @@
   "exportDownloadLinkMissing": "Ссылка на скачивание недоступна.",
   "exportDownloadFailed": "Не удалось загрузить файл.",
   "editHistoryTitle": {
-  "setFixedPrice": "Цена установлена на {{value}}"
-}
+    "setFixedPrice": "Цена установлена на {{value}}"
+  },
+  "failureStage": "Стадия отказа"
 }

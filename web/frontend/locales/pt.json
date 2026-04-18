@@ -974,6 +974,7 @@
   "exportDownloadLinkMissing": "Link para download não disponível.",
   "exportDownloadFailed": "Falha ao baixar o arquivo.",
   "editHistoryTitle": {
-  "setFixedPrice": "Preço definido para {{value}}"
-}
+    "setFixedPrice": "Preço definido para {{value}}"
+  },
+  "failureStage": "Estágio de falha"
 }

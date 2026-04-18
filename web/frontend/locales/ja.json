@@ -973,6 +973,7 @@
   "exportDownloadLinkMissing": "ダウンロードリンクは利用できません。",
   "exportDownloadFailed": "ファイルのダウンロードに失敗しました。",
   "editHistoryTitle": {
-  "setFixedPrice": "価格を{{value}}に設定しました"
-}
+    "setFixedPrice": "価格を{{value}}に設定しました"
+  },
+  "failureStage": "故障段階"
 }

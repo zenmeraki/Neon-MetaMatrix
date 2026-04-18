@@ -988,6 +988,7 @@
   "exportDownloadLinkMissing": "رابط التحميل غير متوفر.",
   "exportDownloadFailed": "فشل تنزيل الملف.",
   "editHistoryTitle": {
-  "setFixedPrice": "تم تعيين السعر إلى {{value}}"
-}
+    "setFixedPrice": "تم تعيين السعر إلى {{value}}"
+  },
+  "failureStage": "مرحلة الفشل"
 }

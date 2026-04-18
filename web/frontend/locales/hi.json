@@ -995,6 +995,7 @@
   "exportDownloadLinkMissing": "डाउनलोड लिंक उपलब्ध नहीं है.",
   "exportDownloadFailed": "फ़ाइल डाउनलोड करने में विफल.",
   "editHistoryTitle": {
-  "setFixedPrice": "कीमत {{value}} पर सेट की गई"
-}
+    "setFixedPrice": "कीमत {{value}} पर सेट की गई"
+  },
+  "failureStage": "विफलता चरण"
 }

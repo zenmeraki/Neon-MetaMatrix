@@ -1007,6 +1007,7 @@
   "exportDownloadLinkMissing": "Download link not available.",
   "exportDownloadFailed": "Failed to download file.",
   "editHistoryTitle": {
-  "setFixedPrice": "Price set to {{value}}"
-}
+    "setFixedPrice": "Price set to {{value}}"
+  },
+  "failureStage": "Failure stage"
 }

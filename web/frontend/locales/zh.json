@@ -974,6 +974,7 @@
   "exportDownloadLinkMissing": "下载链接不可用。",
   "exportDownloadFailed": "下载文件失败。",
   "editHistoryTitle": {
-  "setFixedPrice": "价格已设置为 {{value}}"
-}
+    "setFixedPrice": "价格已设置为 {{value}}"
+  },
+  "failureStage": "失败阶段"
 }
