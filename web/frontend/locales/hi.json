@@ -997,5 +997,82 @@
   "editHistoryTitle": {
     "setFixedPrice": "कीमत {{value}} पर सेट की गई"
   },
-  "failureStage": "विफलता चरण"
+  "failureStage": "विफलता चरण",
+  "IncreaseValue": "मूल्य बढ़ाएँ",
+  "search_multiple": "एकाधिक खोजें और चुनें...",
+
+
+"search_for": "खोजें",
+"replace_with": "से बदलें",
+"location": "स्थान",
+"select_category": "श्रेणी चुनें",
+"permanent_action": "यह क्रिया स्थायी है और इसे पूर्ववत नहीं किया जा सकता।",
+"collectionActions": {
+  "addToCollection": "कलेक्शन में जोड़ें",
+  "removeFromCollection": "कलेक्शन से हटाएं"
+},
+"collectionSearch": {
+  "label": "कलेक्शन खोजें और चुनें"
+},
+
+"tagActions": {
+  "add": "उत्पाद में टैग जोड़ें",
+  "remove": "उत्पाद से टैग हटाएं",
+  "rename": "टैग का नाम बदलें",
+  "searchReplace": "टैग नाम में खोजें/बदलें",
+  "setAll": "टैग सेट करें (मौजूदा को बदल देगा)"
+},
+"tagInput": {
+  "commaSeparated": "कॉमा से अलग किए गए टैग",
+  "rename": "पुराना टैग → नया टैग",
+  "old": "पुराना टैग",
+  "new": "नया टैग",
+  "searchReplace": "खोजें → बदलें",
+  "search": "टैग में खोजें",
+  "replace": "से बदलें"
+},
+"textInput": {
+  "enterText": "पाठ दर्ज करें",
+  "enterTextToAdd": "जोड़ने के लिए पाठ दर्ज करें",
+  "enterTextToRemove": "हटाने के लिए पाठ दर्ज करें",
+  "enterMaxCharacterLength": "अधिकतम अक्षर लंबाई दर्ज करें",
+  "enterSearchAndReplaceValues": "खोज और बदलने के मान दर्ज करें",
+  "enterWord": "शब्द दर्ज करें"
+},
+"statusActions": {
+  "setStatus": "स्थिति सेट करें"
+},
+"statusInput": {
+  "selectProductStatus": "उत्पाद स्थिति चुनें"
+},
+"statusChoices": {
+  "active": "सक्रिय",
+  "draft": "ड्राफ्ट",
+  "archived": "संग्रहीत"
+},
+"categorySearch": {
+  "label": "खोजें और चुनें"
+},
+"taxActions": {
+  "setTaxApplicability": "कर लागू करें"
+},
+"taxInput": {
+  "shouldProductBeTaxable": "क्या इस उत्पाद पर कर लगाया जाना चाहिए?"
+},
+"commonChoices": {
+  "yes": "हाँ",
+  "no": "नहीं"
+},
+
+"inventoryPolicyActions": {
+  "setInventoryPolicy": "इन्वेंटरी नीति सेट करें"
+},
+"inventoryPolicyInput": {
+  "shouldContinueSellingOutOfStock": "क्या स्टॉक खत्म होने पर भी इस उत्पाद की बिक्री जारी रखनी चाहिए?"
+},
+"inventoryPolicyChoices": {
+  "continueSelling": "स्टॉक खत्म होने पर भी बिक्री जारी रखें",
+  "denySelling": "स्टॉक खत्म होने पर बिक्री जारी न रखें"
+}
+
 }

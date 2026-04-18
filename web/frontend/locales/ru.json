@@ -976,5 +976,78 @@
   "editHistoryTitle": {
     "setFixedPrice": "Цена установлена на {{value}}"
   },
-  "failureStage": "Стадия отказа"
+  "failureStage": "Стадия отказа",
+  "IncreaseValue": "Увеличение ценности",
+  "search_multiple": "Найдите и выберите несколько...",
+  "location": "Расположение",
+  "permanent_action": "Это действие является постоянным и не может быть отменено.",
+  "select_category": "Выбрать категорию",
+"collectionActions": {
+  "addToCollection": "Добавить в коллекцию",
+  "removeFromCollection": "Удалить из коллекции"
+},
+"collectionSearch": {
+  "label": "Найти и выбрать коллекции"
+},
+
+"tagActions": {
+  "add": "Добавить теги к продукту",
+  "remove": "Удалить теги у продукта",
+  "rename": "Переименовать тег",
+  "searchReplace": "Поиск/замена в названии тега",
+  "setAll": "Установить теги (перезаписывает существующие)"
+},
+"tagInput": {
+  "commaSeparated": "Теги, разделённые запятыми",
+  "rename": "Старый тег → Новый тег",
+  "old": "Старый тег",
+  "new": "Новый тег",
+  "searchReplace": "Поиск → Замена",
+  "search": "Поиск в тегах",
+  "replace": "Заменить на"
+},
+"textInput": {
+  "enterText": "Введите текст",
+  "enterTextToAdd": "Введите текст для добавления",
+  "enterTextToRemove": "Введите текст для удаления",
+  "enterMaxCharacterLength": "Введите максимальную длину",
+  "enterSearchAndReplaceValues": "Введите значения поиска и замены",
+  "enterWord": "Введите слово"
+},
+"statusActions": {
+  "setStatus": "Установить статус"
+},
+"statusInput": {
+  "selectProductStatus": "Выберите статус продукта"
+},
+"statusChoices": {
+  "active": "Активный",
+  "draft": "Черновик",
+  "archived": "Архивирован"
+},
+"categorySearch": {
+  "label": "Найти и выбрать"
+},
+"taxActions": {
+  "setTaxApplicability": "Применить налог"
+},
+"taxInput": {
+  "shouldProductBeTaxable": "Должен ли этот продукт облагаться налогом?"
+},
+"commonChoices": {
+  "yes": "Да",
+  "no": "Нет"
+},
+
+
+"inventoryPolicyActions": {
+  "setInventoryPolicy": "Установить политику запасов"
+},
+"inventoryPolicyInput": {
+  "shouldContinueSellingOutOfStock": "Следует ли продолжать продавать этот продукт при отсутствии на складе?"
+},
+"inventoryPolicyChoices": {
+  "continueSelling": "Продолжать продажу при отсутствии на складе",
+  "denySelling": "Не продолжать продажу при отсутствии на складе"
+}
 }
