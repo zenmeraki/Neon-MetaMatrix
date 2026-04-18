@@ -44,41 +44,52 @@ function formatDuration(ms = 0) {
 }
 
 function getPrimaryStatus(historyItem) {
-  if (historyItem?.primaryStatus) {
-    return historyItem.primaryStatus;
+  if (historyItem?.primaryStatus?.key) {
+    return {
+      key: historyItem.primaryStatus.key,
+      tone: historyItem.primaryStatus.tone || "info",
+      isTerminal: historyItem.primaryStatus.isTerminal === true,
+    };
   }
 
   const status = String(historyItem?.status || "").toLowerCase();
+
   if (status === "completed") {
-    return { key: "completed", label: "Completed", tone: "success", isTerminal: true };
-  }
-  if (status === "failed") {
-    return { key: "failed", label: "Failed", tone: "critical", isTerminal: true };
-  }
-  if (status === "processing") {
-    return { key: "processing", label: "Processing", tone: "info", isTerminal: false };
+    return { key: "completed", tone: "success", isTerminal: true };
   }
 
-  return { key: "pending", label: "Pending", tone: "attention", isTerminal: false };
+  if (status === "failed") {
+    return { key: "failed", tone: "critical", isTerminal: true };
+  }
+
+  if (status === "processing") {
+    return { key: "processing", tone: "info", isTerminal: false };
+  }
+
+  return { key: "pending", tone: "attention", isTerminal: false };
 }
 
 function getUndoStatus(historyItem) {
-  if (historyItem?.undoStatusSummary) {
-    return historyItem.undoStatusSummary;
+  if (historyItem?.undoStatusSummary?.key) {
+    return {
+      key: historyItem.undoStatusSummary.key,
+      tone: historyItem.undoStatusSummary.tone || "info",
+      isTerminal: historyItem.undoStatusSummary.isTerminal === true,
+    };
   }
 
   const undoStatus = String(historyItem?.undo?.status || "").toLowerCase();
   if (!undoStatus || undoStatus === "idle") return null;
 
   if (undoStatus === "completed") {
-    return { key: "undo_completed", label: "Undo completed", tone: "success", isTerminal: true };
+    return { key: "undo_completed", tone: "success", isTerminal: true };
   }
 
   if (undoStatus === "failed") {
-    return { key: "undo_failed", label: "Undo failed", tone: "critical", isTerminal: true };
+    return { key: "undo_failed", tone: "critical", isTerminal: true };
   }
 
-  return { key: "undo_processing", label: "Undo processing", tone: "info", isTerminal: false };
+  return { key: "undo_processing", tone: "info", isTerminal: false };
 }
 
 function getStatusIcon(statusKey) {
@@ -124,8 +135,7 @@ function normalizeErrors(value) {
 export default function EditDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { t } = useTranslation();
-
+const { t, i18n } = useTranslation();
   const [historyItem, setHistoryItem] = useState(null);
   const [changes, setChanges] = useState([]);
   const [changeField, setChangeField] = useState("");
@@ -146,6 +156,7 @@ export default function EditDetails() {
   const handleBack = useCallback(() => {
     navigate("/history");
   }, [navigate]);
+  
 
   const fetchHistoryDetails = useCallback(async () => {
     if (!id) {
@@ -158,7 +169,9 @@ export default function EditDetails() {
       setIsLoadingHistory(true);
       setError(null);
 
-      const response = await fetch(`/api/history/get-edit-history-details/${id}`);
+const response = await fetch(
+  `/api/history/get-edit-history-details/${id}?lang=${i18n.language}`
+);
       if (!response.ok) {
         throw new Error("Failed to fetch history");
       }
@@ -181,8 +194,8 @@ export default function EditDetails() {
         setIsLoadingChanges(true);
 
         const response = await fetch(
-          `/api/history/get-edit-history/changes/${id}?page=${page}&limit=${itemsPerPage}`,
-        );
+  `/api/history/get-edit-history/changes/${id}?page=${page}&limit=${itemsPerPage}&lang=${i18n.language}`
+);
 
         if (!response.ok) {
           throw new Error("Failed to fetch changes");
@@ -251,11 +264,13 @@ export default function EditDetails() {
     const primaryStatus = getPrimaryStatus(historyItem);
     const undoStatus = getUndoStatus(historyItem);
 
+    
     if (!isActiveStatus(primaryStatus) && !isActiveStatus(undoStatus)) return;
 
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(`/api/history/get-edit-history-details/${id}`);
+        const res = await fetch(`/api/history/get-edit-history-details/${id}?lang=${i18n.language}`);
+
         if (!res.ok) return;
 
         const json = await res.json();
@@ -292,43 +307,48 @@ export default function EditDetails() {
       const productTitle = change?.title || "Untitled product";
       const productImage = change?.image || "";
 
-      const productRows = Array.isArray(change?.productFieldChanges)
-        ? change.productFieldChanges.map((fieldChange) => ({
-            image: productImage,
-            title: productTitle,
-            scope: t("scope.product"),
-            field: fieldChange?.field || changeField || "N/A",
-            oldValue:
-              fieldChange?.oldValue !== undefined && fieldChange?.oldValue !== null
-                ? String(fieldChange.oldValue)
-                : "N/A",
-            newValue:
-              fieldChange?.newValue !== undefined && fieldChange?.newValue !== null
-                ? String(fieldChange.newValue)
-                : "N/A",
-          }))
-        : [];
+  const productRows = Array.isArray(change?.productFieldChanges)
+  ? change.productFieldChanges.map((fieldChange) => {
+      const rawField = fieldChange?.field || changeField || "N/A";  // ✅ store raw first
+      return {
+        image: productImage,
+        title: productTitle,
+        scope: t("scope.product"),
+        field: t(`fieldLabels.${rawField}`, { defaultValue: rawField }),  // ✅ translate
+        oldValue:
+          fieldChange?.oldValue !== undefined && fieldChange?.oldValue !== null
+            ? String(fieldChange.oldValue)
+            : "N/A",
+        newValue:
+          fieldChange?.newValue !== undefined && fieldChange?.newValue !== null
+            ? String(fieldChange.newValue)
+            : "N/A",
+      };
+    })
+  : [];
 
       const variantRows = Array.isArray(change?.variantFieldChanges)
-        ? change.variantFieldChanges.flatMap((variantChange) => {
-            if (!Array.isArray(variantChange?.changes)) return [];
-
-            return variantChange.changes.map((fieldChange) => ({
-              image: productImage,
-              title: `${productTitle} - ${variantChange?.variantTitle || "Default Title"}`,
-              scope: t("scope.variant"),
-              field: fieldChange?.field || changeField || "N/A",
-              oldValue:
-                fieldChange?.oldValue !== undefined && fieldChange?.oldValue !== null
-                  ? String(fieldChange.oldValue)
-                  : "N/A",
-              newValue:
-                fieldChange?.newValue !== undefined && fieldChange?.newValue !== null
-                  ? String(fieldChange.newValue)
-                  : "N/A",
-            }));
-          })
-        : [];
+  ? change.variantFieldChanges.flatMap((variantChange) => {
+      if (!Array.isArray(variantChange?.changes)) return [];
+      return variantChange.changes.map((fieldChange) => {
+        const rawField = fieldChange?.field || changeField || "N/A";  // ✅ store raw first
+        return {
+          image: productImage,
+          title: `${productTitle} - ${variantChange?.variantTitle || "Default Title"}`,
+          scope: t("scope.variant"),
+          field: t(`fieldLabels.${rawField}`, { defaultValue: rawField }),  // ✅ translate
+          oldValue:
+            fieldChange?.oldValue !== undefined && fieldChange?.oldValue !== null
+              ? String(fieldChange.oldValue)
+              : "N/A",
+          newValue:
+            fieldChange?.newValue !== undefined && fieldChange?.newValue !== null
+              ? String(fieldChange.newValue)
+              : "N/A",
+        };
+      });
+    })
+  : [];
 
       return [...productRows, ...variantRows];
     });
@@ -399,8 +419,8 @@ export default function EditDetails() {
     return (
       <Page
         fullWidth
-        title="Loading Details..."
-        backAction={{ content: "History", onAction: handleBack }}
+        title={t("loadingHistoryDetails")}
+        backAction={{ content: t("History"), onAction: handleBack }}
       >
         <Layout>
           <Layout.Section>
@@ -408,7 +428,7 @@ export default function EditDetails() {
               <Box padding="500">
                 <InlineStack align="center" gap="300">
                   <Spinner size="large" />
-                  <Text tone="subdued">Loading history details...</Text>
+                  <Text tone="subdued">{t("loadingHistoryDetailsSpinner")}</Text>
                 </InlineStack>
               </Box>
             </Card>
@@ -422,8 +442,8 @@ export default function EditDetails() {
     return (
       <Page
         fullWidth
-        title="Error"
-        backAction={{ content: "History", onAction: handleBack }}
+        title={t("errorPageTitle")}
+        backAction={{ content: t("History"), onAction: handleBack }}
       >
         <Banner tone="critical">{error}</Banner>
       </Page>
@@ -432,13 +452,45 @@ export default function EditDetails() {
 
   if (!historyItem) return null;
 
-  const title = historyItem?.title || t("EditDetails");
-  const primaryStatus = getPrimaryStatus(historyItem);
+
+
+const title = historyItem?.titleKey
+  ? t(historyItem.titleKey, {
+      ...(historyItem.titleParams || {}),
+      defaultValue: historyItem?.title || "",
+    })
+  : historyItem?.title || "";
+
+      const primaryStatus = getPrimaryStatus(historyItem);
   const undoStatus = getUndoStatus(historyItem);
-  const statusBadge = { tone: primaryStatus.tone, children: primaryStatus.label };
-  const undoBadge = undoStatus
-    ? { tone: undoStatus.tone, children: undoStatus.label }
-    : null;
+  const primaryStatusLabel = t(`historyStatus.${primaryStatus.key}`, {
+  defaultValue: primaryStatus.key,
+});
+
+const primaryStatusDetail = t(`historyStatusDetail.${primaryStatus.key}`, {
+  defaultValue: "",
+});
+
+const statusBadge = {
+  tone: primaryStatus.tone,
+  children: primaryStatusLabel,
+};
+
+const undoStatusLabel = undoStatus
+  ? t(`historyStatus.${undoStatus.key}`, {
+      defaultValue: undoStatus.key,
+    })
+  : null;
+
+const undoStatusDetail = undoStatus
+  ? t(`historyStatusDetail.${undoStatus.key}`, {
+      defaultValue: "",
+    })
+  : "";
+
+const undoBadge = undoStatus
+  ? { tone: undoStatus.tone, children: undoStatusLabel }
+  : null;
   const mainProgress = historyItem?.progressSummary || {
     current: Number(historyItem?.progressCount || historyItem?.processedCount || 0),
     total: Number(historyItem?.targetSnapshotCount || historyItem?.totalItems || 0),
@@ -468,7 +520,7 @@ export default function EditDetails() {
     <Page
       fullWidth
       title={title}
-      backAction={{ content: "History", onAction: handleBack }}
+      backAction={{ content: t("History"), onAction: handleBack }}
       titleMetadata={
         <InlineStack gap="200">
           <Badge {...statusBadge} />
@@ -510,20 +562,21 @@ export default function EditDetails() {
 
                   {Number(historyItem?.durationMs) > 0 ? (
                     <Text tone="subdued">
-                      {t("Duration:")} {formatDuration(historyItem.durationMs)}
+                      {t("Duration")}: {formatDuration(historyItem.durationMs)}
+
                     </Text>
                   ) : null}
                 </InlineStack>
 
-                {primaryStatus.detail ? (
-                  <Text tone="subdued" variant="bodySm">
-                    {primaryStatus.detail}
-                  </Text>
-                ) : null}
+               {primaryStatusDetail ? (
+  <Text tone="subdued" variant="bodySm">
+    {primaryStatusDetail}
+  </Text>
+) : null}
 
                 {historyItem?.supportStatus?.failureStage ? (
                   <Text tone="subdued" variant="bodySm">
-                    Failure stage: {historyItem.supportStatus.failureStage}
+                    {t("failureStage")}: {historyItem.supportStatus.failureStage}
                   </Text>
                 ) : null}
 
@@ -532,8 +585,8 @@ export default function EditDetails() {
                     <BlockStack gap="200">
                       <Text>
                         {primaryStatus.key === "partial"
-                          ? "The edit finished with recorded issues."
-                          : "The edit recorded execution errors."}
+                          ? t("editFinishedWithIssues")
+                          : t("editExecutionErrors")}
                       </Text>
                       {editErrors.slice(0, 3).map((entry, index) => (
                         <Text key={index} tone="subdued" variant="bodySm">
@@ -556,7 +609,7 @@ export default function EditDetails() {
                   <InlineStack align="space-between">
                     <InlineStack gap="200">
                       <Icon source={getStatusIcon(undoStatus.key)} />
-                      <Text variant="headingMd">Undo Progress</Text>
+                      <Text variant="headingMd">{t("UndoProgress")}</Text>
                     </InlineStack>
                     {undoBadge ? <Badge {...undoBadge} /> : null}
                   </InlineStack>
@@ -581,24 +634,24 @@ export default function EditDetails() {
 
                     {Number(historyItem?.undo?.durationMs) > 0 ? (
                       <Text tone="subdued">
-                        {t("Duration:")} {formatDuration(historyItem.undo.durationMs)}
+                        {t("Duration")}: {formatDuration(historyItem.undo.durationMs)}
                       </Text>
                     ) : null}
                   </InlineStack>
 
-                  {undoStatus.detail ? (
-                    <Text tone="subdued" variant="bodySm">
-                      {undoStatus.detail}
-                    </Text>
-                  ) : null}
+                  {undoStatusDetail ? (
+  <Text tone="subdued" variant="bodySm">
+    {undoStatusDetail}
+  </Text>
+) : null}
 
                   {undoErrors.length > 0 ? (
                     <Banner tone={undoStatus.key === "undo_partial" ? "warning" : "critical"}>
                       <BlockStack gap="200">
                         <Text>
                           {undoStatus.key === "undo_partial"
-                            ? "Undo completed with recorded issues."
-                            : "Undo encountered errors."}
+                            ? t("undoFinishedWithIssues")
+                            : t("undoEncounteredErrors")}
                         </Text>
                         {undoErrors.slice(0, 3).map((entry, index) => (
                           <Text key={index} tone="subdued" variant="bodySm">
@@ -647,7 +700,7 @@ export default function EditDetails() {
               <Box paddingInlineStart="60">
                 <DataTable
                   columnContentTypes={["text", "text", "text"]}
-                  headings={["Product", "Field", "Change"]}
+                  headings={[t("table.product"), t("table.field"), t("table.change")]}
                   rows={tableRows}
                 /></Box>
 

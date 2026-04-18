@@ -74,7 +74,23 @@ export function getUserLocale() {
 export function getPolarisTranslations() {
   return _polarisTranslations;
 }
+export async function getPolarisTranslationsForLocale(locale) {
+  const defaultPolarisLocale = match(
+    [DEFAULT_APP_LOCALE],
+    SUPPORTED_POLARIS_LOCALES,
+    DEFAULT_POLARIS_LOCALE,
+  );
 
+  const polarisLocale = match(
+    [locale || DEFAULT_APP_LOCALE],
+    SUPPORTED_POLARIS_LOCALES,
+    defaultPolarisLocale,
+  );
+
+  const translations = await loadPolarisTranslations(polarisLocale);
+  _polarisTranslations = translations;
+  return translations;
+}
 /**
  * Asynchronously initializes i18next and loads Polaris translations.
  *

@@ -335,9 +335,17 @@ const HistoryTable = memo(function HistoryTable({
       return [
         <Box key={`title-${id}`} maxWidth="320px">
           <BlockStack gap="050">
-            <Text variant="bodyMd" fontWeight="medium" truncate as="span">
-              {title || "-"}
-            </Text>
+         <Text variant="bodyMd" fontWeight="medium" truncate as="span">
+  {typeof title === "string"
+    ? title
+    : Array.isArray(title)
+      ? title
+          .map((rule) =>
+            `${t(`fieldLabels.${rule.field}`)} ${t(rule.operation)} ${rule.value}`
+          )
+          .join(" + ")
+      : "-"}
+</Text>
             <Text variant="bodySm" tone="subdued" as="span">
               {user || "-"}
             </Text>

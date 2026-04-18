@@ -330,27 +330,28 @@ function ScheduleEdit({
                 <Banner status="info">
                   <InlineStack gap="200" direction="vertical">
                     <Text as="p" variant="bodyMd" fontWeight="semibold">
-                      Edit Summary:
+                      {t("edit_summary")}:
                     </Text>
                     <Text as="p" variant="bodyMd">
-                      Field: <strong>{editedField}</strong>
+                      {t("field")}: <strong>{t(editedField)}</strong>
+
                     </Text>
                     <Text as="p" variant="bodyMd">
-                      Products: <strong>{count}</strong>
+                      {t("Products")}: <strong>{count}</strong>
                     </Text>
                     <Text as="p" variant="bodyMd">
-                      Scheduled for:{" "}
+                      {t("scheduled_for")}:{" "}
                       <strong>
-                        {startEditDate} at {startEditTime}
+                        {startEditDate} {t("at")} {startEditTime}
                       </strong>
                     </Text>
                     {undoStartEditChecked &&
                       undoStartEditDate &&
                       undoStartEditTime && (
                         <Text as="p" variant="bodyMd">
-                          Undo scheduled for:{" "}
+                          {t("undo_scheduled_for")}:{" "}
                           <strong>
-                            {undoStartEditDate} at {undoStartEditTime}
+                            {undoStartEditDate} {t("at")} {undoStartEditTime}
                           </strong>
                         </Text>
                       )}

@@ -63,6 +63,7 @@ function mapBulkEditExecutionSummary(executionState, status) {
         detailKey: "historyStatusDetail.queued",
       });
 
+      
     case BULK_EDIT_EXECUTION_STATES.DISPATCHING:
       return buildStatusSummary({
         key: "dispatching",

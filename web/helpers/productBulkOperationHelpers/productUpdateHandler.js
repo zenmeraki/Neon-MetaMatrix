@@ -54,7 +54,9 @@ export const editProductField = ({
 
     const operations = config.isNumeric ? NUMERIC_OPERATIONS : TEXT_OPERATIONS;
     const operation = operations[editType];
-    return operation ? operation.getTitle(plainValue, config.displayName) : "";
+    return operation
+  ? operation.getTitle(plainValue, config.displayName)
+  : "";
   }
 
   if (config?.optionPosition && config.isTextOperation) {

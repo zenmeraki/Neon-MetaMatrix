@@ -12,7 +12,8 @@ import {
 } from "@shopify/polaris";
 
 import { getAllFilters } from "../constants";
-import { t } from "i18next";
+
+import { useTranslation } from "react-i18next";
 
 const VALUE_OPTION_OPERATORS = new Set([
   "contains",
@@ -137,6 +138,7 @@ const ProductsFilters = memo(function ProductsFilters({
   onQueryClear,
   onClearAll,
 }) {
+  const { t } = useTranslation();
   const allFilters = getAllFilters();
   const [draftFilters, setDraftFilters] = useState({});
   const [filtersKey, setFiltersKey] = useState(0);
@@ -259,7 +261,7 @@ const ProductsFilters = memo(function ProductsFilters({
           ),
         };
       }),
-    [allFilters, autocompleteLoading, autocompleteOptions, draftFilters],
+    [allFilters, autocompleteLoading, autocompleteOptions, draftFilters,t],
   );
 
   return (
@@ -280,6 +282,7 @@ const ProductsFilters = memo(function ProductsFilters({
 });
 
 function InlineHeader() {
+    const { t } = useTranslation();
   return (
     <BlockStack gap="100">
      <Text as="h3" variant="headingSm">

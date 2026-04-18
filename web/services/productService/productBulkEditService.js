@@ -99,23 +99,23 @@ function normalizeMirrorProductForPreview(rawProduct) {
 
   const variants = Array.isArray(rawProduct?.variants)
     ? rawProduct.variants.map((variant) => ({
-        ...variant,
-        selectedOptions: Array.isArray(variant?.selectedOptions)
-          ? variant.selectedOptions
-          : Array.isArray(variant?.selectedOptionsJson)
-            ? variant.selectedOptionsJson
-            : [],
-      }))
+      ...variant,
+      selectedOptions: Array.isArray(variant?.selectedOptions)
+        ? variant.selectedOptions
+        : Array.isArray(variant?.selectedOptionsJson)
+          ? variant.selectedOptionsJson
+          : [],
+    }))
     : [];
 
   return {
     ...rawProduct,
     descriptionHtml: rawProduct.descriptionHtml ?? null,
-  descriptionText: rawProduct.descriptionText ?? null,
-  description:
-    rawProduct.descriptionHtml ??
-    rawProduct.descriptionText ??
-    "",
+    descriptionText: rawProduct.descriptionText ?? null,
+    description:
+      rawProduct.descriptionHtml ??
+      rawProduct.descriptionText ??
+      "",
     options,
     variants,
     seo: {
@@ -125,9 +125,9 @@ function normalizeMirrorProductForPreview(rawProduct) {
     category: rawProduct?.category ?? (
       rawProduct?.categoryId || rawProduct?.categoryName
         ? {
-            id: rawProduct.categoryId ?? null,
-            name: rawProduct.categoryName ?? "",
-          }
+          id: rawProduct.categoryId ?? null,
+          name: rawProduct.categoryName ?? "",
+        }
         : null
     ),
     collections: Array.isArray(rawProduct?.collections)
@@ -138,12 +138,12 @@ function normalizeMirrorProductForPreview(rawProduct) {
     featuredMedia: rawProduct?.featuredMedia ?? (
       rawProduct?.featuredImageUrl
         ? {
-            preview: {
-              image: {
-                url: rawProduct.featuredImageUrl,
-              },
+          preview: {
+            image: {
+              url: rawProduct.featuredImageUrl,
             },
-          }
+          },
+        }
         : null
     ),
   };
@@ -560,8 +560,8 @@ export default class ProductBulkService {
         },
         ...(history.targetMirrorBatchId
           ? {
-              mirrorBatchId: history.targetMirrorBatchId,
-            }
+            mirrorBatchId: history.targetMirrorBatchId,
+          }
           : {}),
       },
       ...(include ? { include } : {}),
@@ -589,12 +589,12 @@ export default class ProductBulkService {
 
       const product = {
         ...rawProduct,
-         descriptionHtml: rawProduct.descriptionHtml ?? null,
-  descriptionText: rawProduct.descriptionText ?? null,
-  description:
-    rawProduct.descriptionHtml ??
-    rawProduct.descriptionText ??
-    "",
+        descriptionHtml: rawProduct.descriptionHtml ?? null,
+        descriptionText: rawProduct.descriptionText ?? null,
+        description:
+          rawProduct.descriptionHtml ??
+          rawProduct.descriptionText ??
+          "",
         options: Array.isArray(rawProduct.options)
           ? rawProduct.options
           : Array.isArray(rawProduct.optionsJson)
@@ -602,13 +602,13 @@ export default class ProductBulkService {
             : [],
         variants: Array.isArray(rawProduct.variants)
           ? rawProduct.variants.map((variant) => ({
-              ...variant,
-              selectedOptions: Array.isArray(variant.selectedOptions)
-                ? variant.selectedOptions
-                : Array.isArray(variant.selectedOptionsJson)
-                  ? variant.selectedOptionsJson
-                  : [],
-            }))
+            ...variant,
+            selectedOptions: Array.isArray(variant.selectedOptions)
+              ? variant.selectedOptions
+              : Array.isArray(variant.selectedOptionsJson)
+                ? variant.selectedOptionsJson
+                : [],
+          }))
           : [],
       };
 

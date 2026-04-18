@@ -11,6 +11,7 @@ import {
 } from "@shopify/polaris";
 import { useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 
 import HistoryComponent from "../components/HistoryComponent";
 import ExportComponent from "../components/ExportComponent";
@@ -18,6 +19,7 @@ import ExportComponent from "../components/ExportComponent";
 export default function HistoryPage() {
   const location = useLocation();
   const { t } = useTranslation();
+  const navigate = useNavigate();
 
   const parentTabs = useMemo(
     () => [
@@ -56,7 +58,11 @@ export default function HistoryPage() {
     selectedParentTab === 0 ? t("edit") : t("export");
 
   return (
-    <Page fullWidth title={t("history")} subtitle={t("TrackYourHistory")}>
+    <Page fullWidth title={t("history")} subtitle={t("TrackYourHistory")}
+  backAction={{
+    content: t("Products"),
+    onAction: () => navigate("/products"),
+  }}>
       <BlockStack gap="500">
         <Card>
           <Box padding="600">
