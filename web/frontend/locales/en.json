@@ -1005,5 +1005,8 @@
     "scheduled": "Scheduled Export"
   },
   "exportDownloadLinkMissing": "Download link not available.",
-  "exportDownloadFailed": "Failed to download file."
+  "exportDownloadFailed": "Failed to download file.",
+  "editHistoryTitle": {
+  "setFixedPrice": "Price set to {{value}}"
+}
 }

@@ -972,5 +972,8 @@
     "scheduled": "Запланированный экспорт"
   },
   "exportDownloadLinkMissing": "Ссылка на скачивание недоступна.",
-  "exportDownloadFailed": "Не удалось загрузить файл."
+  "exportDownloadFailed": "Не удалось загрузить файл.",
+  "editHistoryTitle": {
+  "setFixedPrice": "Цена установлена на {{value}}"
+}
 }

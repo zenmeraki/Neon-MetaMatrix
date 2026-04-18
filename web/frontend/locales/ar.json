@@ -986,5 +986,8 @@
     "scheduled": "التصدير المقرر"
   },
   "exportDownloadLinkMissing": "رابط التحميل غير متوفر.",
-  "exportDownloadFailed": "فشل تنزيل الملف."
+  "exportDownloadFailed": "فشل تنزيل الملف.",
+  "editHistoryTitle": {
+  "setFixedPrice": "تم تعيين السعر إلى {{value}}"
+}
 }

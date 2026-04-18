@@ -973,5 +973,8 @@
     "scheduled": "Geplanter Export"
   },
   "exportDownloadLinkMissing": "Download-Link nicht verfügbar.",
-  "exportDownloadFailed": "Datei konnte nicht heruntergeladen werden."
+  "exportDownloadFailed": "Datei konnte nicht heruntergeladen werden.",
+  "editHistoryTitle": {
+  "setFixedPrice": "Preis auf {{value}} gesetzt"
+}
 }

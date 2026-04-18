@@ -30,8 +30,8 @@ import { useTranslation } from "react-i18next";
 
 const FALLBACK_IMAGE = "https://www.otithee.com/img/fallback/fallback-2.png";
 
-function formatDuration(ms = 0) {
-  if (!ms || ms < 0) return "0s";
+function formatDuration(ms = 0, t) {
+  if (!ms || ms < 0) return `0${t("common.seconds", { defaultValue: "s" })}`;
 
   const totalSeconds = Math.floor(ms / 1000);
   const hours = Math.floor(totalSeconds / 3600);
@@ -40,7 +40,7 @@ function formatDuration(ms = 0) {
 
   if (hours > 0) return `${hours}h ${minutes}m`;
   if (minutes > 0) return `${minutes}m ${seconds}s`;
-  return `${seconds}s`;
+  return `${seconds}${t("common.seconds", { defaultValue: "s" })}`;
 }
 
 function getPrimaryStatus(historyItem) {
@@ -49,17 +49,39 @@ function getPrimaryStatus(historyItem) {
   }
 
   const status = String(historyItem?.status || "").toLowerCase();
+
   if (status === "completed") {
-    return { key: "completed", label: "Completed", tone: "success", isTerminal: true };
+    return { key: "completed", tone: "success", isTerminal: true };
   }
   if (status === "failed") {
-    return { key: "failed", label: "Failed", tone: "critical", isTerminal: true };
+    return { key: "failed", tone: "critical", isTerminal: true };
+  }
+  if (status === "finalizing") {
+    return { key: "finalizing", tone: "info", isTerminal: false };
+  }
+  if (status === "dispatching") {
+    return { key: "dispatching", tone: "info", isTerminal: false };
+  }
+  if (status === "awaiting_shopify") {
+    return { key: "awaiting_shopify", tone: "info", isTerminal: false };
+  }
+  if (status === "running") {
+    return { key: "running", tone: "info", isTerminal: false };
   }
   if (status === "processing") {
-    return { key: "processing", label: "Processing", tone: "info", isTerminal: false };
+    return { key: "processing", tone: "info", isTerminal: false };
+  }
+  if (status === "queued") {
+    return { key: "queued", tone: "attention", isTerminal: false };
+  }
+  if (status === "partial") {
+    return { key: "partial", tone: "warning", isTerminal: true };
+  }
+  if (status === "cancelled") {
+    return { key: "cancelled", tone: "warning", isTerminal: true };
   }
 
-  return { key: "pending", label: "Pending", tone: "attention", isTerminal: false };
+  return { key: "pending", tone: "attention", isTerminal: false };
 }
 
 function getUndoStatus(historyItem) {
@@ -68,17 +90,35 @@ function getUndoStatus(historyItem) {
   }
 
   const undoStatus = String(historyItem?.undo?.status || "").toLowerCase();
+
   if (!undoStatus || undoStatus === "idle") return null;
 
   if (undoStatus === "completed") {
-    return { key: "undo_completed", label: "Undo completed", tone: "success", isTerminal: true };
+    return { key: "undo_completed", tone: "success", isTerminal: true };
   }
-
   if (undoStatus === "failed") {
-    return { key: "undo_failed", label: "Undo failed", tone: "critical", isTerminal: true };
+    return { key: "undo_failed", tone: "critical", isTerminal: true };
+  }
+  if (undoStatus === "queued") {
+    return { key: "undo_queued", tone: "attention", isTerminal: false };
+  }
+  if (undoStatus === "dispatching") {
+    return { key: "undo_dispatching", tone: "info", isTerminal: false };
+  }
+  if (undoStatus === "awaiting_shopify") {
+    return { key: "undo_awaiting_shopify", tone: "info", isTerminal: false };
+  }
+  if (undoStatus === "finalizing") {
+    return { key: "undo_finalizing", tone: "info", isTerminal: false };
+  }
+  if (undoStatus === "partial") {
+    return { key: "undo_partial", tone: "warning", isTerminal: true };
+  }
+  if (undoStatus === "cancelled") {
+    return { key: "undo_cancelled", tone: "warning", isTerminal: true };
   }
 
-  return { key: "undo_processing", label: "Undo processing", tone: "info", isTerminal: false };
+  return { key: "undo_processing", tone: "info", isTerminal: false };
 }
 
 function getStatusIcon(statusKey) {
@@ -121,10 +161,18 @@ function normalizeErrors(value) {
   return [{ message: String(value) }];
 }
 
+function safeToString(value, fallback = "") {
+  if (value === null || value === undefined) return fallback;
+  if (typeof value === "object") {
+    return value.text ?? value.label ?? value.value ?? JSON.stringify(value);
+  }
+  return String(value);
+}
+
 export default function EditDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const [historyItem, setHistoryItem] = useState(null);
   const [changes, setChanges] = useState([]);
@@ -147,9 +195,70 @@ export default function EditDetails() {
     navigate("/history");
   }, [navigate]);
 
+  const getStatusLabel = useCallback(
+    (status) => {
+      if (!status?.key) return "";
+
+      return t(`historyStatus.${status.key}`, {
+        defaultValue: status?.label || status.key,
+      });
+    },
+    [t],
+  );
+
+  const getStatusDetail = useCallback(
+    (status) => {
+      if (!status?.key) return null;
+
+      return t(`historyStatusDetail.${status.key}`, {
+        defaultValue: status?.detail || "",
+      });
+    },
+    [t],
+  );
+
+  const getFieldLabel = useCallback(
+    (field) => {
+      if (!field) {
+        return t("field", { defaultValue: "Field" });
+      }
+
+      return t(`fieldLabels.${field}`, {
+        defaultValue: field,
+      });
+    },
+    [t],
+  );
+
+  const getPageTitle = useCallback(
+    (item) => {
+      if (!item) {
+        return t("EditDetails", { defaultValue: "Edit Details" });
+      }
+
+      if (item?.titleKey) {
+        return t(item.titleKey, {
+          ...(item.titleParams || {}),
+          defaultValue: item?.title || t("EditDetails", { defaultValue: "Edit Details" }),
+        });
+      }
+
+      if (item?.title) {
+        return item.title;
+      }
+
+      return t("EditDetails", { defaultValue: "Edit Details" });
+    },
+    [t],
+  );
+
   const fetchHistoryDetails = useCallback(async () => {
     if (!id) {
-      setError("No history ID provided");
+      setError(
+        t("loadingDetails", {
+          defaultValue: "No history ID provided",
+        }),
+      );
       setIsLoadingHistory(false);
       return;
     }
@@ -158,19 +267,31 @@ export default function EditDetails() {
       setIsLoadingHistory(true);
       setError(null);
 
-      const response = await fetch(`/api/history/get-edit-history-details/${id}`);
+      const response = await fetch(
+        `/api/history/get-edit-history-details/${id}?lang=${encodeURIComponent(i18n.language)}`,
+      );
+
       if (!response.ok) {
-        throw new Error("Failed to fetch history");
+        throw new Error(
+          t("loadingHistoryDetails", {
+            defaultValue: "Failed to fetch history",
+          }),
+        );
       }
 
       const json = await response.json();
       setHistoryItem(json?.data || null);
     } catch (err) {
-      setError(err?.message || "Failed to fetch history");
+      setError(
+        err?.message ||
+          t("loadingHistoryDetails", {
+            defaultValue: "Failed to fetch history",
+          }),
+      );
     } finally {
       setIsLoadingHistory(false);
     }
-  }, [id]);
+  }, [id, i18n.language, t]);
 
   const fetchChanges = useCallback(
     async (page = 1) => {
@@ -181,11 +302,15 @@ export default function EditDetails() {
         setIsLoadingChanges(true);
 
         const response = await fetch(
-          `/api/history/get-edit-history/changes/${id}?page=${page}&limit=${itemsPerPage}`,
+          `/api/history/get-edit-history/changes/${id}?page=${page}&limit=${itemsPerPage}&lang=${encodeURIComponent(i18n.language)}`,
         );
 
         if (!response.ok) {
-          throw new Error("Failed to fetch changes");
+          throw new Error(
+            t("loadingChanges", {
+              defaultValue: "Failed to fetch changes",
+            }),
+          );
         }
 
         const json = await response.json();
@@ -229,12 +354,17 @@ export default function EditDetails() {
         setTotalPages(1);
         setTotalChanges(0);
         setCurrentPage(page);
-        setChangesError(err?.message || "Failed to fetch changes");
+        setChangesError(
+          err?.message ||
+            t("loadingChanges", {
+              defaultValue: "Failed to fetch changes",
+            }),
+        );
       } finally {
         setIsLoadingChanges(false);
       }
     },
-    [id],
+    [id, i18n.language, t],
   );
 
   useEffect(() => {
@@ -255,7 +385,10 @@ export default function EditDetails() {
 
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(`/api/history/get-edit-history-details/${id}`);
+        const res = await fetch(
+          `/api/history/get-edit-history-details/${id}?lang=${encodeURIComponent(i18n.language)}`,
+        );
+
         if (!res.ok) return;
 
         const json = await res.json();
@@ -269,7 +402,9 @@ export default function EditDetails() {
 
         if (
           nextPrimaryStatus.key === "completed" ||
-          nextUndoStatus?.key === "undo_completed"
+          nextPrimaryStatus.key === "partial" ||
+          nextUndoStatus?.key === "undo_completed" ||
+          nextUndoStatus?.key === "undo_partial"
         ) {
           fetchChanges(currentPage);
         }
@@ -283,29 +418,33 @@ export default function EditDetails() {
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [historyItem, id, currentPage, fetchChanges]);
+  }, [historyItem, id, currentPage, fetchChanges, i18n.language]);
 
   const flattenedRows = useMemo(() => {
     if (!Array.isArray(changes) || changes.length === 0) return [];
 
     return changes.flatMap((change) => {
-      const productTitle = change?.title || "Untitled product";
+      const productTitle =
+        getPageTitle(change) ||
+        change?.title ||
+        t("product", { defaultValue: "Product" });
+
       const productImage = change?.image || "";
 
       const productRows = Array.isArray(change?.productFieldChanges)
         ? change.productFieldChanges.map((fieldChange) => ({
             image: productImage,
             title: productTitle,
-            scope: t("scope.product"),
-            field: fieldChange?.field || changeField || "N/A",
+            scope: t("scope.product", { defaultValue: "Product" }),
+            field: getFieldLabel(fieldChange?.field || changeField),
             oldValue:
               fieldChange?.oldValue !== undefined && fieldChange?.oldValue !== null
-                ? String(fieldChange.oldValue)
-                : "N/A",
+                ? safeToString(fieldChange.oldValue)
+                : "-",
             newValue:
               fieldChange?.newValue !== undefined && fieldChange?.newValue !== null
-                ? String(fieldChange.newValue)
-                : "N/A",
+                ? safeToString(fieldChange.newValue)
+                : "-",
           }))
         : [];
 
@@ -313,26 +452,30 @@ export default function EditDetails() {
         ? change.variantFieldChanges.flatMap((variantChange) => {
             if (!Array.isArray(variantChange?.changes)) return [];
 
+            const variantTitle =
+              variantChange?.variantTitle ||
+              t("variantTitle", { defaultValue: "Default Title" });
+
             return variantChange.changes.map((fieldChange) => ({
               image: productImage,
-              title: `${productTitle} - ${variantChange?.variantTitle || "Default Title"}`,
-              scope: t("scope.variant"),
-              field: fieldChange?.field || changeField || "N/A",
+              title: `${productTitle} - ${variantTitle}`,
+              scope: t("scope.variant", { defaultValue: "Variant" }),
+              field: getFieldLabel(fieldChange?.field || changeField),
               oldValue:
                 fieldChange?.oldValue !== undefined && fieldChange?.oldValue !== null
-                  ? String(fieldChange.oldValue)
-                  : "N/A",
+                  ? safeToString(fieldChange.oldValue)
+                  : "-",
               newValue:
                 fieldChange?.newValue !== undefined && fieldChange?.newValue !== null
-                  ? String(fieldChange.newValue)
-                  : "N/A",
+                  ? safeToString(fieldChange.newValue)
+                  : "-",
             }));
           })
         : [];
 
       return [...productRows, ...variantRows];
     });
-  }, [changes, changeField, t]);
+  }, [changes, changeField, getFieldLabel, getPageTitle, t, isVariantChange]);
 
   const tableRows = useMemo(
     () =>
@@ -340,7 +483,7 @@ export default function EditDetails() {
         <InlineStack key={`product-cell-${index}`} gap="300" wrap={false}>
           <Thumbnail
             source={item.image || FALLBACK_IMAGE}
-            alt={item.title || "product"}
+            alt={item.title || t("product", { defaultValue: "product" })}
             size="small"
           />
           <BlockStack inlineAlign="start">
@@ -364,11 +507,13 @@ export default function EditDetails() {
           <Text>{item.newValue}</Text>
         </BlockStack>,
       ]),
-    [flattenedRows],
+    [flattenedRows, t],
   );
 
   const handleDownloadLogs = useCallback(() => {
     if (!historyItem?.id || flattenedRows.length === 0) return;
+
+    const primaryStatus = getPrimaryStatus(historyItem);
 
     const csvData = flattenedRows.map((row) => ({
       ProductTitle: row.title,
@@ -378,7 +523,7 @@ export default function EditDetails() {
       NewValue: row.newValue,
       EditID: historyItem.id,
       Shop: historyItem.shop || "",
-      Status: historyItem.primaryStatus?.label || historyItem.status || "",
+      Status: getStatusLabel(primaryStatus),
     }));
 
     const csv = Papa.unparse(csvData);
@@ -393,14 +538,17 @@ export default function EditDetails() {
     document.body.removeChild(link);
 
     URL.revokeObjectURL(url);
-  }, [flattenedRows, historyItem]);
+  }, [flattenedRows, historyItem, getStatusLabel]);
 
   if (isLoadingHistory) {
     return (
       <Page
         fullWidth
-        title="Loading Details..."
-        backAction={{ content: "History", onAction: handleBack }}
+        title={t("loadingDetails", { defaultValue: "Loading Details..." })}
+        backAction={{
+          content: t("History", { defaultValue: "History" }),
+          onAction: handleBack,
+        }}
       >
         <Layout>
           <Layout.Section>
@@ -408,7 +556,11 @@ export default function EditDetails() {
               <Box padding="500">
                 <InlineStack align="center" gap="300">
                   <Spinner size="large" />
-                  <Text tone="subdued">Loading history details...</Text>
+                  <Text tone="subdued">
+                    {t("loadingHistoryDetails", {
+                      defaultValue: "Loading history details...",
+                    })}
+                  </Text>
                 </InlineStack>
               </Box>
             </Card>
@@ -422,8 +574,11 @@ export default function EditDetails() {
     return (
       <Page
         fullWidth
-        title="Error"
-        backAction={{ content: "History", onAction: handleBack }}
+        title={t("error", { defaultValue: "Error" })}
+        backAction={{
+          content: t("History", { defaultValue: "History" }),
+          onAction: handleBack,
+        }}
       >
         <Banner tone="critical">{error}</Banner>
       </Page>
@@ -432,13 +587,26 @@ export default function EditDetails() {
 
   if (!historyItem) return null;
 
-  const title = historyItem?.title || t("EditDetails");
+  const title = getPageTitle(historyItem);
   const primaryStatus = getPrimaryStatus(historyItem);
   const undoStatus = getUndoStatus(historyItem);
-  const statusBadge = { tone: primaryStatus.tone, children: primaryStatus.label };
+  const primaryStatusLabel = getStatusLabel(primaryStatus);
+  const undoStatusLabel = undoStatus ? getStatusLabel(undoStatus) : null;
+  const primaryDetail = getStatusDetail(primaryStatus);
+  const undoDetail = undoStatus ? getStatusDetail(undoStatus) : null;
+
+  const statusBadge = {
+    tone: primaryStatus.tone,
+    children: primaryStatusLabel,
+  };
+
   const undoBadge = undoStatus
-    ? { tone: undoStatus.tone, children: undoStatus.label }
+    ? {
+        tone: undoStatus.tone,
+        children: undoStatusLabel,
+      }
     : null;
+
   const mainProgress = historyItem?.progressSummary || {
     current: Number(historyItem?.progressCount || historyItem?.processedCount || 0),
     total: Number(historyItem?.targetSnapshotCount || historyItem?.totalItems || 0),
@@ -454,30 +622,37 @@ export default function EditDetails() {
           : 0,
     label: "",
   };
+
   const undoProcessed = Number(historyItem?.undo?.processedCount || 0);
   const undoTotal = Number(historyItem?.targetSnapshotCount || historyItem?.totalItems || 0);
+
   const undoErrors = normalizeErrors(
     historyItem?.supportStatus?.undoErrors || historyItem?.undo?.error,
   );
+
   const editErrors = normalizeErrors(
     historyItem?.supportStatus?.errors || historyItem?.error,
   );
+
   const canDownload = primaryStatus.key === "completed" && flattenedRows.length > 0;
 
   return (
     <Page
       fullWidth
       title={title}
-      backAction={{ content: "History", onAction: handleBack }}
+      backAction={{
+        content: t("History", { defaultValue: "History" }),
+        onAction: handleBack,
+      }}
       titleMetadata={
         <InlineStack gap="200">
-          <Badge {...statusBadge} />
-          {undoBadge ? <Badge {...undoBadge} /> : null}
+          <Badge tone={statusBadge.tone}>{statusBadge.children}</Badge>
+          {undoBadge ? <Badge tone={undoBadge.tone}>{undoBadge.children}</Badge> : null}
         </InlineStack>
       }
       secondaryActions={[
         {
-          content: t("Download Logs"),
+          content: t("Download Logs", { defaultValue: "Download Logs" }),
           onAction: handleDownloadLogs,
           disabled: !canDownload,
         },
@@ -491,39 +666,50 @@ export default function EditDetails() {
                 <InlineStack align="space-between">
                   <InlineStack gap="200">
                     <Icon source={getStatusIcon(primaryStatus.key)} />
-                    <Text variant="headingMd">{t("EditProgress")}</Text>
+                    <Text variant="headingMd">
+                      {t("EditProgress", { defaultValue: "Edit Progress" })}
+                    </Text>
                   </InlineStack>
-                  <Badge {...statusBadge} />
+                  <Badge tone={statusBadge.tone}>{statusBadge.children}</Badge>
                 </InlineStack>
 
                 <ProgressBar
                   progress={Number(mainProgress.percent || 0)}
                   animated={isActiveStatus(primaryStatus)}
                   size="small"
-                  tone={primaryStatus.key === "failed" ? "critical" : primaryStatus.key === "partial" ? "warning" : "primary"}
+                  tone={
+                    primaryStatus.key === "failed"
+                      ? "critical"
+                      : primaryStatus.key === "partial"
+                        ? "warning"
+                        : "primary"
+                  }
                 />
 
                 <InlineStack align="space-between">
                   <Text tone="subdued">
-                    {mainProgress.label || `${mainProgress.current} / ${mainProgress.total || mainProgress.current}`}
+                    {mainProgress.label ||
+                      `${mainProgress.current} / ${mainProgress.total || mainProgress.current}`}
                   </Text>
 
                   {Number(historyItem?.durationMs) > 0 ? (
                     <Text tone="subdued">
-                      {t("Duration:")} {formatDuration(historyItem.durationMs)}
+                      {t("Duration", { defaultValue: "Duration" })}:{" "}
+                      {formatDuration(historyItem.durationMs, t)}
                     </Text>
                   ) : null}
                 </InlineStack>
 
-                {primaryStatus.detail ? (
+                {primaryDetail ? (
                   <Text tone="subdued" variant="bodySm">
-                    {primaryStatus.detail}
+                    {primaryDetail}
                   </Text>
                 ) : null}
 
                 {historyItem?.supportStatus?.failureStage ? (
                   <Text tone="subdued" variant="bodySm">
-                    Failure stage: {historyItem.supportStatus.failureStage}
+                    {t("failureStage", { defaultValue: "Failure stage" })}:{" "}
+                    {historyItem.supportStatus.failureStage}
                   </Text>
                 ) : null}
 
@@ -532,12 +718,16 @@ export default function EditDetails() {
                     <BlockStack gap="200">
                       <Text>
                         {primaryStatus.key === "partial"
-                          ? "The edit finished with recorded issues."
-                          : "The edit recorded execution errors."}
+                          ? t("partial_msg", {
+                              defaultValue: "The edit finished with recorded issues.",
+                            })
+                          : t("update_failed", {
+                              defaultValue: "The edit recorded execution errors.",
+                            })}
                       </Text>
                       {editErrors.slice(0, 3).map((entry, index) => (
                         <Text key={index} tone="subdued" variant="bodySm">
-                          - {entry?.message || entry?.code || "Unknown error"}
+                          - {entry?.message || entry?.code || t("unexpected", { defaultValue: "Unknown error" })}
                         </Text>
                       ))}
                     </BlockStack>
@@ -556,9 +746,11 @@ export default function EditDetails() {
                   <InlineStack align="space-between">
                     <InlineStack gap="200">
                       <Icon source={getStatusIcon(undoStatus.key)} />
-                      <Text variant="headingMd">Undo Progress</Text>
+                      <Text variant="headingMd">
+                        {t("undoEdit", { defaultValue: "Undo Progress" })}
+                      </Text>
                     </InlineStack>
-                    {undoBadge ? <Badge {...undoBadge} /> : null}
+                    {undoBadge ? <Badge tone={undoBadge.tone}>{undoBadge.children}</Badge> : null}
                   </InlineStack>
 
                   <ProgressBar
@@ -571,7 +763,13 @@ export default function EditDetails() {
                     }
                     animated={isActiveStatus(undoStatus)}
                     size="small"
-                    tone={undoStatus.key === "undo_failed" ? "critical" : undoStatus.key === "undo_partial" ? "warning" : "warning"}
+                    tone={
+                      undoStatus.key === "undo_failed"
+                        ? "critical"
+                        : undoStatus.key === "undo_partial"
+                          ? "warning"
+                          : "warning"
+                    }
                   />
 
                   <InlineStack align="space-between">
@@ -581,14 +779,15 @@ export default function EditDetails() {
 
                     {Number(historyItem?.undo?.durationMs) > 0 ? (
                       <Text tone="subdued">
-                        {t("Duration:")} {formatDuration(historyItem.undo.durationMs)}
+                        {t("Duration", { defaultValue: "Duration" })}:{" "}
+                        {formatDuration(historyItem.undo.durationMs, t)}
                       </Text>
                     ) : null}
                   </InlineStack>
 
-                  {undoStatus.detail ? (
+                  {undoDetail ? (
                     <Text tone="subdued" variant="bodySm">
-                      {undoStatus.detail}
+                      {undoDetail}
                     </Text>
                   ) : null}
 
@@ -597,12 +796,16 @@ export default function EditDetails() {
                       <BlockStack gap="200">
                         <Text>
                           {undoStatus.key === "undo_partial"
-                            ? "Undo completed with recorded issues."
-                            : "Undo encountered errors."}
+                            ? t("undoPartiallyCompletedDetail", {
+                                defaultValue: "Undo completed with recorded issues.",
+                              })
+                            : t("undoFailed", {
+                                defaultValue: "Undo encountered errors.",
+                              })}
                         </Text>
                         {undoErrors.slice(0, 3).map((entry, index) => (
                           <Text key={index} tone="subdued" variant="bodySm">
-                            - {entry?.message || entry?.code || "Unknown error"}
+                            - {entry?.message || entry?.code || t("unexpected", { defaultValue: "Unknown error" })}
                           </Text>
                         ))}
                       </BlockStack>
@@ -619,13 +822,19 @@ export default function EditDetails() {
             <Box padding="400">
               <BlockStack gap="300">
                 <InlineStack align="space-between">
-                  <Text variant="headingMd">{t("ProductChanges")}</Text>
+                  <Text variant="headingMd">
+                    {t("ProductChanges", { defaultValue: "Product Changes" })}
+                  </Text>
                   <Text tone="subdued">
                     {totalChanges > 0
-                      ? `${t("Showing")} ${
+                      ? `${t("Showing", { defaultValue: "Showing" })} ${
                           (currentPage - 1) * itemsPerPage + 1
-                        }-${Math.min(currentPage * itemsPerPage, totalChanges)} ${t("of")} ${totalChanges}`
-                      : `${t("Showing")} 0-0 ${t("of")} 0`}
+                        }-${Math.min(currentPage * itemsPerPage, totalChanges)} ${t("of", {
+                          defaultValue: "of",
+                        })} ${totalChanges}`
+                      : `${t("Showing", { defaultValue: "Showing" })} 0-0 ${t("of", {
+                          defaultValue: "of",
+                        })} 0`}
                   </Text>
                 </InlineStack>
               </BlockStack>
@@ -635,7 +844,9 @@ export default function EditDetails() {
               <Box padding="400">
                 <InlineStack gap="200">
                   <Spinner size="small" />
-                  <Text tone="subdued">{t("Loadingchanges")}</Text>
+                  <Text tone="subdued">
+                    {t("Loadingchanges", { defaultValue: "Loading changes..." })}
+                  </Text>
                 </InlineStack>
               </Box>
             ) : changesError ? (
@@ -644,12 +855,17 @@ export default function EditDetails() {
               </Box>
             ) : tableRows.length > 0 ? (
               <>
-              <Box paddingInlineStart="60">
-                <DataTable
-                  columnContentTypes={["text", "text", "text"]}
-                  headings={["Product", "Field", "Change"]}
-                  rows={tableRows}
-                /></Box>
+                <Box paddingInlineStart="60">
+                  <DataTable
+                    columnContentTypes={["text", "text", "text"]}
+                    headings={[
+                      t("table.product", { defaultValue: "Product" }),
+                      t("table.field", { defaultValue: "Field" }),
+                      t("table.change", { defaultValue: "Change" }),
+                    ]}
+                    rows={tableRows}
+                  />
+                </Box>
 
                 {totalPages > 1 ? (
                   <Box padding="400">
@@ -658,25 +874,30 @@ export default function EditDetails() {
                         disabled={currentPage === 1}
                         onClick={() => fetchChanges(currentPage - 1)}
                       >
-                        {t("Previous")}
+                        {t("Previous", { defaultValue: "Previous" })}
                       </Button>
 
                       <Text>
-                        {t("Page")} {currentPage} {t("of")} {totalPages}
+                        {t("Page", { defaultValue: "Page" })} {currentPage} {t("of", { defaultValue: "of" })}{" "}
+                        {totalPages}
                       </Text>
 
                       <Button
                         disabled={currentPage === totalPages}
                         onClick={() => fetchChanges(currentPage + 1)}
                       >
-                        {t("Next")}
+                        {t("Next", { defaultValue: "Next" })}
                       </Button>
                     </InlineStack>
                   </Box>
                 ) : null}
               </>
             ) : (
-              <EmptyState heading={t("Noproductschanged")} />
+              <EmptyState
+                heading={t("Noproductschanged", {
+                  defaultValue: "No products changed",
+                })}
+              />
             )}
           </Card>
         </Layout.Section>

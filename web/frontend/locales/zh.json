@@ -972,5 +972,8 @@
     "scheduled": "预定出口"
   },
   "exportDownloadLinkMissing": "下载链接不可用。",
-  "exportDownloadFailed": "下载文件失败。"
+  "exportDownloadFailed": "下载文件失败。",
+  "editHistoryTitle": {
+  "setFixedPrice": "价格已设置为 {{value}}"
+}
 }

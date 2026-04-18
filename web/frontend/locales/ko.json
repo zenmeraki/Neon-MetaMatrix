@@ -972,5 +972,8 @@
     "scheduled": "예약된 내보내기"
   },
   "exportDownloadLinkMissing": "다운로드 링크를 사용할 수 없습니다.",
-  "exportDownloadFailed": "파일을 다운로드하지 못했습니다."
+  "exportDownloadFailed": "파일을 다운로드하지 못했습니다.",
+  "editHistoryTitle": {
+  "setFixedPrice": "가격을 {{value}}(으)로 설정했습니다"
+}
 }

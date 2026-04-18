@@ -26,43 +26,38 @@ function getPrimaryStatusSummary(item) {
 
   const status = String(item?.status || "pending").toLowerCase();
 
-  if (status === "completed") {
-    return {
-      key: "completed",
-      tone: "success",
-      isTerminal: true,
-    };
+  switch (status) {
+    case "completed":
+      return {
+        key: "completed",
+        tone: "success",
+        isTerminal: true,
+      };
+    case "failed":
+      return {
+        key: "failed",
+        tone: "critical",
+        isTerminal: true,
+      };
+    case "finalizing":
+      return {
+        key: "finalizing",
+        tone: "info",
+        isTerminal: false,
+      };
+    case "processing":
+      return {
+        key: "processing",
+        tone: "info",
+        isTerminal: false,
+      };
+    default:
+      return {
+        key: "pending",
+        tone: "attention",
+        isTerminal: false,
+      };
   }
-
-  if (status === "failed") {
-    return {
-      key: "failed",
-      tone: "critical",
-      isTerminal: true,
-    };
-  }
-
-  if (status === "finalizing") {
-    return {
-      key: "finalizing",
-      tone: "info",
-      isTerminal: false,
-    };
-  }
-
-  if (status === "processing") {
-    return {
-      key: "processing",
-      tone: "info",
-      isTerminal: false,
-    };
-  }
-
-  return {
-    key: "pending",
-    tone: "attention",
-    isTerminal: false,
-  };
 }
 
 function getUndoStatusSummary(item) {
@@ -76,31 +71,57 @@ function getUndoStatusSummary(item) {
     return null;
   }
 
-  if (undoStatus === "completed") {
-    return {
-      key: "undo_completed",
-      tone: "success",
-      isTerminal: true,
-    };
+  switch (undoStatus) {
+    case "completed":
+      return {
+        key: "undo_completed",
+        tone: "success",
+        isTerminal: true,
+      };
+    case "failed":
+      return {
+        key: "undo_failed",
+        tone: "critical",
+        isTerminal: true,
+      };
+    default:
+      return {
+        key: "undo_processing",
+        tone: "attention",
+        isTerminal: false,
+      };
   }
-
-  if (undoStatus === "failed") {
-    return {
-      key: "undo_failed",
-      tone: "critical",
-      isTerminal: true,
-    };
-  }
-
-  return {
-    key: "undo_processing",
-    tone: "attention",
-    isTerminal: false,
-  };
 }
 
 function isActiveStatus(summary) {
   return Boolean(summary) && summary.isTerminal !== true;
+}
+
+function getItemViewModel(item) {
+  const primaryStatus = getPrimaryStatusSummary(item);
+  const undoStatus = getUndoStatusSummary(item);
+
+  const isProcessing =
+    isActiveStatus(primaryStatus) || isActiveStatus(undoStatus);
+
+  const progressLabel =
+    item?.progressSummary?.label ||
+    `${item?.processedCount || 0} / ${item?.totalItems || item?.processedCount || 0}`;
+
+  const timeValue =
+    isActiveStatus(undoStatus) && item?.undo?.startedAt
+      ? item.undo.startedAt
+      : undoStatus?.key === "undo_completed" && item?.undo?.completedAt
+        ? item.undo.completedAt
+        : item?.completedAt || item?.updatedAt || item?.editTime;
+
+  return {
+    primaryStatus,
+    undoStatus,
+    isProcessing,
+    progressLabel,
+    timeValue,
+  };
 }
 
 const HistoryTable = memo(function HistoryTable({
@@ -112,7 +133,7 @@ const HistoryTable = memo(function HistoryTable({
   emptyStateMessage = "No history items found.",
 }) {
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { isSyncInProgress } = useProductSyncStatus();
 
   const [showUndoModal, setShowUndoModal] = useState(false);
@@ -125,9 +146,7 @@ const HistoryTable = memo(function HistoryTable({
   }, [histories]);
 
   const getStatusLabel = useCallback(
-    (statusKey) => {
-      return t(`historyStatus.${statusKey}`, { defaultValue: statusKey });
-    },
+    (statusKey) => t(`historyStatus.${statusKey}`, { defaultValue: statusKey }),
     [t],
   );
 
@@ -151,26 +170,10 @@ const HistoryTable = memo(function HistoryTable({
     setUndoHistoryItem(null);
   }, []);
 
-  const renderStatusBadge = useCallback(
-    (item) => {
-      const primaryStatus = getPrimaryStatusSummary(item);
-      const undoStatus = getUndoStatusSummary(item);
-
-      return (
-        <InlineStack gap="150" wrap>
-          <Badge tone={primaryStatus.tone}>
-            {getStatusLabel(primaryStatus.key)}
-          </Badge>
-          {undoStatus ? (
-            <Badge tone={undoStatus.tone}>
-              {getStatusLabel(undoStatus.key)}
-            </Badge>
-          ) : null}
-        </InlineStack>
-      );
-    },
-    [getStatusLabel],
-  );
+  const handleUndo = useCallback((history) => {
+    setUndoHistoryItem(history);
+    setShowUndoModal(true);
+  }, []);
 
   const canUndo = useCallback((item) => {
     const primaryStatus = getPrimaryStatusSummary(item);
@@ -184,10 +187,26 @@ const HistoryTable = memo(function HistoryTable({
     );
   }, []);
 
-  const handleUndo = useCallback((history) => {
-    setUndoHistoryItem(history);
-    setShowUndoModal(true);
-  }, []);
+  const renderStatusBadge = useCallback(
+    (item) => {
+      const { primaryStatus, undoStatus } = getItemViewModel(item);
+
+      return (
+        <InlineStack gap="150" wrap>
+          <Badge tone={primaryStatus.tone}>
+            {getStatusLabel(primaryStatus.key)}
+          </Badge>
+
+          {undoStatus ? (
+            <Badge tone={undoStatus.tone}>
+              {getStatusLabel(undoStatus.key)}
+            </Badge>
+          ) : null}
+        </InlineStack>
+      );
+    },
+    [getStatusLabel],
+  );
 
   const handleUndoEditHistory = useCallback(async () => {
     if (!undoHistoryItem?.id) return;
@@ -235,59 +254,67 @@ const HistoryTable = memo(function HistoryTable({
   const activeHistoryIds = useMemo(() => {
     return (localHistories || [])
       .filter((history) => {
-        const primaryStatus = getPrimaryStatusSummary(history);
-        const undoStatus = getUndoStatusSummary(history);
+        const { primaryStatus, undoStatus } = getItemViewModel(history);
         return isActiveStatus(primaryStatus) || isActiveStatus(undoStatus);
       })
       .map((history) => history.id)
       .filter(Boolean);
   }, [localHistories]);
 
+  const fetchHistoryDetails = useCallback(async () => {
+    if (activeHistoryIds.length === 0) {
+      return;
+    }
+
+    try {
+      const updates = await Promise.all(
+        activeHistoryIds.map((id) =>
+          fetch(
+            `/api/history/get-edit-history-details/${id}?lang=${encodeURIComponent(i18n.language)}`,
+          )
+            .then((response) => (response.ok ? response.json() : null))
+            .then((json) => json?.data || null)
+            .catch(() => null),
+        ),
+      );
+
+      const updateMap = new Map(
+        updates.filter(Boolean).map((entry) => [entry.id, entry]),
+      );
+
+      if (updateMap.size === 0) {
+        return;
+      }
+
+      setLocalHistories((prev) =>
+        prev.map((history) => {
+          const updated = updateMap.get(history.id);
+          return updated ? { ...history, ...updated } : history;
+        }),
+      );
+    } catch {
+      // silent polling failure
+    }
+  }, [activeHistoryIds, i18n.language]);
+
   useEffect(() => {
     if (activeHistoryIds.length === 0) {
       return undefined;
     }
 
-    const interval = setInterval(async () => {
-      try {
-        const updates = await Promise.all(
-          activeHistoryIds.map((id) =>
-            fetch(`/api/history/get-edit-history-details/${id}`)
-              .then((response) => (response.ok ? response.json() : null))
-              .then((json) => json?.data || null)
-              .catch(() => null),
-          ),
-        );
-
-        const updateMap = new Map(
-          updates.filter(Boolean).map((entry) => [entry.id, entry]),
-        );
-
-        if (updateMap.size === 0) {
-          return;
-        }
-
-        setLocalHistories((prev) =>
-          prev.map((history) => {
-            const updated = updateMap.get(history.id);
-            return updated ? { ...history, ...updated } : history;
-          }),
-        );
-      } catch {
-        // silent polling failure
-      }
+    const interval = setInterval(() => {
+      fetchHistoryDetails();
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [activeHistoryIds]);
+  }, [activeHistoryIds, fetchHistoryDetails]);
 
   const summary = useMemo(() => {
     const items = localHistories || [];
 
     const total = items.length;
     const processing = items.filter((item) => {
-      const primaryStatus = getPrimaryStatusSummary(item);
-      const undoStatus = getUndoStatusSummary(item);
+      const { primaryStatus, undoStatus } = getItemViewModel(item);
       return isActiveStatus(primaryStatus) || isActiveStatus(undoStatus);
     }).length;
 
@@ -312,25 +339,17 @@ const HistoryTable = memo(function HistoryTable({
       const { id, title, shop } = item;
       const user = shop?.split(".")[0];
 
+      const {
+        primaryStatus,
+        undoStatus,
+        isProcessing,
+        progressLabel,
+        timeValue,
+      } = getItemViewModel(item);
+
       const isUndoable = canUndo(item);
-      const primaryStatus = getPrimaryStatusSummary(item);
-      const undoStatus = getUndoStatusSummary(item);
-      const isProcessing = isActiveStatus(primaryStatus) || isActiveStatus(undoStatus);
-
       const undoDisabled = !isUndoable || isProcessing || isSyncInProgress;
-
-      const progressLabel =
-        item?.progressSummary?.label ||
-        `${item?.processedCount || 0} / ${item?.totalItems || item?.processedCount || 0}`;
-
       const primaryDetail = getStatusDetail(primaryStatus);
-
-      const timeValue =
-        isActiveStatus(undoStatus) && item?.undo?.startedAt
-          ? item.undo.startedAt
-          : undoStatus?.key === "undo_completed" && item?.undo?.completedAt
-            ? item.undo.completedAt
-            : item?.completedAt || item?.updatedAt || item?.editTime;
 
       return [
         <Box key={`title-${id}`} maxWidth="320px">
@@ -365,6 +384,7 @@ const HistoryTable = memo(function HistoryTable({
           <Button size="slim" onClick={() => navigate(`/editDetails/${id}`)}>
             {t("historyViewButton")}
           </Button>
+
           <Button
             size="slim"
             tone={isUndoable ? "critical" : undefined}
@@ -383,12 +403,12 @@ const HistoryTable = memo(function HistoryTable({
   }, [
     localHistories,
     canUndo,
+    getStatusDetail,
+    handleUndo,
     isSyncInProgress,
     navigate,
     renderStatusBadge,
-    handleUndo,
     t,
-    getStatusDetail,
   ]);
 
   if (isLoading) {
@@ -416,7 +436,7 @@ const HistoryTable = memo(function HistoryTable({
     return (
       <Card>
         <Box padding="1200">
-          <EmptyState  heading={t("historyEmptyStateTitle")}>
+          <EmptyState heading={t("historyEmptyStateTitle")}>
             <p>{emptyStateMessage}</p>
           </EmptyState>
         </Box>
