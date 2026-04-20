@@ -64,36 +64,36 @@ const RecurringEditModal = ({ open, onClose, data, isLoading, error, onUpdated }
   const [validationErrors, setValidationErrors] = useState({});
 
   // Options for dropdowns
-  const frequencyOptions = [
-    { label: "Hourly", value: "Hourly" },
-    { label: "Every 2 Hours", value: "Every 2 Hours" },
-    { label: "Daily", value: "Daily" },
-    { label: "Weekly", value: "Weekly" },
-    { label: "Monthly", value: "Monthly" },
-  ];
+ const frequencyOptions = [
+  { label: t("frequencyRecurring.hourly"), value: "Hourly" },
+  { label: t("frequencyRecurring.every2Hours"), value: "Every 2 Hours" },
+  { label: t("frequencyRecurring.daily"), value: "Daily" },
+  { label: t("frequencyRecurring.weekly"), value: "Weekly" },
+  { label: t("frequencyRecurring.monthly"), value: "Monthly" },
+];
 
-  const statusOptions = [
-    { label: "Active", value: "Active" },
-    { label: "Inactive", value: "Inactive" },
-  ];
+const statusOptions = [
+  { label: t("statusRecurring.active"), value: "Active" },
+  { label: t("statusRecurring.inactive"), value: "Inactive" },
+];
 
-  const timezoneOptions = [
-    { label: "Asia/Kolkata (IST)", value: "Asia/Kolkata" },
-    { label: "UTC", value: "UTC" },
-    { label: "America/New_York (EST/EDT)", value: "America/New_York" },
-    { label: "Europe/London (GMT/BST)", value: "Europe/London" },
-    { label: "Asia/Tokyo (JST)", value: "Asia/Tokyo" },
-  ];
+const timezoneOptions = [
+  { label: t("timezoneRecurring.india"), value: "Asia/Kolkata" },
+  { label: t("timezoneRecurring.utc"), value: "UTC" },
+  { label: t("timezoneRecurring.newYork"), value: "America/New_York" },
+  { label: t("timezoneRecurring.london"), value: "Europe/London" },
+  { label: t("timezoneRecurring.tokyo"), value: "Asia/Tokyo" },
+];
 
-  const daysOfWeek = [
-    "Sunday",
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-  ];
+ const daysOfWeek = [
+  t("days.sunday"),
+  t("days.monday"),
+  t("days.tuesday"),
+  t("days.wednesday"),
+  t("days.thursday"),
+  t("days.friday"),
+  t("days.saturday"),
+];
 
   const timeSlotOptions = generateTimeSlots();
 
@@ -130,59 +130,69 @@ const RecurringEditModal = ({ open, onClose, data, isLoading, error, onUpdated }
 
   // Helper function to get status badge
   const getStatusBadge = (status) => {
-    const normalizedStatus = status?.toLowerCase();
-    let tone = "attention";
+  const normalizedStatus = String(status || "").toLowerCase();
+  let tone = "attention";
 
-    switch (normalizedStatus) {
-      case "active":
-        tone = "success";
-        break;
-      case "inactive":
-      case "paused":
-        tone = "warning";
-        break;
-      case "completed":
-        tone = "info";
-        break;
-      case "failed":
-        tone = "critical";
-        break;
-      case "expired":
-        tone = "subdued";
-        break;
-      default:
-        tone = "attention";
-    }
+  switch (normalizedStatus) {
+    case "active":
+      tone = "success";
+      break;
+    case "inactive":
+    case "paused":
+      tone = "warning";
+      break;
+    case "completed":
+      tone = "info";
+      break;
+    case "failed":
+      tone = "critical";
+      break;
+    case "expired":
+      tone = "subdued";
+      break;
+    default:
+      tone = "attention";
+  }
 
-    return <Badge tone={tone}>{status}</Badge>;
-  };
+  const label =
+    t(`statusRecurring.${normalizedStatus}`, {
+      defaultValue: t(normalizedStatus, { defaultValue: status }),
+    });
+
+  return <Badge tone={tone}>{label}</Badge>;
+};
 
   // Helper function to get last run status badge
-  const getLastRunStatusBadge = (status) => {
-    const normalizedStatus = status?.toLowerCase();
-    let tone = "attention";
+const getLastRunStatusBadge = (status) => {
+  const normalizedStatus = String(status || "").trim().toLowerCase();
+  let tone = "attention";
 
-    switch (normalizedStatus) {
-      case "success":
-        tone = "success";
-        break;
-      case "failed":
-      case "error":
-        tone = "critical";
-        break;
-      case "running":
-      case "processing":
-        tone = "info";
-        break;
-      case "skipped":
-        tone = "warning";
-        break;
-      default:
-        tone = "attention";
-    }
+  switch (normalizedStatus) {
+    case "success":
+      tone = "success";
+      break;
+    case "failed":
+    case "error":
+      tone = "critical";
+      break;
+    case "running":
+    case "processing":
+      tone = "info";
+      break;
+    case "skipped":
+      tone = "warning";
+      break;
+    default:
+      tone = "attention";
+  }
 
-    return <Badge tone={tone}>{status}</Badge>;
-  };
+  const fallbackLabel =
+    normalizedStatus.charAt(0).toUpperCase() + normalizedStatus.slice(1);
+
+ const label = t(`runStatus.${normalizedStatus}`);
+
+  return <Badge tone={tone}>{label}</Badge>;
+};
 
   // Calculate success rate
   const getSuccessRate = (totalRuns, totalRunsSucceed) => {
@@ -382,14 +392,14 @@ const RecurringEditModal = ({ open, onClose, data, isLoading, error, onUpdated }
       return (
         <BlockStack gap="400">
           <TextField
-            label="Time to Run"
+            label= {t("timeToRun")}
             type="time"  // ← native browser time picker, allows any HH:MM
             value={formData.timeToRun}
             onChange={(value) => handleFieldChange("timeToRun", value)}
             disabled={isSubmitting}
             error={validationErrors.timeToRun}
             requiredIndicator
-            helpText="Enter the time you want this edit to run"
+            helpText={t("timeToRunHelpText")}
           />
           {frequency === "Weekly" && (
             <BlockStack gap="200">
@@ -441,7 +451,7 @@ const RecurringEditModal = ({ open, onClose, data, isLoading, error, onUpdated }
 
   if (isLoading) {
     return (
-      <Modal open={open} onClose={onClose} title="Loading..." size="large">
+      <Modal open={open} onClose={onClose} title={t("loading")} size="large">
         <Modal.Section>
           <Box padding="400" textAlign="center">
             <Text as="p" tone="subdued">
@@ -471,7 +481,7 @@ const RecurringEditModal = ({ open, onClose, data, isLoading, error, onUpdated }
         <Modal.Section>
           <Banner tone="critical">
             <Text as="p">
-              {error || "Failed to load recurring edit details"}
+              {error || t("failedToLoadRecurringEditDetails")}
             </Text>
           </Banner>
         </Modal.Section>
@@ -505,16 +515,15 @@ const RecurringEditModal = ({ open, onClose, data, isLoading, error, onUpdated }
     <Modal
       open={open}
       onClose={handleClose}
-      title="Edit Recurring Schedule"
+      title={t("editRecurringEdit")}
       primaryAction={{
-        content: "Update Recurring Edit",
-        onAction: handleSubmit,
+        content: t("updateRecurringEdit"),
         loading: isSubmitting,
         disabled: isSubmitting,
       }}
       secondaryActions={[
         {
-          content: "Cancel",
+          content: t("cancel"),
           onAction: handleClose,
           disabled: isSubmitting,
         },
@@ -534,10 +543,10 @@ const RecurringEditModal = ({ open, onClose, data, isLoading, error, onUpdated }
             <FormLayout>
               {/* Title Field */}
               <TextField
-                label="Title"
+                label={t("title")}
                 value={formData.title}
                 onChange={(value) => handleFieldChange("title", value)}
-                placeholder="Enter a descriptive title for this recurring edit"
+                placeholder={t("enterDescriptiveTitle")}
                 disabled={isSubmitting}
                 error={validationErrors.title}
                 requiredIndicator
@@ -546,72 +555,36 @@ const RecurringEditModal = ({ open, onClose, data, isLoading, error, onUpdated }
               {/* Frequency and Status Row */}
               <FormLayout.Group>
                 <Select
-                  label="Frequency"
+                  label={t("frequency")}
                   options={frequencyOptions}
                   value={formData.frequency}
                   onChange={(value) => handleFieldChange("frequency", value)}
                   disabled={isSubmitting}
-                  helpText="How often should this edit run?"
+                  helpText={t("frequencyHelpText")}
                 />
                 <Select
-                  label="Status"
+                  label={t("status")}
                   options={statusOptions}
                   value={formData.status}
                   onChange={(value) => handleFieldChange("status", value)}
                   disabled={isSubmitting}
-                  helpText="Set to Inactive to pause scheduling"
+                  helpText={t("statusHelpText")}
                 />
               </FormLayout.Group>
 
               {/* Timezone */}
               <Select
-                label="Timezone"
+                label={t("timezone")}
                 options={timezoneOptions}
                 value={formData.timezone}
                 onChange={(value) => handleFieldChange("timezone", value)}
                 disabled={isSubmitting}
-                helpText="All times will be interpreted in this timezone"
+                helpText={t("selectTimezoneForScheduling")}
               />
 
               {/* Frequency-specific fields */}
               {renderFrequencySpecificFields()}
             </FormLayout>
-          </LegacyCard>
-
-          {/* Current Steps Section */}
-          <LegacyCard sectioned>
-            <BlockStack gap="300">
-              <Text variant="headingMd" as="h3">
-                Current Edit Steps
-              </Text>
-              <Text variant="bodyMd" as="p" tone="subdued">
-                This recurring edit performs the following actions:
-              </Text>
-              <BlockStack gap="200">
-                {steps?.map((step, index) => (
-                  <Box
-                    key={index}
-                    padding="300"
-                    background="bg-surface-secondary"
-                    borderRadius="200"
-                    borderColor="border-secondary"
-                    borderWidth="025"
-                  >
-                    <Text variant="bodyMd" as="p">
-                      <Text as="span" fontWeight="semibold">
-                        Step {index + 1}:
-                      </Text>{" "}
-                      Edit <Tag>{step.field}</Tag> using "{step.editType}" to
-                      value "
-                      <Text as="span" fontWeight="semibold">
-                        {step.value}
-                      </Text>
-                      "
-                    </Text>
-                  </Box>
-                ))}
-              </BlockStack>
-            </BlockStack>
           </LegacyCard>
 
           <Divider />
@@ -621,12 +594,12 @@ const RecurringEditModal = ({ open, onClose, data, isLoading, error, onUpdated }
             <BlockStack gap="400">
               <InlineStack align="space-between" blockAlign="start">
                 <Text variant="headingMd" as="h3">
-                  Execution Details
+                  {t("executionDetails")}
                 </Text>
                 <InlineStack gap="200">
                   {getStatusBadge(data.status)}
                   {isCurrentlyRunning && (
-                    <Badge tone="info">Currently Running</Badge>
+                    <Badge tone="info">{t("currentlyRunning")}</Badge>
                   )}
                 </InlineStack>
               </InlineStack>
@@ -636,23 +609,23 @@ const RecurringEditModal = ({ open, onClose, data, isLoading, error, onUpdated }
                 <InlineStack gap="800" wrap>
                   <Box>
                     <Text variant="bodyMd" as="p" tone="subdued">
-                      Shop
+                      {t("shop")}
                     </Text>
                     <Text variant="bodyMd" as="p" fontWeight="semibold">
                       {user}
                     </Text>
                   </Box>
                   <Box>
-                    <Text variant="bodyMd" as="p" tone="subdued">
-                      Query Filter
+                    {/* <Text variant="bodyMd" as="p" tone="subdued">
+                      {t("queryFilter")}
                     </Text>
                     <Text variant="bodyMd" as="p" fontWeight="semibold">
                       {queryFilter || "None"}
-                    </Text>
+                    </Text> */}
                   </Box>
                   <Box>
                     <Text variant="bodyMd" as="p" tone="subdued">
-                      Total Products
+                      {t("totalProducts")}
                     </Text>
                     <Text variant="bodyMd" as="p" fontWeight="semibold">
                       {totalItems || 0}
@@ -663,12 +636,12 @@ const RecurringEditModal = ({ open, onClose, data, isLoading, error, onUpdated }
                 {/* Statistics */}
                 <BlockStack gap="300">
                   <Text variant="bodyMd" as="p" fontWeight="semibold">
-                    Run Statistics
+                    {t("runStatistics")}
                   </Text>
                   <InlineStack gap="800" wrap>
                     <Box>
                       <Text variant="bodyMd" as="p" tone="subdued">
-                        Total Runs
+                        {t("totalRuns")}
                       </Text>
                       <Text variant="headingLg" as="p">
                         {totalRuns || 0}
@@ -676,7 +649,7 @@ const RecurringEditModal = ({ open, onClose, data, isLoading, error, onUpdated }
                     </Box>
                     <Box>
                       <Text variant="bodyMd" as="p" tone="subdued">
-                        Successful Runs
+                        {t("successfulRuns")}
                       </Text>
                       <Text variant="headingLg" as="p" tone="success">
                         {totalRunsSucceed || 0}
@@ -684,7 +657,7 @@ const RecurringEditModal = ({ open, onClose, data, isLoading, error, onUpdated }
                     </Box>
                     <Box>
                       <Text variant="bodyMd" as="p" tone="subdued">
-                        Failed Runs
+                        {t("failedRuns")}
                       </Text>
                       <Text variant="headingLg" as="p" tone="critical">
                         {totalFails || 0}
@@ -692,7 +665,7 @@ const RecurringEditModal = ({ open, onClose, data, isLoading, error, onUpdated }
                     </Box>
                     <Box>
                       <Text variant="bodyMd" as="p" tone="subdued">
-                        Success Rate
+                        {t("successRate")}
                       </Text>
                       <Text
                         variant="headingLg"
@@ -730,12 +703,12 @@ const RecurringEditModal = ({ open, onClose, data, isLoading, error, onUpdated }
                 {/* Last Run Information */}
                 <BlockStack gap="300">
                   <Text variant="bodyMd" as="p" fontWeight="semibold">
-                    Last Run Information
+                    {t("lastRunInformation")}
                   </Text>
                   <InlineStack gap="800" wrap>
                     <Box>
                       <Text variant="bodyMd" as="p" tone="subdued">
-                        Last Run At
+                        {t("lastRunAt")}
                       </Text>
                       <Text variant="bodyMd" as="p" fontWeight="semibold">
                         {formatDate(lastRunAt?.$date || lastRunAt)}
@@ -743,7 +716,7 @@ const RecurringEditModal = ({ open, onClose, data, isLoading, error, onUpdated }
                     </Box>
                     <Box>
                       <Text variant="bodyMd" as="p" tone="subdued">
-                        Status
+                        {t("status")}
                       </Text>
                       <Box paddingBlockStart="100">
                         {getLastRunStatusBadge(lastRunStatus)}
@@ -751,7 +724,7 @@ const RecurringEditModal = ({ open, onClose, data, isLoading, error, onUpdated }
                     </Box>
                     <Box>
                       <Text variant="bodyMd" as="p" tone="subdued">
-                        Duration
+                        {t("duration")}
                       </Text>
                       <Text variant="bodyMd" as="p" fontWeight="semibold">
                         {durationMs
@@ -763,7 +736,7 @@ const RecurringEditModal = ({ open, onClose, data, isLoading, error, onUpdated }
                   {lastRunMessage && (
                     <Box>
                       <Text variant="bodyMd" as="p" tone="subdued">
-                        Last Message
+                        {t("lastRunMessage")}
                       </Text>
                       <Text variant="bodyMd" as="p" fontWeight="semibold">
                         {lastRunMessage}
@@ -775,12 +748,12 @@ const RecurringEditModal = ({ open, onClose, data, isLoading, error, onUpdated }
                 {/* Timestamps */}
                 <BlockStack gap="200">
                   <Text variant="bodyMd" as="p" fontWeight="semibold">
-                    Timestamps
+                    {t("timestamps")}
                   </Text>
                   <InlineStack gap="800" wrap>
                     <Box>
                       <Text variant="bodyMd" as="p" tone="subdued">
-                        Created
+                        {t("created")}
                       </Text>
                       <Text variant="bodyMd" as="p" fontWeight="semibold">
                         {formatDate(createdAt?.$date || createdAt)}
@@ -788,7 +761,7 @@ const RecurringEditModal = ({ open, onClose, data, isLoading, error, onUpdated }
                     </Box>
                     <Box>
                       <Text variant="bodyMd" as="p" tone="subdued">
-                        Last Updated
+                        {t("lastUpdated")}
                       </Text>
                       <Text variant="bodyMd" as="p" fontWeight="semibold">
                         {formatDate(updatedAt?.$date || updatedAt)}

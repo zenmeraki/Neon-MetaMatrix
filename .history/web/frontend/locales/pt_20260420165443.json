@@ -1130,7 +1130,7 @@
 "inventoryPolicyChoices": {
   "continueSelling": "Continuar vendendo quando estiver sem estoque",
   "denySelling": "Não continuar vendendo quando estiver sem estoque"
-},
+}
   "recurringEditErrors": {
     "titleRequired": "O título é obrigatório",
     "weekdayRequired": "Selecione pelo menos um dia da semana",

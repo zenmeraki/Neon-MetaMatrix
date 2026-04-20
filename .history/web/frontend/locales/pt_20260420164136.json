@@ -1057,6 +1057,7 @@
   "scheduled_for": "Agendado para",
   "at": "no",
   "undo_scheduled_for": "Desfazer agendado para",
+<<<<<<< HEAD
 
   "failureStage": "Estágio de falha",
   "IncreaseValue": "Aumentar valor",
@@ -1130,7 +1131,8 @@
 "inventoryPolicyChoices": {
   "continueSelling": "Continuar vendendo quando estiver sem estoque",
   "denySelling": "Não continuar vendendo quando estiver sem estoque"
-},
+}
+=======
   "recurringEditErrors": {
     "titleRequired": "O título é obrigatório",
     "weekdayRequired": "Selecione pelo menos um dia da semana",
@@ -1195,4 +1197,5 @@
   "spreadsheetConfirmPrimary": "Sim, importar produtos",
   "spreadsheetConfirmMessage": "Tem certeza de que deseja importar este CSV?",
   "spreadsheetConfirmBanner": "Os produtos serão atualizados com base no ID do produto e no ID da variante"
+>>>>>>> 0b0179c0a1b7ca7093f836ee98f3a7a3082dafe8
 }

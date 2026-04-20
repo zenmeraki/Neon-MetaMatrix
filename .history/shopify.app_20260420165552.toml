@@ -41,7 +41,12 @@ optional_scopes = [ ]
 use_legacy_install_flow = false
 
 [auth]
-[
+redirect_urls = [
+<<<<<<< HEAD
+  "https://tea-ralph-brooklyn-trout.trycloudflare.com/auth/callback",
+  "https://tea-ralph-brooklyn-trout.trycloudflare.com/auth/shopify/callback",
+  "https://tea-ralph-brooklyn-trout.trycloudflare.com/api/auth/callback"
+=======
   "https://reduction-initiative-loving-august.trycloudflare.com/auth/callback",
   "https://reduction-initiative-loving-august.trycloudflare.com/auth/shopify/callback",
   "https://reduction-initiative-loving-august.trycloudflare.com/api/auth/callback"

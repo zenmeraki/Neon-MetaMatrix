@@ -1161,7 +1161,9 @@
     "continueSelling": "Continue selling when out of stock",
     "denySelling": "Don't continue selling when out of stock"
   },
-  
+  "recurringEditErrors": {
+    "titleRequired": "Title is required"
+  }
   "recurringEditErrors": {
     "titleRequired": "Title is required",
     "weekdayRequired": "Please select at least one weekday",

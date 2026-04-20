@@ -1129,7 +1129,7 @@
 "inventoryPolicyChoices": {
   "continueSelling": "Continuer à vendre en cas de rupture de stock",
   "denySelling": "Ne pas continuer à vendre en cas de rupture de stock"
-},
+}
   "recurringEditErrors": {
     "titleRequired": "Le titre est requis",
     "weekdayRequired": "Veuillez sélectionner au moins un jour de la semaine",

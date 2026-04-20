@@ -1129,7 +1129,7 @@
 "inventoryPolicyChoices": {
   "continueSelling": "Weiterverkaufen, wenn nicht auf Lager",
   "denySelling": "Nicht weiterverkaufen, wenn nicht auf Lager"
-},
+},,
   "recurringEditErrors": {
     "titleRequired": "Titel ist erforderlich",
     "weekdayRequired": "Bitte wählen Sie mindestens einen Wochentag aus",

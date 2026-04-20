@@ -1032,6 +1032,7 @@
     "scheduled": "Запланированный экспорт"
   },
   "exportDownloadLinkMissing": "Ссылка на скачивание недоступна.",
+  "exportDownloadFailed": "Не удалось загрузить файл."
   "exportDownloadFailed": "Не удалось загрузить файл.",
   "scheduledExport": {
     "failedMessage": "Не удалось запланировать экспорт.",

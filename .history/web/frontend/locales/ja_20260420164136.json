@@ -1056,6 +1056,7 @@
   "scheduled_for": "予定されている",
   "at": "で",
   "undo_scheduled_for": "予定を元に戻す",
+<<<<<<< HEAD
   "failureStage": "故障段階",
   "IncreaseValue": "価値を高める",
   "search_multiple": "検索して複数選択...",
@@ -1127,7 +1128,8 @@
 "inventoryPolicyChoices": {
   "continueSelling": "在庫切れでも販売を続ける",
   "denySelling": "在庫切れの場合は販売しない"
-},
+}
+=======
   "recurringEditErrors": {
     "titleRequired": "タイトルは必須です",
     "weekdayRequired": "少なくとも 1 つの平日を選択してください",
@@ -1192,4 +1194,5 @@
   "spreadsheetConfirmPrimary": "はい、製品を輸入します",
   "spreadsheetConfirmMessage": "この CSV をインポートしてもよろしいですか?",
   "spreadsheetConfirmBanner": "製品は製品 ID とバリアント ID に基づいて更新されます"
+>>>>>>> 0b0179c0a1b7ca7093f836ee98f3a7a3082dafe8
 }

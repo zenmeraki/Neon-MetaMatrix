@@ -1032,6 +1032,9 @@
     "scheduled": "Запланированный экспорт"
   },
   "exportDownloadLinkMissing": "Ссылка на скачивание недоступна.",
+<<<<<<< HEAD
+  "exportDownloadFailed": "Не удалось загрузить файл."
+=======
   "exportDownloadFailed": "Не удалось загрузить файл.",
   "scheduledExport": {
     "failedMessage": "Не удалось запланировать экспорт.",
@@ -1115,4 +1118,5 @@
   "spreadsheetConfirmPrimary": "Да, импортные товары",
   "spreadsheetConfirmMessage": "Вы уверены, что хотите импортировать этот CSV-файл?",
   "spreadsheetConfirmBanner": "Продукты будут обновляться на основе идентификатора продукта и идентификатора варианта."
+>>>>>>> 0b0179c0a1b7ca7093f836ee98f3a7a3082dafe8
 }

@@ -1078,6 +1078,7 @@
   "scheduled_for": "के लिए शेड्यूल किया गया",
   "at": "पर",
   "undo_scheduled_for": "पूर्ववत करने के लिए शेड्यूल किया गया",
+<<<<<<< HEAD
   "failureStage": "विफलता चरण",
   "IncreaseValue": "मूल्य बढ़ाएँ",
   "search_multiple": "एकाधिक खोजें और चुनें...",
@@ -1152,8 +1153,9 @@
 "inventoryPolicyChoices": {
   "continueSelling": "स्टॉक खत्म होने पर भी बिक्री जारी रखें",
   "denySelling": "स्टॉक खत्म होने पर बिक्री जारी न रखें"
-},
+}
 
+=======
   "recurringEditErrors": {
     "titleRequired": "शीर्षक आवश्यक है",
     "weekdayRequired": "कृपया कम से कम एक कार्यदिवस चुनें",
@@ -1226,4 +1228,5 @@
   "spreadsheetConfirmPrimary": "हाँ, उत्पाद आयात करें",
   "spreadsheetConfirmMessage": "क्या आप वाकई इस सीएसवी को आयात करना चाहते हैं?",
   "spreadsheetConfirmBanner": "उत्पाद आईडी और वैरिएंट आईडी के आधार पर उत्पादों को अपडेट किया जाएगा"
+>>>>>>> 0b0179c0a1b7ca7093f836ee98f3a7a3082dafe8
 }

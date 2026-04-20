@@ -1057,6 +1057,7 @@
   "scheduled_for": "예정된",
   "at": "~에",
   "undo_scheduled_for": "실행취소 예정 날짜",
+<<<<<<< HEAD
   
   "failureStage": "실패 단계",
   "IncreaseValue": "가치 증대",
@@ -1130,7 +1131,8 @@
 "inventoryPolicyChoices": {
   "continueSelling": "재고가 없어도 계속 판매",
   "denySelling": "재고가 없으면 판매하지 않음"
-},
+}
+=======
   "recurringEditErrors": {
     "titleRequired": "제목은 필수 항목입니다.",
     "weekdayRequired": "평일을 하나 이상 선택하세요.",
@@ -1195,4 +1197,5 @@
   "spreadsheetConfirmPrimary": "예, 수입 제품입니다.",
   "spreadsheetConfirmMessage": "이 CSV를 가져오시겠습니까?",
   "spreadsheetConfirmBanner": "제품은 제품 ID 및 변형 ID를 기반으로 업데이트됩니다."
+>>>>>>> 0b0179c0a1b7ca7093f836ee98f3a7a3082dafe8
 }

@@ -1072,6 +1072,7 @@
   "scheduled_for": "المقرر ل",
   "at": "في",
   "undo_scheduled_for": "التراجع عن المقرر ل",
+<<<<<<< HEAD
   "IncreaseValue": "زيادة القيمة",
   "search_multiple": "بحث واختيار عدة...",
   "location": "موقع",
@@ -1143,7 +1144,8 @@
 "inventoryPolicyChoices": {
   "continueSelling": "الاستمرار في البيع عند نفاد المخزون",
   "denySelling": "عدم الاستمرار في البيع عند نفاد المخزون"
-},
+}
+=======
   "recurringEditErrors": {
     "titleRequired": "العنوان مطلوب",
     "weekdayRequired": "يرجى تحديد يوم واحد على الأقل من أيام الأسبوع",
@@ -1208,4 +1210,5 @@
   "spreadsheetConfirmPrimary": "نعم استيراد المنتجات",
   "spreadsheetConfirmMessage": "هل أنت متأكد أنك تريد استيراد ملف CSV هذا؟",
   "spreadsheetConfirmBanner": "سيتم تحديث المنتجات بناءً على معرف المنتج ومعرف المتغير"
+>>>>>>> 0b0179c0a1b7ca7093f836ee98f3a7a3082dafe8
 }

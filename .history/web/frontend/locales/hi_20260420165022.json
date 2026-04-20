@@ -1152,7 +1152,7 @@
 "inventoryPolicyChoices": {
   "continueSelling": "स्टॉक खत्म होने पर भी बिक्री जारी रखें",
   "denySelling": "स्टॉक खत्म होने पर बिक्री जारी न रखें"
-},
+}
 
   "recurringEditErrors": {
     "titleRequired": "शीर्षक आवश्यक है",

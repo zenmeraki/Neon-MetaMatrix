@@ -1128,7 +1128,7 @@
 "inventoryPolicyChoices": {
   "continueSelling": "缺货时继续销售",
   "denySelling": "缺货时不继续销售"
-},
+}
   "recurringEditErrors": {
     "titleRequired": "标题为必填项",
     "weekdayRequired": "请至少选择一个工作日",

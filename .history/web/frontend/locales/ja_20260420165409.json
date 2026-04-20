@@ -1127,7 +1127,7 @@
 "inventoryPolicyChoices": {
   "continueSelling": "在庫切れでも販売を続ける",
   "denySelling": "在庫切れの場合は販売しない"
-},
+}
   "recurringEditErrors": {
     "titleRequired": "タイトルは必須です",
     "weekdayRequired": "少なくとも 1 つの平日を選択してください",

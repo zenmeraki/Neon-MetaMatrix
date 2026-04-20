@@ -155,18 +155,24 @@ function RecurringEditModal({
   const validate = useCallback(() => {
     if (!title.trim()) {
       return t("recurringEditErrors.titleRequired");
+<<<<<<< HEAD
+=======
+
+>>>>>>> 0b0179c0a1b7ca7093f836ee98f3a7a3082dafe8
     }
 
     if (needsWeekdaySelection && daysOfWeekToRun.length === 0) {
-      return "Please select at least one weekday";
+      return t("recurringEditErrors.weekdayRequired");
+
     }
 
     if (hasStartAt && !startDate) {
-      return "Please select a start date";
+      return t("recurringEditErrors.startDateRequired");
     }
 
     if (hasEndAt && !endDate) {
-      return "Please select an end date";
+      return t("recurringEditErrors.endDateRequired");
+
     }
 
     const startAt = hasStartAt
@@ -175,7 +181,7 @@ function RecurringEditModal({
     const endAt = hasEndAt ? buildIsoFromDateAndTime(endDate, endTime) : null;
 
     if (startAt && endAt && new Date(startAt) >= new Date(endAt)) {
-      return "End time must be after start time";
+      return t("recurringEditErrors.endAfterStart");
     }
 
     return "";
@@ -249,7 +255,8 @@ function RecurringEditModal({
       const data = await response.json();
 
       if (!response.ok) {
-        const message = data?.message || "Failed to create recurring edit";
+        const message =
+  data?.message || t("recurringEditErrors.createFailed");
 
         if (response.status === 400 && message.toLowerCase().includes("pro")) {
           setUpgradeWarning(message);
@@ -262,7 +269,7 @@ function RecurringEditModal({
 
       setToastState({
         active: true,
-        message: "Recurring edit created successfully",
+        message: t("recurringEditSuccess.created"),
         error: false,
       });
 
@@ -271,10 +278,10 @@ function RecurringEditModal({
         navigate("/history");
       }, 800);
     } catch (requestError) {
-      setError(requestError.message || "Failed to create recurring edit");
+      setError(requestError.message || t("recurringEditErrors.createFailed"));
       setToastState({
         active: true,
-        message: requestError.message || "Failed to create recurring edit",
+        message: requestError.message || t("recurringEditErrors.createFailed"),
         error: true,
       });
     } finally {
@@ -343,10 +350,10 @@ function RecurringEditModal({
             {upgradeWarning && (
               <Banner
                 tone="warning"
-                title="Upgrade Required"
+                title={t("recurringEditUpgradeRequired")}
                 onDismiss={() => setUpgradeWarning("")}
                 action={{
-                  content: "Upgrade Plan",
+                  content: t("recurringEditUpgradePlan"),
                   onAction: () => navigate("/pricing"),
                 }}
               >
@@ -416,7 +423,7 @@ function RecurringEditModal({
                     {DAYS_OF_WEEK.map((day) => (
                       <Checkbox
                         key={day}
-                        label={day}
+                        label={t(`weekdays.${day}`)}
                         checked={daysOfWeekToRun.includes(day)}
                         onChange={(checked) => handleWeekdayChange(day, checked)}
                       />

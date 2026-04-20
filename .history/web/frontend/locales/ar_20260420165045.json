@@ -1143,7 +1143,7 @@
 "inventoryPolicyChoices": {
   "continueSelling": "الاستمرار في البيع عند نفاد المخزون",
   "denySelling": "عدم الاستمرار في البيع عند نفاد المخزون"
-},
+}
   "recurringEditErrors": {
     "titleRequired": "العنوان مطلوب",
     "weekdayRequired": "يرجى تحديد يوم واحد على الأقل من أيام الأسبوع",
