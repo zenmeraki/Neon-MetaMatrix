@@ -1070,5 +1070,56 @@
     "created": "Edição recorrente criada com sucesso"
   },
   "recurringEditUpgradeRequired": "Atualização necessária",
-  "recurringEditUpgradePlan": "Plano de atualização"
+  "recurringEditUpgradePlan": "Plano de atualização",
+  "editRecurringEdit": "Editar agendamento recorrente",
+  "failedToLoadRecurringEditDetails": "Falha ao carregar detalhes de edição recorrente",
+  "updateRecurringEdit": "Atualizar edição recorrente",
+  "enterDescriptiveTitle": "Insira um título descritivo para esta edição recorrente",
+  "timezone": "Fuso horário",
+  "frequencyHelpText": "Com que frequência esta edição deve ser executada?",
+  "statusHelpText": "Defina como Inativo para pausar o agendamento",
+  "selectTimezoneForScheduling": "Todos os horários serão interpretados neste fuso horário",
+  "currentSteps": "Etapas de edição atuais",
+  "currentStepsDescription": "Esta edição recorrente executa as seguintes ações:",
+  "step": "Etapa",
+  "using": "usando",
+  "to_value": "valorizar",
+  "executionDetails": "Detalhes de execução",
+  "currentlyRunning": "Atualmente em execução",
+  "shop": "Comprar",
+  "queryFilter": "Filtro de consulta",
+  "runStatistics": "Executar estatísticas",
+  "totalRuns": "Total de corridas",
+  "successfulRuns": "Execuções bem-sucedidas",
+  "failedRuns": "Execuções com falha",
+  "successRate": "Taxa de sucesso",
+  "lastRunInformation": "Informações da última execução",
+  "lastRunAt": "Última execução em",
+  "lastRunMessage": "Última mensagem",
+  "timestamps": "Carimbos de data e hora",
+  "lastUpdated": "Última atualização",
+  "timeToRun": "Hora de correr",
+  "timeToRunHelpText": "Insira a hora em que deseja que esta edição seja executada",
+  "timezoneRecurring": {
+    "india": "Ásia/Calcutá (IST)",
+    "utc": "UTC",
+    "newYork": "América/Nova_Iorque (EST/EDT)",
+    "london": "Europa/Londres (GMT/BST)",
+    "tokyo": "Ásia/Tóquio (JST)"
+  },
+  "statusRecurring": {
+    "active": "Ativo",
+    "inactive": "Inativo"
+  },
+  "frequencyRecurring": {
+    "hourly": "De hora em hora",
+    "every2Hours": "A cada 2 horas",
+    "daily": "Diário",
+    "weekly": "Semanalmente",
+    "monthly": "Mensal"
+  },
+  "spreadsheetConfirmTitle": "Confirme a importação do produto",
+  "spreadsheetConfirmPrimary": "Sim, importar produtos",
+  "spreadsheetConfirmMessage": "Tem certeza de que deseja importar este CSV?",
+  "spreadsheetConfirmBanner": "Os produtos serão atualizados com base no ID do produto e no ID da variante"
 }

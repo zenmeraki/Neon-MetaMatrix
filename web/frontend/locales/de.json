@@ -1071,5 +1071,56 @@
     "created": "Wiederkehrende Bearbeitung erfolgreich erstellt"
   },
   "recurringEditUpgradeRequired": "Upgrade erforderlich",
-  "recurringEditUpgradePlan": "Upgrade-Plan"
+  "recurringEditUpgradePlan": "Upgrade-Plan",
+  "editRecurringEdit": "Bearbeiten Sie den wiederkehrenden Zeitplan",
+  "failedToLoadRecurringEditDetails": "Wiederkehrende Bearbeitungsdetails konnten nicht geladen werden",
+  "updateRecurringEdit": "Aktualisieren Sie die wiederkehrende Bearbeitung",
+  "enterDescriptiveTitle": "Geben Sie einen beschreibenden Titel für diese wiederkehrende Bearbeitung ein",
+  "timezone": "Zeitzone",
+  "frequencyHelpText": "Wie oft sollte diese Bearbeitung ausgeführt werden?",
+  "statusHelpText": "Auf „Inaktiv“ setzen, um die Planung anzuhalten",
+  "selectTimezoneForScheduling": "Alle Zeiten werden in dieser Zeitzone interpretiert",
+  "currentSteps": "Aktuelle Bearbeitungsschritte",
+  "currentStepsDescription": "Diese wiederkehrende Bearbeitung führt die folgenden Aktionen aus:",
+  "step": "Schritt",
+  "using": "verwenden",
+  "to_value": "zu schätzen",
+  "executionDetails": "Ausführungsdetails",
+  "currentlyRunning": "Wird derzeit ausgeführt",
+  "shop": "Geschäft",
+  "queryFilter": "Abfragefilter",
+  "runStatistics": "Statistiken ausführen",
+  "totalRuns": "Gesamtanzahl der Läufe",
+  "successfulRuns": "Erfolgreiche Läufe",
+  "failedRuns": "Fehlgeschlagene Läufe",
+  "successRate": "Erfolgsquote",
+  "lastRunInformation": "Informationen zum letzten Lauf",
+  "lastRunAt": "Letzter Lauf um",
+  "lastRunMessage": "Letzte Nachricht",
+  "timestamps": "Zeitstempel",
+  "lastUpdated": "Zuletzt aktualisiert",
+  "timeToRun": "Zeit zum Laufen",
+  "timeToRunHelpText": "Geben Sie die Zeit ein, zu der diese Bearbeitung ausgeführt werden soll",
+  "timezoneRecurring": {
+    "india": "Asien/Kalkutta (IST)",
+    "utc": "koordinierte Weltzeit",
+    "newYork": "Amerika/New_York (EST/EDT)",
+    "london": "Europa/London (GMT/BST)",
+    "tokyo": "Asien/Tokio (JST)"
+  },
+  "statusRecurring": {
+    "active": "Aktiv",
+    "inactive": "Inaktiv"
+  },
+  "frequencyRecurring": {
+    "hourly": "Stündlich",
+    "every2Hours": "Alle 2 Stunden",
+    "daily": "Täglich",
+    "weekly": "Wöchentlich",
+    "monthly": "Monatlich"
+  },
+  "spreadsheetConfirmTitle": "Bestätigen Sie den Produktimport",
+  "spreadsheetConfirmPrimary": "Ja, Produkte importieren",
+  "spreadsheetConfirmMessage": "Sind Sie sicher, dass Sie diese CSV-Datei importieren möchten?",
+  "spreadsheetConfirmBanner": "Produkte werden basierend auf Produkt-ID und Varianten-ID aktualisiert"
 }

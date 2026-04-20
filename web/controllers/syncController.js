@@ -8,6 +8,7 @@ import { logApiError } from "../utils/errorLogUtils.js";
 import { prisma } from "../config/database.js";
 
 const service = new Services();
+
 export const syncProductData = async (req, res) => {
   const session = res.locals?.shopify?.session;
 

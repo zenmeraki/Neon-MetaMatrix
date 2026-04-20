@@ -1084,5 +1084,56 @@
     "created": "تم إنشاء التعديل المتكرر بنجاح"
   },
   "recurringEditUpgradeRequired": "الترقية مطلوبة",
-  "recurringEditUpgradePlan": "خطة الترقية"
+  "recurringEditUpgradePlan": "خطة الترقية",
+  "editRecurringEdit": "تحرير الجدول المتكرر",
+  "failedToLoadRecurringEditDetails": "فشل تحميل تفاصيل التعديل المتكررة",
+  "updateRecurringEdit": "تحديث التحرير المتكرر",
+  "enterDescriptiveTitle": "أدخل عنوانًا وصفيًا لهذا التعديل المتكرر",
+  "timezone": "المنطقة الزمنية",
+  "frequencyHelpText": "كم مرة يجب أن يتم تنفيذ هذا التعديل؟",
+  "statusHelpText": "اضبط على غير نشط لإيقاف الجدولة مؤقتًا",
+  "selectTimezoneForScheduling": "سيتم تفسير جميع الأوقات في هذه المنطقة الزمنية",
+  "currentSteps": "خطوات التحرير الحالية",
+  "currentStepsDescription": "يؤدي هذا التعديل المتكرر إلى تنفيذ الإجراءات التالية:",
+  "step": "خطوة",
+  "using": "استخدام",
+  "to_value": "لقيمة",
+  "executionDetails": "تفاصيل التنفيذ",
+  "currentlyRunning": "قيد التشغيل حاليًا",
+  "shop": "محل",
+  "queryFilter": "عامل تصفية الاستعلام",
+  "runStatistics": "تشغيل الإحصائيات",
+  "totalRuns": "إجمالي عدد مرات التشغيل",
+  "successfulRuns": "أشواط ناجحة",
+  "failedRuns": "عمليات فاشلة",
+  "successRate": "معدل النجاح",
+  "lastRunInformation": "معلومات التشغيل الأخيرة",
+  "lastRunAt": "آخر تشغيل في",
+  "lastRunMessage": "الرسالة الأخيرة",
+  "timestamps": "الطوابع الزمنية",
+  "lastUpdated": "آخر تحديث",
+  "timeToRun": "وقت التشغيل",
+  "timeToRunHelpText": "أدخل الوقت الذي تريد تشغيل هذا التعديل فيه",
+  "timezoneRecurring": {
+    "india": "آسيا/كولكاتا (IST)",
+    "utc": "التوقيت العالمي",
+    "newYork": "أمريكا/نيويورك (توقيت شرق الولايات المتحدة/توقيت شرق الولايات المتحدة)",
+    "london": "أوروبا/لندن (توقيت جرينتش/توقيت جرينتش)",
+    "tokyo": "آسيا/طوكيو (JST)"
+  },
+  "statusRecurring": {
+    "active": "نشيط",
+    "inactive": "غير نشط"
+  },
+  "frequencyRecurring": {
+    "hourly": "كل ساعة",
+    "every2Hours": "كل ساعتين",
+    "daily": "يوميًا",
+    "weekly": "أسبوعي",
+    "monthly": "شهريا"
+  },
+  "spreadsheetConfirmTitle": "تأكيد استيراد المنتج",
+  "spreadsheetConfirmPrimary": "نعم استيراد المنتجات",
+  "spreadsheetConfirmMessage": "هل أنت متأكد أنك تريد استيراد ملف CSV هذا؟",
+  "spreadsheetConfirmBanner": "سيتم تحديث المنتجات بناءً على معرف المنتج ومعرف المتغير"
 }

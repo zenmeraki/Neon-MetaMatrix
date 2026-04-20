@@ -1069,5 +1069,55 @@
     "created": "重复编辑已成功创建"
   },
   "recurringEditUpgradeRequired": "需要升级",
-  "recurringEditUpgradePlan": "升级计划"
+  "recurringEditUpgradePlan": "升级计划",
+  "editRecurringEdit": "编辑定期计划",
+  "failedToLoadRecurringEditDetails": "无法加载重复编辑详细信息",
+  "updateRecurringEdit": "更新定期编辑",
+  "enterDescriptiveTitle": "输入此重复编辑的描述性标题",
+  "timezone": "时区",
+  "frequencyHelpText": "此编辑应该多久运行一次？",
+  "statusHelpText": "设置为“非活动”以暂停调度",
+  "selectTimezoneForScheduling": "所有时间都将在此时区解释",
+  "currentSteps": "当前编辑步骤",
+  "currentStepsDescription": "此重复编辑执行以下操作：",
+  "step": "步",
+  "using": "使用",
+  "to_value": "重视",
+  "executionDetails": "执行详情",
+  "currentlyRunning": "目前正在运行",
+  "shop": "店铺",
+  "queryFilter": "查询过滤器",
+  "runStatistics": "运行统计",
+  "totalRuns": "总运行次数",
+  "successfulRuns": "成功运行",
+  "failedRuns": "失败的运行",
+  "successRate": "成功率",
+  "lastRunInformation": "最后运行信息",
+  "lastRunAt": "上次运行时间",
+  "lastRunMessage": "最后留言",
+  "timestamps": "时间戳",
+  "lastUpdated": "最后更新",
+  "timeToRun": "跑步时间",
+  "timeToRunHelpText": "输入您希望此编辑运行的时间",
+  "timezoneRecurring": {
+    "india": "亚洲/加尔各答 (IST)",
+    "utc": "世界标准时间",
+    "newYork": "美洲/纽约 (EST/EDT)",
+    "london": "欧洲/伦敦（格林威治标准时间/英国夏令时）",
+    "tokyo": "亚洲/东京（JST）"
+  },
+  "statusRecurring": {
+    "active": "积极的",
+    "inactive": "不活跃"
+  },
+  "frequencyRecurring": {
+    "hourly": "每小时",
+    "every2Hours": "每 2 小时",
+    "daily": "日常的",
+    "weekly": "每周",
+    "monthly": "每月"
+  },
+  "spreadsheetConfirmTitle": "确认产品导入",
+  "spreadsheetConfirmPrimary": "是的，进口产品",
+  "spreadsheetConfirmMessage": "您确定要导入此 CSV 吗？"
 }

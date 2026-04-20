@@ -1069,5 +1069,50 @@
     "created": "Повторяющееся изменение успешно создано"
   },
   "recurringEditUpgradeRequired": "Требуется обновление",
-  "recurringEditUpgradePlan": "План обновления"
+  "recurringEditUpgradePlan": "План обновления",
+  "editRecurringEdit": "Изменить повторяющееся расписание",
+  "failedToLoadRecurringEditDetails": "Не удалось загрузить сведения о повторяющихся изменениях.",
+  "updateRecurringEdit": "Обновление, повторяющееся редактирование",
+  "enterDescriptiveTitle": "Введите описательное название для этого повторяющегося редактирования.",
+  "timezone": "Часовой пояс",
+  "frequencyHelpText": "Как часто следует выполнять это редактирование?",
+  "statusHelpText": "Установите значение «Неактивно», чтобы приостановить планирование.",
+  "selectTimezoneForScheduling": "Все времена будут интерпретироваться в этом часовом поясе.",
+  "currentSteps": "Текущие этапы редактирования",
+  "currentStepsDescription": "Это повторяющееся редактирование выполняет следующие действия:",
+  "step": "Шаг",
+  "to_value": "ценить",
+  "currentlyRunning": "В настоящее время работает",
+  "shop": "Магазин",
+  "queryFilter": "Фильтр запросов",
+  "runStatistics": "Запустить статистику",
+  "successfulRuns": "Успешные пробеги",
+  "failedRuns": "Неудачные запуски",
+  "successRate": "Уровень успеха",
+  "timestamps": "Временные метки",
+  "lastUpdated": "Последнее обновление",
+  "timeToRun": "Время бежать",
+  "timeToRunHelpText": "Введите время, в которое вы хотите, чтобы это изменение было выполнено.",
+  "timezoneRecurring": {
+    "india": "Азия/Калькутта (IST)",
+    "utc": "универсальное глобальное время",
+    "newYork": "Америка/Нью-Йорк (EST/EDT)",
+    "london": "Европа/Лондон (GMT/BST)",
+    "tokyo": "Азия/Токио (JST)"
+  },
+  "statusRecurring": {
+    "active": "Активный",
+    "inactive": "Неактивный"
+  },
+  "frequencyRecurring": {
+    "hourly": "Ежечасно",
+    "every2Hours": "Каждые 2 часа",
+    "daily": "Ежедневно",
+    "weekly": "Еженедельно",
+    "monthly": "Ежемесячно"
+  },
+  "spreadsheetConfirmTitle": "Подтвердить импорт продукта",
+  "spreadsheetConfirmPrimary": "Да, импортные товары",
+  "spreadsheetConfirmMessage": "Вы уверены, что хотите импортировать этот CSV-файл?",
+  "spreadsheetConfirmBanner": "Продукты будут обновляться на основе идентификатора продукта и идентификатора варианта."
 }

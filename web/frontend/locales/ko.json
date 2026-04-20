@@ -1070,5 +1070,56 @@
     "created": "반복 수정사항이 성공적으로 생성되었습니다."
   },
   "recurringEditUpgradeRequired": "업그레이드 필요",
-  "recurringEditUpgradePlan": "업그레이드 계획"
+  "recurringEditUpgradePlan": "업그레이드 계획",
+  "editRecurringEdit": "반복 일정 편집",
+  "failedToLoadRecurringEditDetails": "반복 수정 세부정보를 로드하지 못했습니다.",
+  "updateRecurringEdit": "반복 편집 업데이트",
+  "enterDescriptiveTitle": "이 반복 수정 사항을 설명하는 제목을 입력하세요.",
+  "timezone": "시간대",
+  "frequencyHelpText": "이 편집은 얼마나 자주 실행되어야 합니까?",
+  "statusHelpText": "일정을 일시 중지하려면 비활성으로 설정하세요.",
+  "selectTimezoneForScheduling": "모든 시간은 이 시간대로 해석됩니다.",
+  "currentSteps": "현재 편집 단계",
+  "currentStepsDescription": "이 반복 편집은 다음 작업을 수행합니다.",
+  "step": "단계",
+  "using": "사용하여",
+  "to_value": "가치를 부여하다",
+  "executionDetails": "실행 세부정보",
+  "currentlyRunning": "현재 실행 중",
+  "shop": "가게",
+  "queryFilter": "쿼리 필터",
+  "runStatistics": "통계 실행",
+  "totalRuns": "총 실행",
+  "successfulRuns": "성공적인 실행",
+  "failedRuns": "실패한 실행",
+  "successRate": "성공률",
+  "lastRunInformation": "마지막 실행 정보",
+  "lastRunAt": "마지막 실행 시간",
+  "lastRunMessage": "마지막 메시지",
+  "timestamps": "타임스탬프",
+  "lastUpdated": "마지막 업데이트",
+  "timeToRun": "실행할 시간",
+  "timeToRunHelpText": "이 수정사항을 실행할 시간을 입력하세요.",
+  "timezoneRecurring": {
+    "india": "아시아/콜카타(IST)",
+    "utc": "UTC",
+    "newYork": "미국/뉴욕(EST/EDT)",
+    "london": "유럽/런던(GMT/BST)",
+    "tokyo": "아시아/도쿄(JST)"
+  },
+  "statusRecurring": {
+    "active": "활동적인",
+    "inactive": "비활성"
+  },
+  "frequencyRecurring": {
+    "hourly": "시간별",
+    "every2Hours": "2시간마다",
+    "daily": "일일",
+    "weekly": "주간",
+    "monthly": "월간 간행물"
+  },
+  "spreadsheetConfirmTitle": "제품 수입 확인",
+  "spreadsheetConfirmPrimary": "예, 수입 제품입니다.",
+  "spreadsheetConfirmMessage": "이 CSV를 가져오시겠습니까?",
+  "spreadsheetConfirmBanner": "제품은 제품 ID 및 변형 ID를 기반으로 업데이트됩니다."
 }

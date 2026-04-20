@@ -1103,5 +1103,77 @@
     "created": "Recurring edit created successfully"
   },
   "recurringEditUpgradeRequired": "Upgrade Required",
-  "recurringEditUpgradePlan": "Upgrading Plan"
+  "recurringEditUpgradePlan": "Upgrading Plan",
+  "editRecurringEdit": "Edit Recurring Schedule",
+  "failedToLoadRecurringEditDetails": "Failed to load recurring edit details",
+  "updateRecurringEdit": "Update Recurring Edit",
+  "enterDescriptiveTitle": "Enter a descriptive title for this recurring edit",
+  "timezone": "Timezone",
+  "frequencyHelpText": "How often should this edit run?",
+  "statusHelpText": "Set to Inactive to pause scheduling",
+  "selectTimezoneForScheduling": "All times will be interpreted in this timezone",
+  "currentSteps": "Current Edit Steps",
+  "currentStepsDescription": "This recurring edit performs the following actions:",
+  "step": "Step",
+  "using": "using",
+  "to_value": "to  value",
+  "executionDetails": "Execution Details",
+  "currentlyRunning": "Currently Running",
+  "shop": "Shop",
+  "queryFilter": "Query Filter",
+  "runStatistics": " Run Statistics",
+  "totalRuns": "Total Runs",
+  "successfulRuns": "Successful Runs",
+  "failedRuns": "Failed Runs",
+  "successRate": "Success Rate",
+  "lastRunInformation": "Last Run Information",
+  "lastRunAt": " Last Run At",
+  "lastRunMessage": "Last Message",
+  "timestamps": "Timestamps",
+  "lastUpdated": "Last Updated",
+  "timeToRun": "Time to Run",
+  "timeToRunHelpText": "Enter the time you want this edit to run",
+  "frequencyRecurring": {
+    "hourly": "Hourly",
+    "every2Hours": "Every 2 Hours",
+    "daily": "Daily",
+    "weekly": "Weekly",
+    "monthly": "Monthly"
+  },
+  "statusRecurring": {
+    "active": "Active",
+    "inactive": "Inactive",
+    "paused": "Paused",
+    "completed": "Completed",
+    "failed": "Failed",
+    "expired": "Expired"
+  },
+  "timezoneRecurring": {
+    "india": "Asia/Kolkata (IST)",
+    "utc": "UTC",
+    "newYork": "America/New_York (EST/EDT)",
+    "london": "Europe/London (GMT/BST)",
+    "tokyo": "Asia/Tokyo (JST)"
+  },
+  "days": {
+    "sunday": "Sunday",
+    "monday": "Monday",
+    "tuesday": "Tuesday",
+    "wednesday": "Wednesday",
+    "thursday": "Thursday",
+    "friday": "Friday",
+    "saturday": "Saturday"
+  },
+  "runStatus": {
+    "success": "Success",
+    "failed": "Failed",
+    "error": "Error",
+    "running": "Running",
+    "processing": "Processing",
+    "skipped": "Skipped"
+  },
+  "spreadsheetConfirmTitle": "Confirm Product Import",
+  "spreadsheetConfirmPrimary": "Yes, Import Products",
+  "spreadsheetConfirmMessage": "Are you sure you want to import this CSV?",
+  "spreadsheetConfirmBanner": "Products will be updated based on Product ID and Variant ID"
 }

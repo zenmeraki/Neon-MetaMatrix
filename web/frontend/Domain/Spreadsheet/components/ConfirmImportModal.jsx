@@ -13,11 +13,9 @@ export default function ConfirmImportModal({
         <Modal
             open={open}
             onClose={loading ? () => {} : onClose}
-            title={t("spreadsheetConfirmTitle", { defaultValue: "Confirm Product Import" })}
+            title={t("spreadsheetConfirmTitle")}
             primaryAction={{
-                content: t("spreadsheetConfirmPrimary", {
-                    defaultValue: "Yes, Import Products",
-                }),
+                content: t("spreadsheetConfirmPrimary"),
                 destructive: true,
                 onAction: onConfirm,
                 loading,
@@ -25,7 +23,7 @@ export default function ConfirmImportModal({
             }}
             secondaryActions={[
                 {
-                    content: t("spreadsheetCancel", { defaultValue: "Cancel" }),
+                    content: t("cancel", { defaultValue: "Cancel" }),
                     onAction: onClose,
                     disabled: loading,
                 },
@@ -33,18 +31,13 @@ export default function ConfirmImportModal({
         >
             <Modal.Section>
                 <Text>
-                    {t("spreadsheetConfirmMessage", {
-                        defaultValue: "Are you sure you want to import this CSV?",
-                    })}
+                    {t("spreadsheetConfirmMessage")}
                 </Text>
 
                 <Box paddingBlockStart="300">
                     <Banner tone="critical">
                         <p>
-                            {t("spreadsheetConfirmBanner", {
-                                defaultValue:
-                                    "Products will be updated based on Product ID and Variant ID.",
-                            })}
+                            {t("spreadsheetConfirmBanner")}
                         </p>
                     </Banner>
                 </Box>
