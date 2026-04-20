@@ -164,12 +164,11 @@ function RecurringEditModal({
     }
 
     if (hasStartAt && !startDate) {
-      return t("recurringEditErrors.startDateRequired");
+      return "Please select a start date";
     }
 
     if (hasEndAt && !endDate) {
-      return t("recurringEditErrors.endDateRequired");
-
+      return "Please select an end date";
     }
 
     const startAt = hasStartAt
@@ -178,7 +177,7 @@ function RecurringEditModal({
     const endAt = hasEndAt ? buildIsoFromDateAndTime(endDate, endTime) : null;
 
     if (startAt && endAt && new Date(startAt) >= new Date(endAt)) {
-      return t("recurringEditErrors.endAfterStart");
+      return "End time must be after start time";
     }
 
     return "";
@@ -252,8 +251,7 @@ function RecurringEditModal({
       const data = await response.json();
 
       if (!response.ok) {
-        const message =
-  data?.message || t("recurringEditErrors.createFailed");
+        const message = data?.message || "Failed to create recurring edit";
 
         if (response.status === 400 && message.toLowerCase().includes("pro")) {
           setUpgradeWarning(message);
@@ -266,7 +264,7 @@ function RecurringEditModal({
 
       setToastState({
         active: true,
-        message: t("recurringEditSuccess.created"),
+        message: "Recurring edit created successfully",
         error: false,
       });
 
@@ -275,10 +273,10 @@ function RecurringEditModal({
         navigate("/history");
       }, 800);
     } catch (requestError) {
-      setError(requestError.message || t("recurringEditErrors.createFailed"));
+      setError(requestError.message || "Failed to create recurring edit");
       setToastState({
         active: true,
-        message: requestError.message || t("recurringEditErrors.createFailed"),
+        message: requestError.message || "Failed to create recurring edit",
         error: true,
       });
     } finally {
@@ -347,10 +345,10 @@ function RecurringEditModal({
             {upgradeWarning && (
               <Banner
                 tone="warning"
-                title={t("recurringEditUpgradeRequired")}
+                title="Upgrade Required"
                 onDismiss={() => setUpgradeWarning("")}
                 action={{
-                  content: t("recurringEditUpgradePlan"),
+                  content: "Upgrade Plan",
                   onAction: () => navigate("/pricing"),
                 }}
               >
@@ -420,7 +418,7 @@ function RecurringEditModal({
                     {DAYS_OF_WEEK.map((day) => (
                       <Checkbox
                         key={day}
-                        label={t(`weekdays.${day}`)}
+                        label={day}
                         checked={daysOfWeekToRun.includes(day)}
                         onChange={(checked) => handleWeekdayChange(day, checked)}
                       />

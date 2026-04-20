@@ -347,10 +347,10 @@ function RecurringEditModal({
             {upgradeWarning && (
               <Banner
                 tone="warning"
-                title={t("recurringEditUpgradeRequired")}
+                title="Upgrade Required"
                 onDismiss={() => setUpgradeWarning("")}
                 action={{
-                  content: t("recurringEditUpgradePlan"),
+                  content: "Upgrade Plan",
                   onAction: () => navigate("/pricing"),
                 }}
               >
@@ -420,7 +420,7 @@ function RecurringEditModal({
                     {DAYS_OF_WEEK.map((day) => (
                       <Checkbox
                         key={day}
-                        label={t(`weekdays.${day}`)}
+                        label={day}
                         checked={daysOfWeekToRun.includes(day)}
                         onChange={(checked) => handleWeekdayChange(day, checked)}
                       />

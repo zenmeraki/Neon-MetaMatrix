@@ -266,7 +266,7 @@ function RecurringEditModal({
 
       setToastState({
         active: true,
-        message: t("recurringEditSuccess.created"),
+        message: "Recurring edit created successfully",
         error: false,
       });
 
@@ -275,10 +275,10 @@ function RecurringEditModal({
         navigate("/history");
       }, 800);
     } catch (requestError) {
-      setError(requestError.message || t("recurringEditErrors.createFailed"));
+      setError(requestError.message || "Failed to create recurring edit");
       setToastState({
         active: true,
-        message: requestError.message || t("recurringEditErrors.createFailed"),
+        message: requestError.message || "Failed to create recurring edit",
         error: true,
       });
     } finally {
@@ -347,10 +347,10 @@ function RecurringEditModal({
             {upgradeWarning && (
               <Banner
                 tone="warning"
-                title={t("recurringEditUpgradeRequired")}
+                title="Upgrade Required"
                 onDismiss={() => setUpgradeWarning("")}
                 action={{
-                  content: t("recurringEditUpgradePlan"),
+                  content: "Upgrade Plan",
                   onAction: () => navigate("/pricing"),
                 }}
               >
@@ -420,7 +420,7 @@ function RecurringEditModal({
                     {DAYS_OF_WEEK.map((day) => (
                       <Checkbox
                         key={day}
-                        label={t(`weekdays.${day}`)}
+                        label={day}
                         checked={daysOfWeekToRun.includes(day)}
                         onChange={(checked) => handleWeekdayChange(day, checked)}
                       />
