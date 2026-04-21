@@ -366,73 +366,31 @@
   "product_type_help": "Kategorie oder Produkttyp",
   "max_characters": "Maximal {{count}} Zeichen",
   "revert_msg": "Produkte wurden erfolgreich in ihren vorherigen Zustand zurückversetzt.",
-  "fieldLabels": {
-    "price": "Preis",
-    "title": "Titel",
-    "compare_at_price": "Vergleichspreis",
-    "inventory_quantity": "Lagerbestand",
-    "sku": "SKU",
-    "vendor": "Anbieter",
-    "handle": "Handle (URL)",
-    "product_type": "Produkttyp",
-    "collection": "Kollektion",
-    "category": "Kategorie",
-    "description": "Beschreibung",
-    "option_name_1": "Optionsname 1",
-    "option_name_2": "Optionsname 2",
-    "option_name_3": "Optionsname 3",
-    "product_id": "Produkt-ID",
-    "inventory_q": "Lagerbestand",
-    "tag": "Tag",
-    "theme_template": "Theme-Vorlage",
-    "variant_count": "Variantenanzahl",
-    "visible_online_store": "Im Onlineshop sichtbar",
-    "updated_at": "Aktualisierungsdatum",
-    "created_at": "Erstellungsdatum",
-    "published_at": "Veröffentlichungsdatum",
-    "status": "Status",
-    "googleShoppingEnabled": "Google Shopping aktiviert",
-    "googleShoppingAgeGroup": "Google Shopping Altersgruppe",
-    "googleShoppingCategory": "Google Shopping Kategorie",
-    "googleShoppingColor": "Google Shopping Farbe",
-    "googleShoppingCondition": "Google Shopping Zustand",
-    "googleShoppingCustomLabel0": "Google Shopping Benutzerdefiniertes Label 0",
-    "googleShoppingCustomLabel1": "Google Shopping Benutzerdefiniertes Label 1",
-    "googleShoppingCustomLabel2": "Google Shopping Benutzerdefiniertes Label 2",
-    "googleShoppingCustomLabel3": "Google Shopping Benutzerdefiniertes Label 3",
-    "googleShoppingCustomLabel4": "Google Shopping Benutzerdefiniertes Label 4",
-    "googleShoppingCustomProduct": "Google Shopping Benutzerdefiniertes Produkt",
-    "googleShoppingGender": "Google Shopping Geschlecht",
-    "googleShoppingMpn": "Google Shopping MPN",
-    "googleShoppingMaterial": "Google Shopping Material",
-    "googleShoppingSize": "Google Shopping Größe",
-    "googleShoppingSizeSystem": "Google Shopping Größensystem",
-    "googleShoppingSizeType": "Google Shopping Größentyp",
-    "categoryAgeGroup": "Altersgruppe",
-    "categoryColor": "Farbe",
-    "categoryFabric": "Stoff",
-    "categoryFit": "Passform",
-    "categorySize": "Größe",
-    "categoryTargetGender": "Zielgeschlecht",
-    "categoryWaistRise": "Bundhöhe",
-    "barcode": "Barcode",
-    "variant_title": "Variantentitel",
-    "variant_inventory_q": "Variantenlagerbestand",
-    "option_value_1": "Optionswert 1",
-    "option_value_2": "Optionswert 2",
-    "option_value_3": "Optionswert 3",
-    "charge_tax": "Steuer berechnen",
-    "seo_visibility": "Suchmaschinen-Sichtbarkeit (SEO)",
-    "cost": "Kosten",
-    "country_of_origin": "Herkunftsland",
-    "hs_tariff_code": "HS-Tarifcode",
-    "inventory_policy": "Richtlinie bei Nichtverfügbarkeit",
-    "physical_product": "Physisches Produkt",
-    "profit_margin": "Gewinnspanne",
-    "track_quantity": "Menge verfolgen",
-    "weight": "Gewicht",
-    "weight_unit": "Gewichtseinheit"
-  },
+ "fieldLabels": {
+  "title": "Titel",
+  "description": "Beschreibung",
+  "vendor": "Anbieter",
+  "productType": "Produkttyp",
+  "option1Name": "Optionsname 1",
+  "option2Name": "Optionsname 2",
+  "option3Name": "Optionsname 3",
+  "metaTitle": "Meta-Titel",
+  "metaDescription": "Meta-Beschreibung",
+  "handle": "Handle",
+  "status": "Status",
+  "tags": "Tags",
+  "collections": "Kollektionen",
+  "category": "Kategorie",
+  "price": "Preis",
+  "compareAtPrice": "Vergleichspreis",
+  "sku": "SKU",
+  "barcode": "Barcode",
+  "charge_tax": "Steuer berechnen",
+  "option_value_1": "Optionswert 1",
+  "option_value_2": "Optionswert 2",
+  "option_value_3": "Optionswert 3",
+  "inventoryPolicy": "Weiterverkauf bei nicht vorrätig"
+},
   "product_table": "Produkt",
   "variant_table": "Variante",
   "background": "Produktaktualisierung im Hintergrund gestartet",
@@ -1058,78 +1016,6 @@
   "scheduled_for": "Geplant für",
   "at": "bei",
   "undo_scheduled_for": "Rückgängigmachen geplant für",
-  "failureStage": "Fehlerstadium",
-  "IncreaseValue": "Wert steigern",
-  "search_multiple": "Mehrere suchen und auswählen...",
-  "location": "Standort",
-  "permanent_action": "Diese Aktion ist dauerhaft und kann nicht rückgängig gemacht werden.",
-  "select_category": "Kategorie auswählen",
-  "collectionActions": {
-    "addToCollection": "Zur Sammlung hinzufügen",
-    "removeFromCollection": "Aus Sammlung entfernen"
-  },
-  "collectionSearch": {
-    "label": "Sammlungen suchen und auswählen"
-  },
-  "tagActions": {
-    "add": "Tags zum Produkt hinzufügen",
-    "remove": "Tags vom Produkt entfernen",
-    "rename": "Tag umbenennen",
-    "searchReplace": "Suchen/Ersetzen im Tag-Namen",
-    "setAll": "Tags festlegen (überschreibt vorhandene)"
-  },
-  "tagInput": {
-    "commaSeparated": "Kommagetrennte Tags",
-    "rename": "Alter Tag → Neuer Tag",
-    "old": "Alter Tag",
-    "new": "Neuer Tag",
-    "searchReplace": "Suchen → Ersetzen",
-    "search": "In Tags suchen",
-    "replace": "Ersetzen durch"
-  },
-  "textInput": {
-    "enterText": "Text eingeben",
-    "enterTextToAdd": "Text zum Hinzufügen eingeben",
-    "enterTextToRemove": "Text zum Entfernen eingeben",
-    "enterMaxCharacterLength": "Maximale Zeichenlänge eingeben",
-    "enterSearchAndReplaceValues": "Such- und Ersetzungswerte eingeben",
-    "enterWord": "Wort eingeben"
-  },
-  "statusActions": {
-    "setStatus": "Status festlegen"
-  },
-  "statusInput": {
-    "selectProductStatus": "Produktstatus auswählen"
-  },
-  "statusChoices": {
-    "active": "Aktiv",
-    "draft": "Entwurf",
-    "archived": "Archiviert"
-  },
-  "categorySearch": {
-    "label": "Suchen und auswählen"
-  },
-  "taxActions": {
-    "setTaxApplicability": "Steuer anwenden"
-  },
-  "taxInput": {
-    "shouldProductBeTaxable": "Soll dieses Produkt steuerpflichtig sein?"
-  },
-  "commonChoices": {
-    "yes": "Ja",
-    "no": "Nein"
-  },
-
-  "inventoryPolicyActions": {
-    "setInventoryPolicy": "Bestandsrichtlinie festlegen"
-  },
-  "inventoryPolicyInput": {
-    "shouldContinueSellingOutOfStock": "Soll dieses Produkt weiterhin verkauft werden, wenn der Bestand aufgebraucht ist?"
-  },
-  "inventoryPolicyChoices": {
-    "continueSelling": "Weiterverkaufen, wenn nicht auf Lager",
-    "denySelling": "Nicht weiterverkaufen, wenn nicht auf Lager"
-  },
   "recurringEditErrors": {
     "titleRequired": "Titel ist erforderlich",
     "weekdayRequired": "Bitte wählen Sie mindestens einen Wochentag aus",
@@ -1249,5 +1135,77 @@
     "CN": "CN",
     "AU": "AU",
     "BR": "BR"
-  }
+  },
+  "failureStage": "Fehlerstadium",
+  "IncreaseValue": "Wert steigern",
+  "search_multiple": "Mehrere suchen und auswählen...",
+  "location": "Standort",
+  "permanent_action": "Diese Aktion ist dauerhaft und kann nicht rückgängig gemacht werden.",
+  "select_category": "Kategorie auswählen",
+"collectionActions": {
+  "addToCollection": "Zur Sammlung hinzufügen",
+  "removeFromCollection": "Aus Sammlung entfernen"
+},
+"collectionSearch": {
+  "label": "Sammlungen suchen und auswählen"
+},
+"tagActions": {
+  "add": "Tags zum Produkt hinzufügen",
+  "remove": "Tags vom Produkt entfernen",
+  "rename": "Tag umbenennen",
+  "searchReplace": "Suchen/Ersetzen im Tag-Namen",
+  "setAll": "Tags festlegen (überschreibt vorhandene)"
+},
+"tagInput": {
+  "commaSeparated": "Kommagetrennte Tags",
+  "rename": "Alter Tag → Neuer Tag",
+  "old": "Alter Tag",
+  "new": "Neuer Tag",
+  "searchReplace": "Suchen → Ersetzen",
+  "search": "In Tags suchen",
+  "replace": "Ersetzen durch"
+},
+"textInput": {
+  "enterText": "Text eingeben",
+  "enterTextToAdd": "Text zum Hinzufügen eingeben",
+  "enterTextToRemove": "Text zum Entfernen eingeben",
+  "enterMaxCharacterLength": "Maximale Zeichenlänge eingeben",
+  "enterSearchAndReplaceValues": "Such- und Ersetzungswerte eingeben",
+  "enterWord": "Wort eingeben"
+},
+"statusActions": {
+  "setStatus": "Status festlegen"
+},
+"statusInput": {
+  "selectProductStatus": "Produktstatus auswählen"
+},
+"statusChoices": {
+  "active": "Aktiv",
+  "draft": "Entwurf",
+  "archived": "Archiviert"
+},
+"categorySearch": {
+  "label": "Suchen und auswählen"
+},
+"taxActions": {
+  "setTaxApplicability": "Steuer anwenden"
+},
+"taxInput": {
+  "shouldProductBeTaxable": "Soll dieses Produkt steuerpflichtig sein?"
+},
+"commonChoices": {
+  "yes": "Ja",
+  "no": "Nein"
+},
+
+"inventoryPolicyActions": {
+  "setInventoryPolicy": "Bestandsrichtlinie festlegen"
+},
+"inventoryPolicyInput": {
+  "shouldContinueSellingOutOfStock": "Soll dieses Produkt weiterhin verkauft werden, wenn der Bestand aufgebraucht ist?"
+},
+"inventoryPolicyChoices": {
+  "continueSelling": "Weiterverkaufen, wenn nicht auf Lager",
+  "denySelling": "Nicht weiterverkaufen, wenn nicht auf Lager"
+}
 }

@@ -134,7 +134,8 @@ export const trackEditPreview = async (req, res) => {
     } = req.body;
 
     const lang = req.query.lang || "en";
-
+    // console.log("🔴 BACKEND RECEIVED FIELD:", req.body.field);
+    // console.log("🔴 EDIT TYPE:", req.body.editType);
     if (process.env.NODE_ENV === "production") {
       await prisma.filterTrack.create({
         data: {
@@ -167,7 +168,7 @@ export const trackEditPreview = async (req, res) => {
       limit,
       subscription: req.subscription,
     });
-
+    // console.log("🔴 BACKEND RESPONSE:", result);
     return res.status(200).json(result);
   } catch (err) {
     await logApiError({

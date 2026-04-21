@@ -95,8 +95,11 @@ export default function EditPreviewPage() {
   const fetchPreview = useCallback(async () => {
     if (!editType || !selectedField) return;
 
+     console.log("🔵 UI Selected Field:", selectedField.value);
+    //  console.log("🔵 Edit Type:", editType.value)
+
     const validOps = selectedField.actions?.map((a) => a.value) || [];
-  if (!validOps.includes(editType.value)) return;
+    if (!validOps.includes(editType.value)) return;
 
     if (
     editType.inputType === InputType.SEARCH_REPLACE &&
@@ -127,6 +130,10 @@ export default function EditPreviewPage() {
       });
 
       const json = await res.json();
+
+      // console.log("🟢 FULL PREVIEW RESPONSE:", json);
+      // console.log("🟢 PREVIEW DATA:", json.data?.preview);
+
       if (!res.ok) throw new Error(json.message);
 
       setProducts(json.data.preview);
