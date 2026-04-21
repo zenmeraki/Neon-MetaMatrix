@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect} from "react";
 import {
   Card,
   DataTable,
@@ -48,7 +48,21 @@ const PreviewTable = ({
 
   const { page, totalPages, total, limit } = pagination;
   const itemsPerPage = limit;
+// useEffect(() => {
+//   console.log("🟣 PreviewTable field:", field);
+//   console.log("🟣 Products:", products);
 
+//   if (products?.length > 0) {
+//     console.log("🟣 Sample product:", products[0]);
+
+//     if (products[0].variants?.length > 0) {
+//       console.log(
+//         "🟣 Sample variant:",
+//         products[0].variants[0]
+//       );
+//     }
+//   }
+// }, [products, field]);
   // ===============================
   // Loading state
   // ===============================
