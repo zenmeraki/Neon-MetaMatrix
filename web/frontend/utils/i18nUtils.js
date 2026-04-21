@@ -89,18 +89,31 @@ export async function getPolarisTranslationsForLocale(locale) {
   const translations = await loadPolarisTranslations(polarisLocale);
   const localeBase = (locale || DEFAULT_APP_LOCALE).split("-")[0];
 
-  const customPolarisOverrides =
-    localeBase === "hi"
-      ? {
-          Polaris: {
-            Filters: {
-              addFilter: "फ़िल्टर जोड़ें",
-            },
-          },
-        }
-      : {};
+  const POLARIS_FILTER_ADD_LABELS = {
+    en: "Add filter",
+    de: "Filter hinzufügen",
+    fr: "Ajouter un filtre",
+    es: "Agregar filtro",
+    ar: "إضافة عامل تصفية",
+    hi: "फ़िल्टर जोड़ें",
+    ja: "フィルターを追加",
+    ko: "필터 추가",
+    pt: "Adicionar filtro",
+    ru: "Добавить фильтр",
+    zh: "添加筛选条件",
+  };
 
-  _polarisTranslations = deepMerge(translations, customPolarisOverrides);
+    const customPolarisOverrides = POLARIS_FILTER_ADD_LABELS[localeBase]
+    ? {
+        Polaris: {
+          Filters: {
+            addFilter: POLARIS_FILTER_ADD_LABELS[localeBase],
+          },
+        },
+      }
+    : {};
+
+   _polarisTranslations = deepMerge(translations, customPolarisOverrides);
   return _polarisTranslations;
 }
 
