@@ -366,31 +366,73 @@
   "product_type_help": "Categoría o tipo de producto",
   "max_characters": "Máximo {{count}} caracteres",
   "revert_msg": "Los productos se han revertido con éxito a su estado anterior.",
- "fieldLabels": {
-  "title": "Título",
-  "description": "Descripción",
-  "vendor": "Proveedor",
-  "productType": "Tipo de producto",
-  "option1Name": "Nombre de opción 1",
-  "option2Name": "Nombre de opción 2",
-  "option3Name": "Nombre de opción 3",
-  "metaTitle": "Meta título",
-  "metaDescription": "Meta descripción",
-  "handle": "Identificador",
-  "status": "Estado",
-  "tags": "Etiquetas",
-  "collections": "Colecciones",
-  "category": "Categoría",
-  "price": "Precio",
-  "compareAtPrice": "Precio comparativo",
-  "sku": "SKU",
-  "barcode": "Código de barras",
-  "charge_tax": "Aplicar impuesto",
-  "option_value_1": "Valor de opción 1",
-  "option_value_2": "Valor de opción 2",
-  "option_value_3": "Valor de opción 3",
-  "inventoryPolicy": "Continuar vendiendo cuando esté agotado"
-},
+  "fieldLabels": {
+    "price": "Precio",
+    "title": "Título",
+    "compare_at_price": "Precio de comparación",
+    "inventory_quantity": "Cantidad en inventario",
+    "sku": "SKU",
+    "vendor": "Proveedor",
+    "handle": "Identificador (URL)",
+    "product_type": "Tipo de producto",
+    "collection": "Colección",
+    "category": "Categoría",
+    "description": "Descripción",
+    "option_name_1": "Nombre de opción 1",
+    "option_name_2": "Nombre de opción 2",
+    "option_name_3": "Nombre de opción 3",
+    "product_id": "ID del producto",
+    "inventory_q": "Cantidad en inventario",
+    "tag": "Etiqueta",
+    "theme_template": "Plantilla del tema",
+    "variant_count": "Cantidad de variantes",
+    "visible_online_store": "Visible en la tienda en línea",
+    "updated_at": "Fecha de actualización",
+    "created_at": "Fecha de creación",
+    "published_at": "Fecha de publicación",
+    "status": "Estado",
+    "googleShoppingEnabled": "Google Shopping habilitado",
+    "googleShoppingAgeGroup": "Grupo de edad de Google Shopping",
+    "googleShoppingCategory": "Categoría de Google Shopping",
+    "googleShoppingColor": "Color de Google Shopping",
+    "googleShoppingCondition": "Condición de Google Shopping",
+    "googleShoppingCustomLabel0": "Etiqueta personalizada 0 de Google Shopping",
+    "googleShoppingCustomLabel1": "Etiqueta personalizada 1 de Google Shopping",
+    "googleShoppingCustomLabel2": "Etiqueta personalizada 2 de Google Shopping",
+    "googleShoppingCustomLabel3": "Etiqueta personalizada 3 de Google Shopping",
+    "googleShoppingCustomLabel4": "Etiqueta personalizada 4 de Google Shopping",
+    "googleShoppingCustomProduct": "Producto personalizado de Google Shopping",
+    "googleShoppingGender": "Género de Google Shopping",
+    "googleShoppingMpn": "MPN de Google Shopping",
+    "googleShoppingMaterial": "Material de Google Shopping",
+    "googleShoppingSize": "Talla de Google Shopping",
+    "googleShoppingSizeSystem": "Sistema de tallas de Google Shopping",
+    "googleShoppingSizeType": "Tipo de talla de Google Shopping",
+    "categoryAgeGroup": "Grupo de edad",
+    "categoryColor": "Color",
+    "categoryFabric": "Tela",
+    "categoryFit": "Ajuste",
+    "categorySize": "Talla",
+    "categoryTargetGender": "Género objetivo",
+    "categoryWaistRise": "Altura de la cintura",
+    "barcode": "Código de barras",
+    "variant_title": "Título de variante",
+    "variant_inventory_q": "Cantidad de inventario de variante",
+    "option_value_1": "Valor de opción 1",
+    "option_value_2": "Valor de opción 2",
+    "option_value_3": "Valor de opción 3",
+    "charge_tax": "Aplicar impuesto",
+    "seo_visibility": "Visibilidad en motores de búsqueda (SEO)",
+    "cost": "Costo",
+    "country_of_origin": "País de origen",
+    "hs_tariff_code": "Código arancelario HS",
+    "inventory_policy": "Política de inventario agotado",
+    "physical_product": "Producto físico",
+    "profit_margin": "Margen de beneficio",
+    "track_quantity": "Rastrear cantidad",
+    "weight": "Peso",
+    "weight_unit": "Unidad de peso"
+  },
   "product_table": "Producto",
   "variant_table": "Variante",
   "background": "Actualización de productos iniciada en segundo plano",
@@ -1152,7 +1194,8 @@
   "spreadsheetConfirmMessage": "¿Está seguro de que desea importar este CSV?",
   "spreadsheetConfirmBanner": "Los productos se actualizarán según el ID del producto y el ID de la variante.",
   "danger": {
-    "deleteProductsWarning": "Esta acción eliminará permanentemente los productos seleccionados. Esto no se puede deshacer.",
+    "deleteProductsWarning": "Esta acción eliminará permanentemente los productos seleccionados. Esto no se puede deshacer."
+  },
   "configureField": "Configurar {{field}}",
   "searchPlaceholderField": "Buscar {{field}}",
   "filtersOperators": {
@@ -1205,76 +1248,5 @@
     "CN": "CN",
     "AU": "AU",
     "BR": "BR"
-  },
-  "failureStage": "etapa de fracaso",
-  "IncreaseValue": "Aumentar valor",
-  "location": "Ubicación",
-  "permanent_action": "Esta acción es permanente y no se puede deshacer.",
-  "select_category": "Seleccionar categoría",
-"collectionActions": {
-  "addToCollection": "Agregar a la colección",
-  "removeFromCollection": "Eliminar de la colección"
-},
-"collectionSearch": {
-  "label": "Buscar y seleccionar colecciones"
-},
-"tagActions": {
-  "add": "Agregar etiquetas al producto",
-  "remove": "Eliminar etiquetas del producto",
-  "rename": "Renombrar etiqueta",
-  "searchReplace": "Buscar/reemplazar en nombre de etiqueta",
-  "setAll": "Establecer etiquetas (sobrescribe existentes)"
-},
-"tagInput": {
-  "commaSeparated": "Etiquetas separadas por comas",
-  "rename": "Etiqueta antigua → Nueva etiqueta",
-  "old": "Etiqueta antigua",
-  "new": "Nueva etiqueta",
-  "searchReplace": "Buscar → Reemplazar",
-  "search": "Buscar en etiquetas",
-  "replace": "Reemplazar con"
-},
-"textInput": {
-  "enterText": "Ingresar texto",
-  "enterTextToAdd": "Ingresar el texto a agregar",
-  "enterTextToRemove": "Ingresar el texto a eliminar",
-  "enterMaxCharacterLength": "Ingresar longitud máxima",
-  "enterSearchAndReplaceValues": "Ingresar valores de búsqueda y reemplazo",
-  "enterWord": "Ingresar palabra"
-},
-"statusActions": {
-  "setStatus": "Establecer estado"
-},
-"statusInput": {
-  "selectProductStatus": "Seleccionar estado del producto"
-},
-"statusChoices": {
-  "active": "Activo",
-  "draft": "Borrador",
-  "archived": "Archivado"
-},
-"categorySearch": {
-  "label": "Buscar y seleccionar"
-},
-"taxActions": {
-  "setTaxApplicability": "Aplicar impuesto"
-},
-"taxInput": {
-  "shouldProductBeTaxable": "¿Este producto debe ser gravable?"
-},
-"commonChoices": {
-  "yes": "Sí",
-  "no": "No"
-},
-"inventoryPolicyActions": {
-  "setInventoryPolicy": "Establecer política de inventario"
-},
-"inventoryPolicyInput": {
-  "shouldContinueSellingOutOfStock": "¿Este producto debe seguir vendiéndose cuando esté sin stock?"
-},
-"inventoryPolicyChoices": {
-  "continueSelling": "Seguir vendiendo cuando no haya stock",
-  "denySelling": "No seguir vendiendo cuando no haya stock"
-}
-}
+  }
 }

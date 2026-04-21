@@ -367,30 +367,72 @@
   "max_characters": "Максимум {{count}} символов",
   "revert_msg": "Продукты успешно возвращены к предыдущему состоянию.",
   "fieldLabels": {
-  "title": "Название",
-  "description": "Описание",
-  "vendor": "Поставщик",
-  "productType": "Тип продукта",
-  "option1Name": "Название опции 1",
-  "option2Name": "Название опции 2",
-  "option3Name": "Название опции 3",
-  "metaTitle": "Мета-заголовок",
-  "metaDescription": "Мета-описание",
-  "handle": "Идентификатор",
-  "status": "Статус",
-  "tags": "Теги",
-  "collections": "Коллекции",
-  "category": "Категория",
-  "price": "Цена",
-  "compareAtPrice": "Сравнительная цена",
-  "sku": "SKU",
-  "barcode": "Штрихкод",
-  "charge_tax": "Применить налог",
-  "option_value_1": "Значение опции 1",
-  "option_value_2": "Значение опции 2",
-  "option_value_3": "Значение опции 3",
-  "inventoryPolicy": "Продолжать продажу при отсутствии на складе"
-},
+    "price": "Цена",
+    "title": "Название",
+    "compare_at_price": "Сравнительная цена",
+    "inventory_quantity": "Количество на складе",
+    "sku": "SKU",
+    "vendor": "Поставщик",
+    "handle": "Идентификатор (URL)",
+    "product_type": "Тип продукта",
+    "collection": "Коллекция",
+    "category": "Категория",
+    "description": "Описание",
+    "option_name_1": "Название опции 1",
+    "option_name_2": "Название опции 2",
+    "option_name_3": "Название опции 3",
+    "product_id": "ID продукта",
+    "inventory_q": "Количество на складе",
+    "tag": "Тег",
+    "theme_template": "Шаблон темы",
+    "variant_count": "Количество вариантов",
+    "visible_online_store": "Видимо в интернет-магазине",
+    "updated_at": "Дата обновления",
+    "created_at": "Дата создания",
+    "published_at": "Дата публикации",
+    "status": "Статус",
+    "googleShoppingEnabled": "Google Shopping включён",
+    "googleShoppingAgeGroup": "Возрастная группа Google Shopping",
+    "googleShoppingCategory": "Категория Google Shopping",
+    "googleShoppingColor": "Цвет Google Shopping",
+    "googleShoppingCondition": "Состояние Google Shopping",
+    "googleShoppingCustomLabel0": "Пользовательская метка Google Shopping 0",
+    "googleShoppingCustomLabel1": "Пользовательская метка Google Shopping 1",
+    "googleShoppingCustomLabel2": "Пользовательская метка Google Shopping 2",
+    "googleShoppingCustomLabel3": "Пользовательская метка Google Shopping 3",
+    "googleShoppingCustomLabel4": "Пользовательская метка Google Shopping 4",
+    "googleShoppingCustomProduct": "Пользовательский продукт Google Shopping",
+    "googleShoppingGender": "Пол Google Shopping",
+    "googleShoppingMpn": "MPN Google Shopping",
+    "googleShoppingMaterial": "Материал Google Shopping",
+    "googleShoppingSize": "Размер Google Shopping",
+    "googleShoppingSizeSystem": "Система размеров Google Shopping",
+    "googleShoppingSizeType": "Тип размера Google Shopping",
+    "categoryAgeGroup": "Возрастная группа",
+    "categoryColor": "Цвет",
+    "categoryFabric": "Ткань",
+    "categoryFit": "Посадка",
+    "categorySize": "Размер",
+    "categoryTargetGender": "Целевой пол",
+    "categoryWaistRise": "Высота талии",
+    "barcode": "Штрихкод",
+    "variant_title": "Название варианта",
+    "variant_inventory_q": "Количество варианта на складе",
+    "option_value_1": "Значение опции 1",
+    "option_value_2": "Значение опции 2",
+    "option_value_3": "Значение опции 3",
+    "charge_tax": "Применить налог",
+    "seo_visibility": "Видимость в поисковых системах (SEO)",
+    "cost": "Стоимость",
+    "country_of_origin": "Страна происхождения",
+    "hs_tariff_code": "Код тарифа HS",
+    "inventory_policy": "Политика отсутствия на складе",
+    "physical_product": "Физический продукт",
+    "profit_margin": "Маржа прибыли",
+    "track_quantity": "Отслеживать количество",
+    "weight": "Вес",
+    "weight_unit": "Единица веса"
+  },
   "product_table": "Продукт",
   "variant_table": "Вариант",
   "background": "Обновление продуктов начато в фоновом режиме",
@@ -1128,78 +1170,5 @@
   "CN": "CN",
   "AU": "AU",
   "BR": "BR"
-},
-  "failureStage": "Стадия отказа",
-  "IncreaseValue": "Увеличение ценности",
-  "search_multiple": "Найдите и выберите несколько...",
-  "location": "Расположение",
-  "permanent_action": "Это действие является постоянным и не может быть отменено.",
-  "select_category": "Выбрать категорию",
-"collectionActions": {
-  "addToCollection": "Добавить в коллекцию",
-  "removeFromCollection": "Удалить из коллекции"
-},
-"collectionSearch": {
-  "label": "Найти и выбрать коллекции"
-},
-
-"tagActions": {
-  "add": "Добавить теги к продукту",
-  "remove": "Удалить теги у продукта",
-  "rename": "Переименовать тег",
-  "searchReplace": "Поиск/замена в названии тега",
-  "setAll": "Установить теги (перезаписывает существующие)"
-},
-"tagInput": {
-  "commaSeparated": "Теги, разделённые запятыми",
-  "rename": "Старый тег → Новый тег",
-  "old": "Старый тег",
-  "new": "Новый тег",
-  "searchReplace": "Поиск → Замена",
-  "search": "Поиск в тегах",
-  "replace": "Заменить на"
-},
-"textInput": {
-  "enterText": "Введите текст",
-  "enterTextToAdd": "Введите текст для добавления",
-  "enterTextToRemove": "Введите текст для удаления",
-  "enterMaxCharacterLength": "Введите максимальную длину",
-  "enterSearchAndReplaceValues": "Введите значения поиска и замены",
-  "enterWord": "Введите слово"
-},
-"statusActions": {
-  "setStatus": "Установить статус"
-},
-"statusInput": {
-  "selectProductStatus": "Выберите статус продукта"
-},
-"statusChoices": {
-  "active": "Активный",
-  "draft": "Черновик",
-  "archived": "Архивирован"
-},
-"categorySearch": {
-  "label": "Найти и выбрать"
-},
-"taxActions": {
-  "setTaxApplicability": "Применить налог"
-},
-"taxInput": {
-  "shouldProductBeTaxable": "Должен ли этот продукт облагаться налогом?"
-},
-"commonChoices": {
-  "yes": "Да",
-  "no": "Нет"
-},
-
-"inventoryPolicyActions": {
-  "setInventoryPolicy": "Установить политику запасов"
-},
-"inventoryPolicyInput": {
-  "shouldContinueSellingOutOfStock": "Следует ли продолжать продавать этот продукт при отсутствии на складе?"
-},
-"inventoryPolicyChoices": {
-  "continueSelling": "Продолжать продажу при отсутствии на складе",
-  "denySelling": "Не продолжать продажу при отсутствии на складе"
 }
 }
