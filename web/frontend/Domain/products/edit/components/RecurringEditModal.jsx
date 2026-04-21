@@ -155,10 +155,8 @@ function RecurringEditModal({
   const validate = useCallback(() => {
     if (!title.trim()) {
       return t("recurringEditErrors.titleRequired");
-<<<<<<< HEAD
-=======
 
->>>>>>> 0b0179c0a1b7ca7093f836ee98f3a7a3082dafe8
+
     }
 
     if (needsWeekdaySelection && daysOfWeekToRun.length === 0) {

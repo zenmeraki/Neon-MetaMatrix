@@ -1192,5 +1192,8 @@
   "spreadsheetConfirmTitle": "Confirmar la importación del producto",
   "spreadsheetConfirmPrimary": "Sí, productos de importación.",
   "spreadsheetConfirmMessage": "¿Está seguro de que desea importar este CSV?",
-  "spreadsheetConfirmBanner": "Los productos se actualizarán según el ID del producto y el ID de la variante."
+  "spreadsheetConfirmBanner": "Los productos se actualizarán según el ID del producto y el ID de la variante.",
+  "danger": {
+  "deleteProductsWarning": "Esta acción eliminará permanentemente los productos seleccionados. Esto no se puede deshacer."
+}
 }

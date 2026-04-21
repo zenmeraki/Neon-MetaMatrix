@@ -98,13 +98,14 @@ const ActionTemplates = {
 
   danger: {
     deleteProducts: () =>
-      createAction(
-        "Delete products",
-        "DELETE_PRODUCTS",
-        "This action will permanently delete selected products. This cannot be undone.",
-        FieldType.DANGER,
-        InputType.NONE,
-        { requiresConfirmation: true }
+     createAction(
+    "Delete products",
+    "DELETE_PRODUCTS",
+-   "This action will permanently delete selected products. This cannot be undone.",
++   "danger.deleteProductsWarning",
+    FieldType.DANGER,
+    InputType.NONE,
+    { requiresConfirmation: true }
       ),
   },
 

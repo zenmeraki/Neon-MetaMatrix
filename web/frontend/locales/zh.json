@@ -1191,5 +1191,8 @@
   },
   "spreadsheetConfirmTitle": "确认产品导入",
   "spreadsheetConfirmPrimary": "是的，进口产品",
-  "spreadsheetConfirmMessage": "您确定要导入此 CSV 吗？"
+  "spreadsheetConfirmMessage": "您确定要导入此 CSV 吗？",
+  "danger": {
+  "deleteProductsWarning": "此操作将永久删除所选产品，且无法撤销。"
+}
 }

@@ -8,7 +8,7 @@
   "uploadSpreadsheet": "Upload Spreadsheet",
   "exportData": "Export Data",
   "bulkEditingTipDescription": "Learn how to safely bulk edit almost any product or variant on your store. Make sure your edits are correct with live previews, live progress, and a one-click undo.",
-  "editWithSpreadsheet": "Edit products with a spreadsheet",
+  "editWithSpreadsheet": "Edit with Spreadsheet",
   "editWithSpreadsheetDescription": "You can update your products with a spreadsheet without having to reformat it to match Shopify's specifications. Update products based on SKU, handle, ID, and much more.",
   "exportProductData": "Export your product data",
   "exportProductDataDescription": "Export your product data to a spreadsheet in the Excel, CSV, Google Shopping, or Matrixify format. Set up repeating exports or exports to a public URL to syndicate your products.",
@@ -1161,7 +1161,6 @@
     "continueSelling": "Continue selling when out of stock",
     "denySelling": "Don't continue selling when out of stock"
   },
-  
   "recurringEditErrors": {
     "titleRequired": "Title is required",
     "weekdayRequired": "Please select at least one weekday",
@@ -1246,5 +1245,8 @@
   "spreadsheetConfirmTitle": "Confirm Product Import",
   "spreadsheetConfirmPrimary": "Yes, Import Products",
   "spreadsheetConfirmMessage": "Are you sure you want to import this CSV?",
-  "spreadsheetConfirmBanner": "Products will be updated based on Product ID and Variant ID"
+  "spreadsheetConfirmBanner": "Products will be updated based on Product ID and Variant ID",
+  "danger": {
+  "deleteProductsWarning": "This action will permanently delete selected products. This cannot be undone."
+}
 }

@@ -1225,5 +1225,8 @@
   "spreadsheetConfirmTitle": "उत्पाद आयात की पुष्टि करें",
   "spreadsheetConfirmPrimary": "हाँ, उत्पाद आयात करें",
   "spreadsheetConfirmMessage": "क्या आप वाकई इस सीएसवी को आयात करना चाहते हैं?",
-  "spreadsheetConfirmBanner": "उत्पाद आईडी और वैरिएंट आईडी के आधार पर उत्पादों को अपडेट किया जाएगा"
+  "spreadsheetConfirmBanner": "उत्पाद आईडी और वैरिएंट आईडी के आधार पर उत्पादों को अपडेट किया जाएगा",
+  "danger": {
+  "deleteProductsWarning": "यह क्रिया चयनित उत्पादों को स्थायी रूप से हटा देगी। इसे वापस नहीं किया जा सकता।"
+}
 }

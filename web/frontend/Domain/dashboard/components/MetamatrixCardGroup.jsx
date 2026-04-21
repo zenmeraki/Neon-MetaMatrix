@@ -52,42 +52,47 @@ export const MetamatrixCardGroup = () => {
   ];
 
   const FeatureCard = ({ icon, title, description, iconColor, badge }) => (
-    <Card roundedAbove="sm">
-      <Box padding="500" minHeight="100%">
-        <BlockStack gap="400">
-          <InlineStack align="space-between" blockAlign="start">
-            <Box
-              background="bg-surface-secondary"
-              borderRadius="300"
-              padding="300"
-            >
-              <Icon source={icon} tone={iconColor} />
-            </Box>
+    <Box height="100%">
+      <Card roundedAbove="sm">
+        <Box padding="500" minHeight="280px">
+          <BlockStack gap="400">
+            <InlineStack align="space-between" blockAlign="start">
+              <Box
+                background="bg-surface-secondary"
+                borderRadius="300"
+                padding="300"
+              >
+                <Icon source={icon} tone={iconColor} />
+              </Box>
 
-            <Badge tone="critical">{badge}</Badge>
-          </InlineStack>
+              <Badge tone="critical">{badge}</Badge>
+            </InlineStack>
 
-          <BlockStack gap="200">
-            <Text variant="headingMd" as="h3">
-              {title}
-            </Text>
-            <Text variant="bodyMd" tone="subdued">
-              {description}
-            </Text>
+            <BlockStack gap="100">
+              <Box minHeight="40px">
+                <Text variant="headingMd" as="h3">
+                  {title}
+                </Text>
+              </Box>
+
+              <Box minHeight="120px">
+                <Text variant="bodyMd" tone="subdued" as="p">
+                  {description}
+                </Text>
+              </Box>
+            </BlockStack>
           </BlockStack>
-        </BlockStack>
-      </Box>
-    </Card>
+        </Box>
+      </Card>
+    </Box>
   );
 
   return (
     <BlockStack gap="500">
       <InlineStack align="space-between" blockAlign="center">
-        <BlockStack gap="100">
-          <Text variant="headingLg" as="h2">
-            {t("learnMore")}
-          </Text>
-        </BlockStack>
+        <Text variant="headingLg" as="h2">
+          {t("learnMore")}
+        </Text>
       </InlineStack>
 
       <Grid>

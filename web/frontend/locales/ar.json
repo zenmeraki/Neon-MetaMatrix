@@ -1207,5 +1207,8 @@
   "spreadsheetConfirmTitle": "تأكيد استيراد المنتج",
   "spreadsheetConfirmPrimary": "نعم استيراد المنتجات",
   "spreadsheetConfirmMessage": "هل أنت متأكد أنك تريد استيراد ملف CSV هذا؟",
-  "spreadsheetConfirmBanner": "سيتم تحديث المنتجات بناءً على معرف المنتج ومعرف المتغير"
+  "spreadsheetConfirmBanner": "سيتم تحديث المنتجات بناءً على معرف المنتج ومعرف المتغير",
+  "danger": {
+  "deleteProductsWarning": "سيؤدي هذا الإجراء إلى حذف المنتجات المحددة نهائيًا. لا يمكن التراجع عن ذلك."
+}
 }
