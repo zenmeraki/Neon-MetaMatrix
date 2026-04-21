@@ -1174,7 +1174,10 @@
   "spreadsheetConfirmTitle": "Confirm Product Import",
   "spreadsheetConfirmPrimary": "Yes, Import Products",
   "spreadsheetConfirmMessage": "Are you sure you want to import this CSV?",
-  "spreadsheetConfirmBanner": "Products will be updated based on Product ID and Variant ID",
+  "spreadsheetConfirmBanner": "Products will be updated based on Product ID and Variant ID"
+  "editHistoryTitle": {
+    "setFixedPrice": "Price set to {{value}}"
+  },
   "failureStage": "Failure stage",
   "IncreaseValue": "Increase Value",
   "search_multiple": "Search and select multiple...",

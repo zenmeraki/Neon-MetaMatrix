@@ -1033,6 +1033,7 @@
   },
   "exportDownloadLinkMissing": "다운로드 링크를 사용할 수 없습니다.",
   "exportDownloadFailed": "파일을 다운로드하지 못했습니다.",
+<<<<<<< HEAD
   "scheduledExport": {
     "failedMessage": "내보내기를 예약하지 못했습니다.",
     "successMessage": "내보내기가 예약되었습니다!",
@@ -1053,6 +1054,7 @@
   "editExecutionErrors": "편집 내용에 실행 오류가 기록되었습니다.",
   "undoFinishedWithIssues": "기록된 문제가 있는 실행 취소가 완료되었습니다.",
   "undoEncounteredErrors": "실행취소에 오류가 발생했습니다.",
+  "failureStage": "실패 단계",
   "loadingHistoryDetailsSpinner": "기록 세부정보 로드 중...",
   "scheduled_for": "예정된",
   "at": "~에",
@@ -1120,7 +1122,11 @@
   "spreadsheetConfirmTitle": "제품 수입 확인",
   "spreadsheetConfirmPrimary": "예, 수입 제품입니다.",
   "spreadsheetConfirmMessage": "이 CSV를 가져오시겠습니까?",
-  "spreadsheetConfirmBanner": "제품은 제품 ID 및 변형 ID를 기반으로 업데이트됩니다.",
+  "spreadsheetConfirmBanner": "제품은 제품 ID 및 변형 ID를 기반으로 업데이트됩니다."
+=======
+  "editHistoryTitle": {
+    "setFixedPrice": "가격을 {{value}}(으)로 설정했습니다"
+  },
   "failureStage": "실패 단계",
   "IncreaseValue": "가치 증대",
   "search_multiple": "여러개 검색해서 선택하세요...",
@@ -1194,4 +1200,5 @@
   "continueSelling": "재고가 없어도 계속 판매",
   "denySelling": "재고가 없으면 판매하지 않음"
 }
+>>>>>>> 37b08fad91160a56491334b7b7c66e80852e9c80
 }

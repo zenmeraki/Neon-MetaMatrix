@@ -1054,6 +1054,7 @@
   "editExecutionErrors": "Bei der Bearbeitung wurden Ausführungsfehler erfasst.",
   "undoFinishedWithIssues": "Rückgängig gemacht mit aufgezeichneten Problemen",
   "undoEncounteredErrors": "Festgestellte Fehler rückgängig machen",
+  "failureStage": "Fehlerstadium",
   "loadingHistoryDetailsSpinner": "Verlaufsdetails werden geladen...",
   "scheduled_for": "Geplant für",
   "at": "bei",
@@ -1121,7 +1122,10 @@
   "spreadsheetConfirmTitle": "Bestätigen Sie den Produktimport",
   "spreadsheetConfirmPrimary": "Ja, Produkte importieren",
   "spreadsheetConfirmMessage": "Sind Sie sicher, dass Sie diese CSV-Datei importieren möchten?",
-  "spreadsheetConfirmBanner": "Produkte werden basierend auf Produkt-ID und Varianten-ID aktualisiert",
+  "spreadsheetConfirmBanner": "Produkte werden basierend auf Produkt-ID und Varianten-ID aktualisiert"
+  "editHistoryTitle": {
+    "setFixedPrice": "Preis auf {{value}} gesetzt"
+  },
   "failureStage": "Fehlerstadium",
   "IncreaseValue": "Wert steigern",
   "search_multiple": "Mehrere suchen und auswählen...",

@@ -1047,6 +1047,7 @@
   },
   "exportDownloadLinkMissing": "رابط التحميل غير متوفر.",
   "exportDownloadFailed": "فشل تنزيل الملف.",
+<<<<<<< HEAD
   "scheduledExport": {
     "failedMessage": "فشل جدولة التصدير",
     "successMessage": "تمت جدولة التصدير بنجاح!",
@@ -1067,6 +1068,7 @@
   "editExecutionErrors": "سجل التعديل أخطاء في التنفيذ.",
   "undoFinishedWithIssues": "التراجع عن إكمال المشكلات المسجلة",
   "undoEncounteredErrors": "التراجع عن الأخطاء التي تمت مواجهتها",
+  "failureStage": "مرحلة الفشل",
   "loadingHistoryDetailsSpinner": "جارٍ تحميل تفاصيل السجل...",
   "scheduled_for": "المقرر ل",
   "at": "في",
@@ -1134,7 +1136,11 @@
   "spreadsheetConfirmTitle": "تأكيد استيراد المنتج",
   "spreadsheetConfirmPrimary": "نعم استيراد المنتجات",
   "spreadsheetConfirmMessage": "هل أنت متأكد أنك تريد استيراد ملف CSV هذا؟",
-  "spreadsheetConfirmBanner": "سيتم تحديث المنتجات بناءً على معرف المنتج ومعرف المتغير",
+  "spreadsheetConfirmBanner": "سيتم تحديث المنتجات بناءً على معرف المنتج ومعرف المتغير"
+=======
+  "editHistoryTitle": {
+    "setFixedPrice": "تم تعيين السعر إلى {{value}}"
+  },
   "failureStage": "مرحلة الفشل",
   "IncreaseValue": "زيادة القيمة",
   "search_multiple": "بحث واختيار عدة...",
@@ -1208,4 +1214,5 @@
   "continueSelling": "الاستمرار في البيع عند نفاد المخزون",
   "denySelling": "عدم الاستمرار في البيع عند نفاد المخزون"
 }
+>>>>>>> 37b08fad91160a56491334b7b7c66e80852e9c80
 }

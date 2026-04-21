@@ -1032,6 +1032,7 @@
   },
   "exportDownloadLinkMissing": "ダウンロードリンクは利用できません。",
   "exportDownloadFailed": "ファイルのダウンロードに失敗しました。",
+<<<<<<< HEAD
   "scheduledExport": {
     "failedMessage": "エクスポートのスケジュールに失敗しました",
     "successMessage": "エクスポートが正常にスケジュールされました。",
@@ -1052,6 +1053,7 @@
   "editExecutionErrors": "編集では実行エラーが記録されました。",
   "undoFinishedWithIssues": "記録された問題で元に戻すが完了しました",
   "undoEncounteredErrors": "発生したエラーを元に戻す",
+  "failureStage": "失敗段階",
   "loadingHistoryDetailsSpinner": "履歴の詳細を読み込んでいます...",
   "scheduled_for": "予定されている",
   "at": "で",
@@ -1119,7 +1121,11 @@
   "spreadsheetConfirmTitle": "製品インポートの確認",
   "spreadsheetConfirmPrimary": "はい、製品を輸入します",
   "spreadsheetConfirmMessage": "この CSV をインポートしてもよろしいですか?",
-  "spreadsheetConfirmBanner": "製品は製品 ID とバリアント ID に基づいて更新されます",
+  "spreadsheetConfirmBanner": "製品は製品 ID とバリアント ID に基づいて更新されます"
+=======
+  "editHistoryTitle": {
+    "setFixedPrice": "価格を{{value}}に設定しました"
+  },
   "failureStage": "故障段階",
   "IncreaseValue": "価値を高める",
   "search_multiple": "検索して複数選択...",
@@ -1192,4 +1198,5 @@
   "continueSelling": "在庫切れでも販売を続ける",
   "denySelling": "在庫切れの場合は販売しない"
 }
+>>>>>>> 37b08fad91160a56491334b7b7c66e80852e9c80
 }

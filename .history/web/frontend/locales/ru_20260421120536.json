@@ -1114,7 +1114,10 @@
   "spreadsheetConfirmTitle": "Подтвердить импорт продукта",
   "spreadsheetConfirmPrimary": "Да, импортные товары",
   "spreadsheetConfirmMessage": "Вы уверены, что хотите импортировать этот CSV-файл?",
-  "spreadsheetConfirmBanner": "Продукты будут обновляться на основе идентификатора продукта и идентификатора варианта.",
+  "spreadsheetConfirmBanner": "Продукты будут обновляться на основе идентификатора продукта и идентификатора варианта."
+  "editHistoryTitle": {
+    "setFixedPrice": "Цена установлена на {{value}}"
+  },
   "failureStage": "Стадия отказа",
   "IncreaseValue": "Увеличение ценности",
   "search_multiple": "Найдите и выберите несколько...",
@@ -1177,6 +1180,7 @@
   "yes": "Да",
   "no": "Нет"
 },
+
 
 "inventoryPolicyActions": {
   "setInventoryPolicy": "Установить политику запасов"

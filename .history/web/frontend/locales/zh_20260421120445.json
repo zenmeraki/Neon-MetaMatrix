@@ -1052,6 +1052,7 @@
   "editExecutionErrors": "编辑记录了执行错误。",
   "undoFinishedWithIssues": "已完成撤消并记录问题",
   "undoEncounteredErrors": "撤消遇到的错误",
+  "failureStage": "失败阶段",
   "loadingHistoryDetailsSpinner": "正在加载历史记录详细信息...",
   "scheduled_for": "预定于",
   "at": "在",
@@ -1118,7 +1119,10 @@
   },
   "spreadsheetConfirmTitle": "确认产品导入",
   "spreadsheetConfirmPrimary": "是的，进口产品",
-  "spreadsheetConfirmMessage": "您确定要导入此 CSV 吗？",
+  "spreadsheetConfirmMessage": "您确定要导入此 CSV 吗？"
+  "editHistoryTitle": {
+    "setFixedPrice": "价格已设置为 {{value}}"
+  },
   "failureStage": "失败阶段",
   "IncreaseValue": "增加价值",
   "search_multiple": "搜索并选择多个...",

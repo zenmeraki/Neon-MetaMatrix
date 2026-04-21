@@ -1033,6 +1033,7 @@
   },
   "exportDownloadLinkMissing": "Ссылка на скачивание недоступна.",
   "exportDownloadFailed": "Не удалось загрузить файл.",
+<<<<<<< HEAD
   "scheduledExport": {
     "failedMessage": "Не удалось запланировать экспорт.",
     "successMessage": "Экспорт запланирован успешно!",
@@ -1114,7 +1115,11 @@
   "spreadsheetConfirmTitle": "Подтвердить импорт продукта",
   "spreadsheetConfirmPrimary": "Да, импортные товары",
   "spreadsheetConfirmMessage": "Вы уверены, что хотите импортировать этот CSV-файл?",
-  "spreadsheetConfirmBanner": "Продукты будут обновляться на основе идентификатора продукта и идентификатора варианта.",
+  "spreadsheetConfirmBanner": "Продукты будут обновляться на основе идентификатора продукта и идентификатора варианта."
+=======
+  "editHistoryTitle": {
+    "setFixedPrice": "Цена установлена на {{value}}"
+  },
   "failureStage": "Стадия отказа",
   "IncreaseValue": "Увеличение ценности",
   "search_multiple": "Найдите и выберите несколько...",
@@ -1178,6 +1183,7 @@
   "no": "Нет"
 },
 
+
 "inventoryPolicyActions": {
   "setInventoryPolicy": "Установить политику запасов"
 },
@@ -1188,4 +1194,5 @@
   "continueSelling": "Продолжать продажу при отсутствии на складе",
   "denySelling": "Не продолжать продажу при отсутствии на складе"
 }
+>>>>>>> 37b08fad91160a56491334b7b7c66e80852e9c80
 }

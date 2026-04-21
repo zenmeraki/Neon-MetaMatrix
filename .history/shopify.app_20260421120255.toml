@@ -6,10 +6,12 @@ application_url = "https://reduction-initiative-loving-august.trycloudflare.com"
 embedded = true
 handle = "test-app-11537"
 
+
 [webhooks]
 api_version = "2025-04"
 
   [[webhooks.subscriptions]]
+<<<<<<< HEAD
   topics = [
   "bulk_operations/finish",
   "app/uninstalled",
@@ -47,6 +49,41 @@ redirect_urls = [
 url = "https://automatic-learners-excluded-decorative.trycloudflare.com/storefront/subscription"
 subpath = "proxy"
 prefix = "apps"
+=======
+  topics = [ "bulk_operations/finish", "products/create" ]
+  uri = "https://a50e-2409-4073-307-d512-1554-bf40-8d5f-a82.ngrok-free.app/api/webhooks"
+
+  [[webhooks.subscriptions]]
+  uri = "https://contributing-cole-senate-dried.trycloudflare.com/gdpr/customer_data_erasure"
+  compliance_topics = [ "customers/redact" ]
+
+  [[webhooks.subscriptions]]
+  uri = "https://contributing-cole-senate-dried.trycloudflare.com/gdpr/customer_data_request"
+  compliance_topics = [ "customers/data_request" ]
+
+  [[webhooks.subscriptions]]
+  uri = "https://contributing-cole-senate-dried.trycloudflare.com/gdpr/shop_data_erasure"
+  compliance_topics = [ "shop/redact" ]
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "read_inventory,read_locations,read_products,write_inventory,write_products"
+
+[auth]
+redirect_urls = [
+  "https://managing-brandon-shares-out.trycloudflare.com/auth/callback",
+  "https://managing-brandon-shares-out.trycloudflare.com/auth/shopify/callback",
+  "https://managing-brandon-shares-out.trycloudflare.com/api/auth/callback"
+]
+
+[app_proxy]
+url = "https://impression-receive-wallace-surprised.trycloudflare.com/storefront/subscription"
+subpath = "proxy"
+prefix = "apps"
+
+[pos]
+embedded = false
+>>>>>>> 37b08fad91160a56491334b7b7c66e80852e9c80
 
 [build]
 automatically_update_urls_on_dev = true

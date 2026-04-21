@@ -1120,7 +1120,10 @@
   "spreadsheetConfirmTitle": "제품 수입 확인",
   "spreadsheetConfirmPrimary": "예, 수입 제품입니다.",
   "spreadsheetConfirmMessage": "이 CSV를 가져오시겠습니까?",
-  "spreadsheetConfirmBanner": "제품은 제품 ID 및 변형 ID를 기반으로 업데이트됩니다.",
+  "spreadsheetConfirmBanner": "제품은 제품 ID 및 변형 ID를 기반으로 업데이트됩니다."
+  "editHistoryTitle": {
+    "setFixedPrice": "가격을 {{value}}(으)로 설정했습니다"
+  },
   "failureStage": "실패 단계",
   "IncreaseValue": "가치 증대",
   "search_multiple": "여러개 검색해서 선택하세요...",

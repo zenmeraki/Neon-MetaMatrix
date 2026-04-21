@@ -1066,6 +1066,7 @@
   },
   "exportDownloadLinkMissing": "Download link not available.",
   "exportDownloadFailed": "Failed to download file.",
+<<<<<<< HEAD
   "scheduledExport": {
     "modalTitle": "Schedule Export",
     "scheduleButton": "Schedule",
@@ -1086,6 +1087,7 @@
   "editExecutionErrors": "The edit recorded execution errors.",
   "undoFinishedWithIssues": "Undo completed with recorded issues",
   "undoEncounteredErrors": "Undo encountered errors",
+  "failureStage": "Failure Stage",
   "loadingHistoryDetailsSpinner": "Loading history details...",
   "scheduled_for": "Scheduled for",
   "at": "at",
@@ -1174,7 +1176,11 @@
   "spreadsheetConfirmTitle": "Confirm Product Import",
   "spreadsheetConfirmPrimary": "Yes, Import Products",
   "spreadsheetConfirmMessage": "Are you sure you want to import this CSV?",
-  "spreadsheetConfirmBanner": "Products will be updated based on Product ID and Variant ID",
+  "spreadsheetConfirmBanner": "Products will be updated based on Product ID and Variant ID"
+=======
+  "editHistoryTitle": {
+    "setFixedPrice": "Price set to {{value}}"
+  },
   "failureStage": "Failure stage",
   "IncreaseValue": "Increase Value",
   "search_multiple": "Search and select multiple...",
@@ -1248,4 +1254,5 @@
   "continueSelling": "Continue selling when out of stock",
   "denySelling": "Don't continue selling when out of stock"
 }
+>>>>>>> 37b08fad91160a56491334b7b7c66e80852e9c80
 }

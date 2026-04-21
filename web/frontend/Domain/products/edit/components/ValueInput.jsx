@@ -179,11 +179,17 @@ const ValueInput = ({
 
   const getLabel = () => {
     if (editType?.value?.toLowerCase().includes("decrease"))
-      return t("DecreaseValue");
+      return t("DecreaseValue", { defaultValue: "Decrease Value" });
+
     if (editType?.value?.toLowerCase().includes("increase"))
-      return "Increase Value";
-    if (editType?.value?.toLowerCase().includes("set")) return "New Value";
-    return config.inputHelperLabel || "Value";
+      return t("IncreaseValue", { defaultValue: "Increase Value" });
+
+    if (editType?.value?.toLowerCase().includes("set"))
+      return t("new_value", { defaultValue: "New Value" });
+
+    return t(config.inputHelperLabel || "value", {
+      defaultValue: config.inputHelperLabel || "Value",
+    });
   };
 
   // Autocomplete handlers with proper debounce
@@ -254,11 +260,15 @@ const ValueInput = ({
   const autocompleteTextField = (
     <Autocomplete.TextField
       onChange={updateAutocompleteText}
-      label={config.inputHelperLabel || "Select Category"}
+      label={t(config.inputHelperLabel || "select_category", {
+        defaultValue: config.inputHelperLabel || "Select Category",
+      })}
       value={autocompleteInputValue}
       prefix={<Icon source={SearchIcon} />}
       placeholder={
-        allowMultiple ? "Search and select multiple..." : "Search..."
+        allowMultiple
+          ? t("search_multiple", { defaultValue: "Search and select multiple..." })
+          : t("search", { defaultValue: "Search..." })
       }
       autoComplete="off"
       error={helperText}
@@ -269,8 +279,13 @@ const ValueInput = ({
     case InputType.CHOICE_LIST:
       return (
         <ChoiceList
-          title={t(editType?.inputHelperLabel || "Select Option")}
-          choices={config.choices || []}
+          title={t(editType?.inputHelperLabel || "Select Option", {
+            defaultValue: editType?.inputHelperLabel || "Select Option",
+          })}
+          choices={(config.choices || []).map((choice) => ({
+            ...choice,
+            label: t(choice.label, { defaultValue: choice.label }),
+          }))}
           selected={
             value !== undefined && value !== null ? [String(value)] : []
           }
@@ -283,7 +298,9 @@ const ValueInput = ({
         <FormLayout>
           <FormLayout.Group condensed>
             <TextField
-              label={config.searchLabel || "Search For"}
+              label={t(config.searchLabel || "search_for", {
+                defaultValue: config.searchLabel || "Search For",
+              })}
               value={
                 typeof searchReplace?.search === "string"
                   ? searchReplace.search
@@ -299,7 +316,9 @@ const ValueInput = ({
             />
 
             <TextField
-              label={config.replaceLabel || "Replace With"}
+              label={t(config.replaceLabel || "replace_with", {
+                defaultValue: config.replaceLabel || "Replace With",
+              })}
               value={
                 typeof searchReplace?.replace === "string"
                   ? searchReplace.replace
@@ -328,7 +347,7 @@ const ValueInput = ({
             autoComplete="off"
           />
           <Select
-            label="Location"
+            label={t("location", { defaultValue: "Location" })}
             options={apiLocations}
             value={locationValue || "all"}
             onChange={onLocationChange}
@@ -355,21 +374,23 @@ const ValueInput = ({
         <Banner tone="critical">
           <Text as="p">
             {editType?.inputHelperLabel ||
-              "This action is permanent and cannot be undone."}
+              t("permanent_action", {
+                defaultValue: "This action is permanent and cannot be undone.",
+              })}
           </Text>
         </Banner>
       );
 
     default:
-return (
-  <TextField
-    label={getLabel()}
-    value={typeof value === "string" ? value : ""}
-    onChange={handleChange}
-    error={helperText || error}
-    autoComplete="off"
-  />
-);
+      return (
+        <TextField
+          label={getLabel()}
+          value={typeof value === "string" ? value : ""}
+          onChange={handleChange}
+          error={helperText || error}
+          autoComplete="off"
+        />
+      );
   }
 };
 

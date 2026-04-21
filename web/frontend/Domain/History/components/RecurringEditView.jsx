@@ -477,6 +477,7 @@ const getLastRunStatusBadge = (status) => {
           },
         ]}
       >
+        
         <Modal.Section>
           <Banner tone="critical">
             <Text as="p">

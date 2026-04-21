@@ -1034,6 +1034,7 @@
   },
   "exportDownloadLinkMissing": "Download-Link nicht verfügbar.",
   "exportDownloadFailed": "Datei konnte nicht heruntergeladen werden.",
+<<<<<<< HEAD
   "scheduledExport": {
     "failedMessage": "Der Export konnte nicht geplant werden",
     "successMessage": "Export erfolgreich geplant!",
@@ -1054,6 +1055,7 @@
   "editExecutionErrors": "Bei der Bearbeitung wurden Ausführungsfehler erfasst.",
   "undoFinishedWithIssues": "Rückgängig gemacht mit aufgezeichneten Problemen",
   "undoEncounteredErrors": "Festgestellte Fehler rückgängig machen",
+  "failureStage": "Fehlerstadium",
   "loadingHistoryDetailsSpinner": "Verlaufsdetails werden geladen...",
   "scheduled_for": "Geplant für",
   "at": "bei",
@@ -1121,7 +1123,11 @@
   "spreadsheetConfirmTitle": "Bestätigen Sie den Produktimport",
   "spreadsheetConfirmPrimary": "Ja, Produkte importieren",
   "spreadsheetConfirmMessage": "Sind Sie sicher, dass Sie diese CSV-Datei importieren möchten?",
-  "spreadsheetConfirmBanner": "Produkte werden basierend auf Produkt-ID und Varianten-ID aktualisiert",
+  "spreadsheetConfirmBanner": "Produkte werden basierend auf Produkt-ID und Varianten-ID aktualisiert"
+=======
+  "editHistoryTitle": {
+    "setFixedPrice": "Preis auf {{value}} gesetzt"
+  },
   "failureStage": "Fehlerstadium",
   "IncreaseValue": "Wert steigern",
   "search_multiple": "Mehrere suchen und auswählen...",
@@ -1194,4 +1200,5 @@
   "continueSelling": "Weiterverkaufen, wenn nicht auf Lager",
   "denySelling": "Nicht weiterverkaufen, wenn nicht auf Lager"
 }
+>>>>>>> 37b08fad91160a56491334b7b7c66e80852e9c80
 }

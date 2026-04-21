@@ -1149,7 +1149,10 @@
   "spreadsheetConfirmTitle": "उत्पाद आयात की पुष्टि करें",
   "spreadsheetConfirmPrimary": "हाँ, उत्पाद आयात करें",
   "spreadsheetConfirmMessage": "क्या आप वाकई इस सीएसवी को आयात करना चाहते हैं?",
-  "spreadsheetConfirmBanner": "उत्पाद आईडी और वैरिएंट आईडी के आधार पर उत्पादों को अपडेट किया जाएगा",
+  "spreadsheetConfirmBanner": "उत्पाद आईडी और वैरिएंट आईडी के आधार पर उत्पादों को अपडेट किया जाएगा"
+  "editHistoryTitle": {
+    "setFixedPrice": "कीमत {{value}} पर सेट की गई"
+  },
   "failureStage": "विफलता चरण",
   "IncreaseValue": "मूल्य बढ़ाएँ",
   "search_multiple": "एकाधिक खोजें और चुनें...",

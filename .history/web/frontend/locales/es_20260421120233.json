@@ -1034,6 +1034,7 @@
   },
   "exportDownloadLinkMissing": "Enlace de descarga no disponible.",
   "exportDownloadFailed": "No se pudo descargar el archivo.",
+<<<<<<< HEAD
   "scheduledExport": {
     "failedMessage": "No se pudo programar la exportación",
     "successMessage": "¡Exportación programada exitosamente!",
@@ -1054,6 +1055,7 @@
   "editExecutionErrors": "La edición registró errores de ejecución.",
   "undoFinishedWithIssues": "Deshacer completado con problemas grabados",
   "undoEncounteredErrors": "Deshacer errores encontrados",
+  "failureStage": "Etapa de fracaso",
   "loadingHistoryDetailsSpinner": "Cargando detalles del historial...",
   "scheduled_for": "Programado para",
   "at": "en",
@@ -1121,7 +1123,11 @@
   "spreadsheetConfirmTitle": "Confirmar la importación del producto",
   "spreadsheetConfirmPrimary": "Sí, productos de importación.",
   "spreadsheetConfirmMessage": "¿Está seguro de que desea importar este CSV?",
-  "spreadsheetConfirmBanner": "Los productos se actualizarán según el ID del producto y el ID de la variante.",
+  "spreadsheetConfirmBanner": "Los productos se actualizarán según el ID del producto y el ID de la variante."
+=======
+  "editHistoryTitle": {
+    "setFixedPrice": "Precio establecido en {{value}}"
+  },
   "failureStage": "etapa de fracaso",
   "IncreaseValue": "Aumentar valor",
   "search_multiple": "Busca y selecciona varios...",
@@ -1193,4 +1199,5 @@
   "continueSelling": "Seguir vendiendo cuando no haya stock",
   "denySelling": "No seguir vendiendo cuando no haya stock"
 }
+>>>>>>> 37b08fad91160a56491334b7b7c66e80852e9c80
 }

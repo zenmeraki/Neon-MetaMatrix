@@ -1134,7 +1134,10 @@
   "spreadsheetConfirmTitle": "تأكيد استيراد المنتج",
   "spreadsheetConfirmPrimary": "نعم استيراد المنتجات",
   "spreadsheetConfirmMessage": "هل أنت متأكد أنك تريد استيراد ملف CSV هذا؟",
-  "spreadsheetConfirmBanner": "سيتم تحديث المنتجات بناءً على معرف المنتج ومعرف المتغير",
+  "spreadsheetConfirmBanner": "سيتم تحديث المنتجات بناءً على معرف المنتج ومعرف المتغير"
+  "editHistoryTitle": {
+    "setFixedPrice": "تم تعيين السعر إلى {{value}}"
+  },
   "failureStage": "مرحلة الفشل",
   "IncreaseValue": "زيادة القيمة",
   "search_multiple": "بحث واختيار عدة...",

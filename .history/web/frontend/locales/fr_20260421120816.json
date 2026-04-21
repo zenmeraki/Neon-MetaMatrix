@@ -1119,7 +1119,10 @@
   "spreadsheetConfirmTitle": "Confirmer l'importation du produit",
   "spreadsheetConfirmPrimary": "Oui, importer des produits",
   "spreadsheetConfirmMessage": "Êtes-vous sûr de vouloir importer ce CSV ?",
-  "spreadsheetConfirmBanner": "Les produits seront mis à jour en fonction de l'ID du produit et de l'ID de la variante.",
+  "spreadsheetConfirmBanner": "Les produits seront mis à jour en fonction de l'ID du produit et de l'ID de la variante."
+  "editHistoryTitle": {
+    "setFixedPrice": "Prix défini à {{value}}"
+  },
   "failureStage": "Étape d'échec",
   "IncreaseValue": "Augmenter la valeur",
   "search_multiple": "Recherchez et sélectionnez plusieurs...",
