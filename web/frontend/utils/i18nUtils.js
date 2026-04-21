@@ -10,16 +10,8 @@ import {
   SUPPORTED_LOCALES as SUPPORTED_POLARIS_LOCALES,
 } from "@shopify/polaris";
 
-/**
- * The default locale for the app.
- */
 const DEFAULT_APP_LOCALE = "en";
 
-/**
- * The supported locales for the app.
- *
- * These should correspond with the JSON files in the `locales` folder.
- */
 const SUPPORTED_APP_LOCALES = [
   "en",
   "de",
@@ -37,9 +29,24 @@ const SUPPORTED_APP_LOCALES = [
 let _userLocale;
 let _polarisTranslations;
 
-/**
- * Safely reads the persisted app language from localStorage.
- */
+function deepMerge(target, source) {
+  const output = { ...target };
+
+  for (const key of Object.keys(source)) {
+    if (
+      source[key] &&
+      typeof source[key] === "object" &&
+      !Array.isArray(source[key])
+    ) {
+      output[key] = deepMerge(target?.[key] || {}, source[key]);
+    } else {
+      output[key] = source[key];
+    }
+  }
+
+  return output;
+}
+
 function getStoredLocale() {
   try {
     return window.localStorage.getItem("appLanguage");
@@ -48,12 +55,6 @@ function getStoredLocale() {
   }
 }
 
-/**
- * Retrieves the user's locale from localStorage first, then URL param,
- * and matches it to supported app locales.
- *
- * Returns the default app locale if the user locale is not supported.
- */
 export function getUserLocale() {
   if (_userLocale) {
     return _userLocale;
@@ -68,12 +69,10 @@ export function getUserLocale() {
   return _userLocale;
 }
 
-/**
- * Returns Polaris translations that correspond to the user locale.
- */
 export function getPolarisTranslations() {
   return _polarisTranslations;
 }
+
 export async function getPolarisTranslationsForLocale(locale) {
   const defaultPolarisLocale = match(
     [DEFAULT_APP_LOCALE],
@@ -88,27 +87,33 @@ export async function getPolarisTranslationsForLocale(locale) {
   );
 
   const translations = await loadPolarisTranslations(polarisLocale);
-  _polarisTranslations = translations;
-  return translations;
+  const localeBase = (locale || DEFAULT_APP_LOCALE).split("-")[0];
+
+  const customPolarisOverrides =
+    localeBase === "hi"
+      ? {
+          Polaris: {
+            Filters: {
+              addFilter: "फ़िल्टर जोड़ें",
+            },
+          },
+        }
+      : {};
+
+  _polarisTranslations = deepMerge(translations, customPolarisOverrides);
+  return _polarisTranslations;
 }
-/**
- * Asynchronously initializes i18next and loads Polaris translations.
- *
- * Intended to be called before rendering the app to ensure translations are present.
- */
+
 export async function initI18n() {
   await loadIntlPolyfills();
   await Promise.all([initI18next(), fetchPolarisTranslations()]);
 
-  // Keep cached locale aligned when language changes at runtime
-  i18next.on("languageChanged", (lng) => {
+  i18next.on("languageChanged", async (lng) => {
     _userLocale = match([lng], SUPPORTED_APP_LOCALES, DEFAULT_APP_LOCALE);
+    _polarisTranslations = await getPolarisTranslationsForLocale(_userLocale);
   });
 }
 
-/**
- * Asynchronously loads Intl polyfills for the default locale and user locale.
- */
 async function loadIntlPolyfills() {
   if (shouldPolyfillLocale()) {
     await import("@formatjs/intl-locale/polyfill");
@@ -131,10 +136,6 @@ async function loadIntlPolyfills() {
   await Promise.all(promises);
 }
 
-/**
- * A subset of the available plural rules locales
- * that match available Shopify Admin languages.
- */
 const PLURAL_RULES_LOCALE_DATA = {
   cs: () => import("@formatjs/intl-pluralrules/locale-data/cs"),
   da: () => import("@formatjs/intl-pluralrules/locale-data/da"),
@@ -162,9 +163,6 @@ async function loadIntlPluralRulesLocaleData(locale) {
   return (await PLURAL_RULES_LOCALE_DATA[locale]()).default;
 }
 
-/**
- * Asynchronously initializes i18next.
- */
 async function initI18next() {
   if (i18next.isInitialized) {
     return i18next;
@@ -194,37 +192,15 @@ function localResourcesToBackend() {
   });
 }
 
-/**
- * Asynchronously loads Polaris translations that correspond to the user locale.
- *
- * Loads Polaris translations for the default locale if the user locale is not supported.
- */
 async function fetchPolarisTranslations() {
   if (_polarisTranslations) {
     return _polarisTranslations;
   }
 
-  const defaultPolarisLocale = match(
-    [DEFAULT_APP_LOCALE],
-    SUPPORTED_POLARIS_LOCALES,
-    DEFAULT_POLARIS_LOCALE,
-  );
-
-  const polarisLocale = match(
-    [getUserLocale()],
-    SUPPORTED_POLARIS_LOCALES,
-    defaultPolarisLocale,
-  );
-
-  _polarisTranslations = await loadPolarisTranslations(polarisLocale);
+  _polarisTranslations = await getPolarisTranslationsForLocale(getUserLocale());
   return _polarisTranslations;
 }
 
-/**
- * Polaris imports are declared explicitly because
- * dynamic imports with variables are only supported
- * for files with relative paths, not packages.
- */
 const POLARIS_LOCALE_DATA = {
   cs: () => import("@shopify/polaris/locales/cs.json"),
   da: () => import("@shopify/polaris/locales/da.json"),

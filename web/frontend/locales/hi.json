@@ -1226,7 +1226,63 @@
   "spreadsheetConfirmPrimary": "हाँ, उत्पाद आयात करें",
   "spreadsheetConfirmMessage": "क्या आप वाकई इस सीएसवी को आयात करना चाहते हैं?",
   "spreadsheetConfirmBanner": "उत्पाद आईडी और वैरिएंट आईडी के आधार पर उत्पादों को अपडेट किया जाएगा",
+
   "danger": {
   "deleteProductsWarning": "यह क्रिया चयनित उत्पादों को स्थायी रूप से हटा देगी। इसे वापस नहीं किया जा सकता।"
+},
+"configureField": "{{field}} कॉन्फ़िगर करें",
+"searchPlaceholderField": "{{field}} खोजें",
+"filtersOperators": {
+  "contains": "शामिल है",
+  "doesNotContain": "शामिल नहीं है",
+  "equals": "बराबर है",
+  "doesNotEqual": "बराबर नहीं है",
+  "startsWith": "से शुरू होता है",
+  "endsWith": "पर समाप्त होता है",
+  "isEmptyBlank": "खाली है",
+  "isNotEmpty": "खाली नहीं है",
+  "isBefore": "से पहले है",
+  "isAfter": "के बाद है",
+  "is": "है",
+  "isNot": "नहीं है",
+  "lessThan": "से कम",
+  "greaterThan": "से अधिक",
+  "equalTo": "बराबर",
+  "notEqualTo": "बराबर नहीं"
+},
+
+"filterValueLabels": {
+  "true": "हाँ",
+  "false": "नहीं",
+  "ACTIVE": "सक्रिय",
+  "DRAFT": "ड्राफ्ट",
+  "ARCHIVED": "संग्रहीत",
+  "male": "पुरुष",
+  "female": "महिला",
+  "unisex": "यूनिसेक्स",
+  "new": "नया",
+  "used": "उपयोग किया हुआ",
+  "refurbished": "रीफर्बिश्ड",
+  "newborn": "नवजात",
+  "infant": "शिशु",
+  "toddler": "नन्हे बच्चे",
+  "kids": "बच्चे",
+  "adult": "वयस्क",
+  "regular": "रेगुलर",
+  "petite": "पेटाइट",
+  "plus": "प्लस",
+  "big and tall": "बिग एंड टॉल",
+  "maternity": "मातृत्व",
+  "US": "US",
+  "UK": "UK",
+  "EU": "EU",
+  "DE": "DE",
+  "FR": "FR",
+  "IT": "IT",
+  "JP": "JP",
+  "CN": "CN",
+  "AU": "AU",
+  "BR": "BR"
 }
+
 }

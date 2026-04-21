@@ -1063,73 +1063,73 @@
   "location": "Emplacement",
   "permanent_action": "Cette action est permanente et ne peut être annulée.",
   "select_category": "Sélectionner une catégorie",
-"collectionActions": {
-  "addToCollection": "Ajouter à la collection",
-  "removeFromCollection": "Supprimer de la collection"
-},
-"collectionSearch": {
-  "label": "Rechercher et sélectionner des collections"
-},
+  "collectionActions": {
+    "addToCollection": "Ajouter à la collection",
+    "removeFromCollection": "Supprimer de la collection"
+  },
+  "collectionSearch": {
+    "label": "Rechercher et sélectionner des collections"
+  },
 
-"tagActions": {
-  "add": "Ajouter des tags au produit",
-  "remove": "Supprimer les tags du produit",
-  "rename": "Renommer le tag",
-  "searchReplace": "Rechercher/remplacer dans le nom du tag",
-  "setAll": "Définir les tags (remplace les existants)"
-},
-"tagInput": {
-  "commaSeparated": "Tags séparés par des virgules",
-  "rename": "Ancien tag → Nouveau tag",
-  "old": "Ancien tag",
-  "new": "Nouveau tag",
-  "searchReplace": "Rechercher → Remplacer",
-  "search": "Rechercher dans les tags",
-  "replace": "Remplacer par"
-},
-"textInput": {
-  "enterText": "Saisir le texte",
-  "enterTextToAdd": "Saisir le texte à ajouter",
-  "enterTextToRemove": "Saisir le texte à supprimer",
-  "enterMaxCharacterLength": "Saisir la longueur maximale",
-  "enterSearchAndReplaceValues": "Saisir les valeurs de recherche et remplacement",
-  "enterWord": "Saisir le mot"
-},
-"statusActions": {
-  "setStatus": "Définir le statut"
-},
-"statusInput": {
-  "selectProductStatus": "Sélectionner le statut du produit"
-},
-"statusChoices": {
-  "active": "Actif",
-  "draft": "Brouillon",
-  "archived": "Archivé"
-},
-"categorySearch": {
-  "label": "Rechercher et sélectionner"
-},
-"taxActions": {
-  "setTaxApplicability": "Appliquer la taxe"
-},
-"taxInput": {
-  "shouldProductBeTaxable": "Ce produit doit-il être taxé ?"
-},
-"commonChoices": {
-  "yes": "Oui",
-  "no": "Non"
-},
+  "tagActions": {
+    "add": "Ajouter des tags au produit",
+    "remove": "Supprimer les tags du produit",
+    "rename": "Renommer le tag",
+    "searchReplace": "Rechercher/remplacer dans le nom du tag",
+    "setAll": "Définir les tags (remplace les existants)"
+  },
+  "tagInput": {
+    "commaSeparated": "Tags séparés par des virgules",
+    "rename": "Ancien tag → Nouveau tag",
+    "old": "Ancien tag",
+    "new": "Nouveau tag",
+    "searchReplace": "Rechercher → Remplacer",
+    "search": "Rechercher dans les tags",
+    "replace": "Remplacer par"
+  },
+  "textInput": {
+    "enterText": "Saisir le texte",
+    "enterTextToAdd": "Saisir le texte à ajouter",
+    "enterTextToRemove": "Saisir le texte à supprimer",
+    "enterMaxCharacterLength": "Saisir la longueur maximale",
+    "enterSearchAndReplaceValues": "Saisir les valeurs de recherche et remplacement",
+    "enterWord": "Saisir le mot"
+  },
+  "statusActions": {
+    "setStatus": "Définir le statut"
+  },
+  "statusInput": {
+    "selectProductStatus": "Sélectionner le statut du produit"
+  },
+  "statusChoices": {
+    "active": "Actif",
+    "draft": "Brouillon",
+    "archived": "Archivé"
+  },
+  "categorySearch": {
+    "label": "Rechercher et sélectionner"
+  },
+  "taxActions": {
+    "setTaxApplicability": "Appliquer la taxe"
+  },
+  "taxInput": {
+    "shouldProductBeTaxable": "Ce produit doit-il être taxé ?"
+  },
+  "commonChoices": {
+    "yes": "Oui",
+    "no": "Non"
+  },
 
-"inventoryPolicyActions": {
-  "setInventoryPolicy": "Définir la politique d'inventaire"
-},
-"inventoryPolicyInput": {
-  "shouldContinueSellingOutOfStock": "Ce produit doit-il continuer à être vendu lorsqu'il est en rupture de stock ?"
-},
-"inventoryPolicyChoices": {
-  "continueSelling": "Continuer à vendre en cas de rupture de stock",
-  "denySelling": "Ne pas continuer à vendre en cas de rupture de stock"
-},
+  "inventoryPolicyActions": {
+    "setInventoryPolicy": "Définir la politique d'inventaire"
+  },
+  "inventoryPolicyInput": {
+    "shouldContinueSellingOutOfStock": "Ce produit doit-il continuer à être vendu lorsqu'il est en rupture de stock ?"
+  },
+  "inventoryPolicyChoices": {
+    "continueSelling": "Continuer à vendre en cas de rupture de stock",
+    "denySelling": "Ne pas continuer à vendre en cas de rupture de stock"
+  },
   "recurringEditErrors": {
     "titleRequired": "Le titre est requis",
     "weekdayRequired": "Veuillez sélectionner au moins un jour de la semaine",
@@ -1194,6 +1194,59 @@
   "spreadsheetConfirmMessage": "Êtes-vous sûr de vouloir importer ce CSV ?",
   "spreadsheetConfirmBanner": "Les produits seront mis à jour en fonction de l'ID du produit et de l'ID de la variante.",
   "danger": {
-  "deleteProductsWarning": "Cette action supprimera définitivement les produits sélectionnés. Cela ne peut pas être annulé."
-}
+    "deleteProductsWarning": "Cette action supprimera définitivement les produits sélectionnés. Cela ne peut pas être annulé."
+  },
+  "configureField": "Configurer {{field}}",
+  "searchPlaceholderField": "Rechercher {{field}}",
+  "filtersOperators": {
+    "contains": "contient",
+    "doesNotContain": "ne contient pas",
+    "equals": "est égal à",
+    "doesNotEqual": "n’est pas égal à",
+    "startsWith": "commence par",
+    "endsWith": "se termine par",
+    "isEmptyBlank": "est vide",
+    "isNotEmpty": "n’est pas vide",
+    "isBefore": "est avant",
+    "isAfter": "est après",
+    "is": "est",
+    "isNot": "n’est pas",
+    "lessThan": "inférieur à",
+    "greaterThan": "supérieur à",
+    "equalTo": "égal à",
+    "notEqualTo": "différent de"
+  },
+  "filterValueLabels": {
+    "true": "Oui",
+    "false": "Non",
+    "ACTIVE": "Actif",
+    "DRAFT": "Brouillon",
+    "ARCHIVED": "Archivé",
+    "male": "Homme",
+    "female": "Femme",
+    "unisex": "Unisexe",
+    "new": "Neuf",
+    "used": "D’occasion",
+    "refurbished": "Reconditionné",
+    "newborn": "Nouveau-né",
+    "infant": "Nourrisson",
+    "toddler": "Tout-petit",
+    "kids": "Enfants",
+    "adult": "Adulte",
+    "regular": "Régulier",
+    "petite": "Petite",
+    "plus": "Grande taille",
+    "big and tall": "Grande taille",
+    "maternity": "Maternité",
+    "US": "US",
+    "UK": "UK",
+    "EU": "EU",
+    "DE": "DE",
+    "FR": "FR",
+    "IT": "IT",
+    "JP": "JP",
+    "CN": "CN",
+    "AU": "AU",
+    "BR": "BR"
+  }
 }

@@ -10,9 +10,7 @@ import {
   Autocomplete,
   Text,
 } from "@shopify/polaris";
-
 import { getAllFilters } from "../constants";
-
 import { useTranslation } from "react-i18next";
 
 const VALUE_OPTION_OPERATORS = new Set([
@@ -25,6 +23,30 @@ const VALUE_OPTION_OPERATORS = new Set([
   "is",
   "is not",
 ]);
+
+const OPERATOR_TRANSLATION_KEY_MAP = {
+  contains: "filtersOperators.contains",
+  "does not contain": "filtersOperators.doesNotContain",
+  equals: "filtersOperators.equals",
+  "does not equal": "filtersOperators.doesNotEqual",
+  "starts with": "filtersOperators.startsWith",
+  "ends with": "filtersOperators.endsWith",
+  "is empty/blank": "filtersOperators.isEmptyBlank",
+  "is not empty": "filtersOperators.isNotEmpty",
+  "is before": "filtersOperators.isBefore",
+  "is after": "filtersOperators.isAfter",
+  is: "filtersOperators.is",
+  "is not": "filtersOperators.isNot",
+  "<": "filtersOperators.lessThan",
+  ">": "filtersOperators.greaterThan",
+  "=": "filtersOperators.equalTo",
+  "!=": "filtersOperators.notEqualTo",
+};
+
+function getTranslatedOperatorLabel(t, operator) {
+  const key = OPERATOR_TRANSLATION_KEY_MAP[operator];
+  return key ? t(key) : operator;
+}
 
 function normalizeAutocompleteOption(item) {
   if (item === null || item === undefined) return null;
@@ -70,6 +92,7 @@ function FilterValueInput({
   onSearch,
   options,
   loading,
+  t,
 }) {
   const [inputValue, setInputValue] = useState("");
 
@@ -90,7 +113,9 @@ function FilterValueInput({
         textField={
           <Autocomplete.TextField
             labelHidden
-            placeholder={`Search ${filter.label}`}
+            placeholder={t("searchPlaceholderField", {
+              field: t(`fieldLabels.${filter.key}`, filter.label),
+            })}
             autoComplete="off"
             value={inputValue}
             onFocus={() => onSearch(inputValue)}
@@ -109,7 +134,7 @@ function FilterValueInput({
       <ChoiceList
         titleHidden
         choices={filter.values.map((entry) => ({
-          label: entry,
+         label: t(`filterValueLabels.${entry}`, entry),
           value: entry,
         }))}
         selected={value ? [value] : []}
@@ -191,19 +216,21 @@ const ProductsFilters = memo(function ProductsFilters({
 
         return {
           key: filter.key,
-          label: filter.label,
+          label: t(`fieldLabels.${filter.key}`, filter.label),
           filter: (
             <Box width="280px">
               <BlockStack gap="300">
                 <Text as="p" variant="bodySm" tone="subdued">
-                  Configure {filter.label.toLowerCase()}
+                  {t("configureField", {
+                    field: t(`fieldLabels.${filter.key}`, filter.label),
+                  })}
                 </Text>
 
                 {filter.operators.length > 0 && (
                   <Select
                     labelHidden
                     options={filter.operators.map((operator) => ({
-                      label: operator,
+                      label: getTranslatedOperatorLabel(t, operator),
                       value: operator,
                     }))}
                     value={draft.operator}
@@ -224,6 +251,7 @@ const ProductsFilters = memo(function ProductsFilters({
                   value={draft.value}
                   options={autocompleteOptions[filter.key] || []}
                   loading={autocompleteLoading[filter.key]}
+                  t={t}
                   onChange={(nextValue) =>
                     setDraftFilters((prev) => ({
                       ...prev,
@@ -261,7 +289,7 @@ const ProductsFilters = memo(function ProductsFilters({
           ),
         };
       }),
-    [allFilters, autocompleteLoading, autocompleteOptions, draftFilters,t],
+    [allFilters, autocompleteLoading, autocompleteOptions, draftFilters, t, onFilterChange],
   );
 
   return (
@@ -282,15 +310,16 @@ const ProductsFilters = memo(function ProductsFilters({
 });
 
 function InlineHeader() {
-    const { t } = useTranslation();
+  const { t } = useTranslation();
+
   return (
     <BlockStack gap="100">
-     <Text as="h3" variant="headingSm">
-  {t("filters")}
-</Text>
-<Text as="p" variant="bodySm" tone="subdued">
-  {t("filtersDescription")}
-</Text>
+      <Text as="h3" variant="headingSm">
+        {t("filters")}
+      </Text>
+      <Text as="p" variant="bodySm" tone="subdued">
+        {t("filtersDescription")}
+      </Text>
     </BlockStack>
   );
 }

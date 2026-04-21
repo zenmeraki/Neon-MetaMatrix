@@ -1064,72 +1064,72 @@
   "location": "Standort",
   "permanent_action": "Diese Aktion ist dauerhaft und kann nicht rückgängig gemacht werden.",
   "select_category": "Kategorie auswählen",
-"collectionActions": {
-  "addToCollection": "Zur Sammlung hinzufügen",
-  "removeFromCollection": "Aus Sammlung entfernen"
-},
-"collectionSearch": {
-  "label": "Sammlungen suchen und auswählen"
-},
-"tagActions": {
-  "add": "Tags zum Produkt hinzufügen",
-  "remove": "Tags vom Produkt entfernen",
-  "rename": "Tag umbenennen",
-  "searchReplace": "Suchen/Ersetzen im Tag-Namen",
-  "setAll": "Tags festlegen (überschreibt vorhandene)"
-},
-"tagInput": {
-  "commaSeparated": "Kommagetrennte Tags",
-  "rename": "Alter Tag → Neuer Tag",
-  "old": "Alter Tag",
-  "new": "Neuer Tag",
-  "searchReplace": "Suchen → Ersetzen",
-  "search": "In Tags suchen",
-  "replace": "Ersetzen durch"
-},
-"textInput": {
-  "enterText": "Text eingeben",
-  "enterTextToAdd": "Text zum Hinzufügen eingeben",
-  "enterTextToRemove": "Text zum Entfernen eingeben",
-  "enterMaxCharacterLength": "Maximale Zeichenlänge eingeben",
-  "enterSearchAndReplaceValues": "Such- und Ersetzungswerte eingeben",
-  "enterWord": "Wort eingeben"
-},
-"statusActions": {
-  "setStatus": "Status festlegen"
-},
-"statusInput": {
-  "selectProductStatus": "Produktstatus auswählen"
-},
-"statusChoices": {
-  "active": "Aktiv",
-  "draft": "Entwurf",
-  "archived": "Archiviert"
-},
-"categorySearch": {
-  "label": "Suchen und auswählen"
-},
-"taxActions": {
-  "setTaxApplicability": "Steuer anwenden"
-},
-"taxInput": {
-  "shouldProductBeTaxable": "Soll dieses Produkt steuerpflichtig sein?"
-},
-"commonChoices": {
-  "yes": "Ja",
-  "no": "Nein"
-},
+  "collectionActions": {
+    "addToCollection": "Zur Sammlung hinzufügen",
+    "removeFromCollection": "Aus Sammlung entfernen"
+  },
+  "collectionSearch": {
+    "label": "Sammlungen suchen und auswählen"
+  },
+  "tagActions": {
+    "add": "Tags zum Produkt hinzufügen",
+    "remove": "Tags vom Produkt entfernen",
+    "rename": "Tag umbenennen",
+    "searchReplace": "Suchen/Ersetzen im Tag-Namen",
+    "setAll": "Tags festlegen (überschreibt vorhandene)"
+  },
+  "tagInput": {
+    "commaSeparated": "Kommagetrennte Tags",
+    "rename": "Alter Tag → Neuer Tag",
+    "old": "Alter Tag",
+    "new": "Neuer Tag",
+    "searchReplace": "Suchen → Ersetzen",
+    "search": "In Tags suchen",
+    "replace": "Ersetzen durch"
+  },
+  "textInput": {
+    "enterText": "Text eingeben",
+    "enterTextToAdd": "Text zum Hinzufügen eingeben",
+    "enterTextToRemove": "Text zum Entfernen eingeben",
+    "enterMaxCharacterLength": "Maximale Zeichenlänge eingeben",
+    "enterSearchAndReplaceValues": "Such- und Ersetzungswerte eingeben",
+    "enterWord": "Wort eingeben"
+  },
+  "statusActions": {
+    "setStatus": "Status festlegen"
+  },
+  "statusInput": {
+    "selectProductStatus": "Produktstatus auswählen"
+  },
+  "statusChoices": {
+    "active": "Aktiv",
+    "draft": "Entwurf",
+    "archived": "Archiviert"
+  },
+  "categorySearch": {
+    "label": "Suchen und auswählen"
+  },
+  "taxActions": {
+    "setTaxApplicability": "Steuer anwenden"
+  },
+  "taxInput": {
+    "shouldProductBeTaxable": "Soll dieses Produkt steuerpflichtig sein?"
+  },
+  "commonChoices": {
+    "yes": "Ja",
+    "no": "Nein"
+  },
 
-"inventoryPolicyActions": {
-  "setInventoryPolicy": "Bestandsrichtlinie festlegen"
-},
-"inventoryPolicyInput": {
-  "shouldContinueSellingOutOfStock": "Soll dieses Produkt weiterhin verkauft werden, wenn der Bestand aufgebraucht ist?"
-},
-"inventoryPolicyChoices": {
-  "continueSelling": "Weiterverkaufen, wenn nicht auf Lager",
-  "denySelling": "Nicht weiterverkaufen, wenn nicht auf Lager"
-},
+  "inventoryPolicyActions": {
+    "setInventoryPolicy": "Bestandsrichtlinie festlegen"
+  },
+  "inventoryPolicyInput": {
+    "shouldContinueSellingOutOfStock": "Soll dieses Produkt weiterhin verkauft werden, wenn der Bestand aufgebraucht ist?"
+  },
+  "inventoryPolicyChoices": {
+    "continueSelling": "Weiterverkaufen, wenn nicht auf Lager",
+    "denySelling": "Nicht weiterverkaufen, wenn nicht auf Lager"
+  },
   "recurringEditErrors": {
     "titleRequired": "Titel ist erforderlich",
     "weekdayRequired": "Bitte wählen Sie mindestens einen Wochentag aus",
@@ -1195,6 +1195,59 @@
   "spreadsheetConfirmMessage": "Sind Sie sicher, dass Sie diese CSV-Datei importieren möchten?",
   "spreadsheetConfirmBanner": "Produkte werden basierend auf Produkt-ID und Varianten-ID aktualisiert",
   "danger": {
-  "deleteProductsWarning": "Diese Aktion löscht die ausgewählten Produkte dauerhaft. Dies kann nicht rückgängig gemacht werden."
-}
+    "deleteProductsWarning": "Diese Aktion löscht die ausgewählten Produkte dauerhaft. Dies kann nicht rückgängig gemacht werden."
+  },
+  "configureField": "{{field}} konfigurieren",
+  "searchPlaceholderField": "{{field}} suchen",
+  "filtersOperators": {
+    "contains": "enthält",
+    "doesNotContain": "enthält nicht",
+    "equals": "ist gleich",
+    "doesNotEqual": "ist nicht gleich",
+    "startsWith": "beginnt mit",
+    "endsWith": "endet mit",
+    "isEmptyBlank": "ist leer",
+    "isNotEmpty": "ist nicht leer",
+    "isBefore": "ist vor",
+    "isAfter": "ist nach",
+    "is": "ist",
+    "isNot": "ist nicht",
+    "lessThan": "kleiner als",
+    "greaterThan": "größer als",
+    "equalTo": "gleich",
+    "notEqualTo": "ungleich"
+  },
+  "filterValueLabels": {
+    "true": "Ja",
+    "false": "Nein",
+    "ACTIVE": "Aktiv",
+    "DRAFT": "Entwurf",
+    "ARCHIVED": "Archiviert",
+    "male": "Männlich",
+    "female": "Weiblich",
+    "unisex": "Unisex",
+    "new": "Neu",
+    "used": "Gebraucht",
+    "refurbished": "Generalüberholt",
+    "newborn": "Neugeboren",
+    "infant": "Säugling",
+    "toddler": "Kleinkind",
+    "kids": "Kinder",
+    "adult": "Erwachsene",
+    "regular": "Regulär",
+    "petite": "Petite",
+    "plus": "Plus",
+    "big and tall": "Große Größen",
+    "maternity": "Umstandsmode",
+    "US": "US",
+    "UK": "UK",
+    "EU": "EU",
+    "DE": "DE",
+    "FR": "FR",
+    "IT": "IT",
+    "JP": "JP",
+    "CN": "CN",
+    "AU": "AU",
+    "BR": "BR"
+  }
 }

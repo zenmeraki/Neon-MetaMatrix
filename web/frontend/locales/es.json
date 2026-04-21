@@ -1064,71 +1064,71 @@
   "location": "Ubicación",
   "permanent_action": "Esta acción es permanente y no se puede deshacer.",
   "select_category": "Seleccionar categoría",
-"collectionActions": {
-  "addToCollection": "Agregar a la colección",
-  "removeFromCollection": "Eliminar de la colección"
-},
-"collectionSearch": {
-  "label": "Buscar y seleccionar colecciones"
-},
-"tagActions": {
-  "add": "Agregar etiquetas al producto",
-  "remove": "Eliminar etiquetas del producto",
-  "rename": "Renombrar etiqueta",
-  "searchReplace": "Buscar/reemplazar en nombre de etiqueta",
-  "setAll": "Establecer etiquetas (sobrescribe existentes)"
-},
-"tagInput": {
-  "commaSeparated": "Etiquetas separadas por comas",
-  "rename": "Etiqueta antigua → Nueva etiqueta",
-  "old": "Etiqueta antigua",
-  "new": "Nueva etiqueta",
-  "searchReplace": "Buscar → Reemplazar",
-  "search": "Buscar en etiquetas",
-  "replace": "Reemplazar con"
-},
-"textInput": {
-  "enterText": "Ingresar texto",
-  "enterTextToAdd": "Ingresar el texto a agregar",
-  "enterTextToRemove": "Ingresar el texto a eliminar",
-  "enterMaxCharacterLength": "Ingresar longitud máxima",
-  "enterSearchAndReplaceValues": "Ingresar valores de búsqueda y reemplazo",
-  "enterWord": "Ingresar palabra"
-},
-"statusActions": {
-  "setStatus": "Establecer estado"
-},
-"statusInput": {
-  "selectProductStatus": "Seleccionar estado del producto"
-},
-"statusChoices": {
-  "active": "Activo",
-  "draft": "Borrador",
-  "archived": "Archivado"
-},
-"categorySearch": {
-  "label": "Buscar y seleccionar"
-},
-"taxActions": {
-  "setTaxApplicability": "Aplicar impuesto"
-},
-"taxInput": {
-  "shouldProductBeTaxable": "¿Este producto debe ser gravable?"
-},
-"commonChoices": {
-  "yes": "Sí",
-  "no": "No"
-},
-"inventoryPolicyActions": {
-  "setInventoryPolicy": "Establecer política de inventario"
-},
-"inventoryPolicyInput": {
-  "shouldContinueSellingOutOfStock": "¿Este producto debe seguir vendiéndose cuando esté sin stock?"
-},
-"inventoryPolicyChoices": {
-  "continueSelling": "Seguir vendiendo cuando no haya stock",
-  "denySelling": "No seguir vendiendo cuando no haya stock"
-},
+  "collectionActions": {
+    "addToCollection": "Agregar a la colección",
+    "removeFromCollection": "Eliminar de la colección"
+  },
+  "collectionSearch": {
+    "label": "Buscar y seleccionar colecciones"
+  },
+  "tagActions": {
+    "add": "Agregar etiquetas al producto",
+    "remove": "Eliminar etiquetas del producto",
+    "rename": "Renombrar etiqueta",
+    "searchReplace": "Buscar/reemplazar en nombre de etiqueta",
+    "setAll": "Establecer etiquetas (sobrescribe existentes)"
+  },
+  "tagInput": {
+    "commaSeparated": "Etiquetas separadas por comas",
+    "rename": "Etiqueta antigua → Nueva etiqueta",
+    "old": "Etiqueta antigua",
+    "new": "Nueva etiqueta",
+    "searchReplace": "Buscar → Reemplazar",
+    "search": "Buscar en etiquetas",
+    "replace": "Reemplazar con"
+  },
+  "textInput": {
+    "enterText": "Ingresar texto",
+    "enterTextToAdd": "Ingresar el texto a agregar",
+    "enterTextToRemove": "Ingresar el texto a eliminar",
+    "enterMaxCharacterLength": "Ingresar longitud máxima",
+    "enterSearchAndReplaceValues": "Ingresar valores de búsqueda y reemplazo",
+    "enterWord": "Ingresar palabra"
+  },
+  "statusActions": {
+    "setStatus": "Establecer estado"
+  },
+  "statusInput": {
+    "selectProductStatus": "Seleccionar estado del producto"
+  },
+  "statusChoices": {
+    "active": "Activo",
+    "draft": "Borrador",
+    "archived": "Archivado"
+  },
+  "categorySearch": {
+    "label": "Buscar y seleccionar"
+  },
+  "taxActions": {
+    "setTaxApplicability": "Aplicar impuesto"
+  },
+  "taxInput": {
+    "shouldProductBeTaxable": "¿Este producto debe ser gravable?"
+  },
+  "commonChoices": {
+    "yes": "Sí",
+    "no": "No"
+  },
+  "inventoryPolicyActions": {
+    "setInventoryPolicy": "Establecer política de inventario"
+  },
+  "inventoryPolicyInput": {
+    "shouldContinueSellingOutOfStock": "¿Este producto debe seguir vendiéndose cuando esté sin stock?"
+  },
+  "inventoryPolicyChoices": {
+    "continueSelling": "Seguir vendiendo cuando no haya stock",
+    "denySelling": "No seguir vendiendo cuando no haya stock"
+  },
   "recurringEditErrors": {
     "titleRequired": "Se requiere título",
     "weekdayRequired": "Por favor seleccione al menos un día de la semana",
@@ -1194,6 +1194,59 @@
   "spreadsheetConfirmMessage": "¿Está seguro de que desea importar este CSV?",
   "spreadsheetConfirmBanner": "Los productos se actualizarán según el ID del producto y el ID de la variante.",
   "danger": {
-  "deleteProductsWarning": "Esta acción eliminará permanentemente los productos seleccionados. Esto no se puede deshacer."
-}
+    "deleteProductsWarning": "Esta acción eliminará permanentemente los productos seleccionados. Esto no se puede deshacer."
+  },
+  "configureField": "Configurar {{field}}",
+  "searchPlaceholderField": "Buscar {{field}}",
+  "filtersOperators": {
+    "contains": "contiene",
+    "doesNotContain": "no contiene",
+    "equals": "es igual a",
+    "doesNotEqual": "no es igual a",
+    "startsWith": "empieza con",
+    "endsWith": "termina con",
+    "isEmptyBlank": "está vacío",
+    "isNotEmpty": "no está vacío",
+    "isBefore": "es anterior a",
+    "isAfter": "es posterior a",
+    "is": "es",
+    "isNot": "no es",
+    "lessThan": "menor que",
+    "greaterThan": "mayor que",
+    "equalTo": "igual a",
+    "notEqualTo": "distinto de"
+  },
+  "filterValueLabels": {
+    "true": "Sí",
+    "false": "No",
+    "ACTIVE": "Activo",
+    "DRAFT": "Borrador",
+    "ARCHIVED": "Archivado",
+    "male": "Masculino",
+    "female": "Femenino",
+    "unisex": "Unisex",
+    "new": "Nuevo",
+    "used": "Usado",
+    "refurbished": "Reacondicionado",
+    "newborn": "Recién nacido",
+    "infant": "Bebé",
+    "toddler": "Niño pequeño",
+    "kids": "Niños",
+    "adult": "Adulto",
+    "regular": "Regular",
+    "petite": "Petite",
+    "plus": "Talla grande",
+    "big and tall": "Grande y alto",
+    "maternity": "Maternidad",
+    "US": "US",
+    "UK": "UK",
+    "EU": "EU",
+    "DE": "DE",
+    "FR": "FR",
+    "IT": "IT",
+    "JP": "JP",
+    "CN": "CN",
+    "AU": "AU",
+    "BR": "BR"
+  }
 }
