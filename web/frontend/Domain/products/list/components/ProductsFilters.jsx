@@ -22,14 +22,36 @@ const ProductsFilters = memo(function ProductsFilters({
   onQueryClear,
   onClearAll,
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [activeFilterKey, setActiveFilterKey] = useState(null);
 
+  const translatedText = useMemo(
+    () => ({
+      filtersHeading: t("filters"),
+      filtersDescription: t("filtersDescription"),
+      searchPlaceholder: t("searchPlaceholder"),
+      addFilter: t("addFilter"),
+      clearAll: t("clearFilters", "Clear Filters"),
+      cancel: t("cancel", "Cancel"),
+    }),
+    [t, i18n.language]
+  );
+
+  const translatedFilters = useMemo(
+    () =>
+      ALL_FILTERS.map((filter) => ({
+        ...filter,
+        translatedLabel: t(`fieldLabels.${filter.key}`, filter.label),
+      })),
+    [t, i18n.language]
+  );
+
   const activeFilter = useMemo(
-    () => ALL_FILTERS.find((filter) => filter.key === activeFilterKey) || null,
-    [activeFilterKey]
+    () =>
+      translatedFilters.find((filter) => filter.key === activeFilterKey) || null,
+    [translatedFilters, activeFilterKey]
   );
 
   const appliedFilterMap = useMemo(() => {
@@ -53,6 +75,10 @@ const ProductsFilters = memo(function ProductsFilters({
     setActiveFilterKey(filterKey);
   }, []);
 
+  const handleBackToList = useCallback(() => {
+    setActiveFilterKey(null);
+  }, []);
+
   const handleApplyFilter = useCallback(
     (nextFilter) => {
       onFilterChange(nextFilter.field, {
@@ -66,23 +92,26 @@ const ProductsFilters = memo(function ProductsFilters({
 
   const actionItems = useMemo(
     () =>
-      ALL_FILTERS.map((filter) => ({
-        content: t(`fieldLabels.${filter.key}`, filter.label),
+      translatedFilters.map((filter) => ({
+        content: filter.translatedLabel,
         onAction: () => handleSelectFilter(filter.key),
       })),
-    [t, handleSelectFilter]
+    [translatedFilters, handleSelectFilter]
   );
 
   return (
     <BlockStack gap="300">
-      <InlineHeader />
+      <InlineHeader
+        heading={translatedText.filtersHeading}
+        description={translatedText.filtersDescription}
+      />
 
       <InlineStack gap="200" wrap blockAlign="center">
         <Box minWidth="320px">
           <TextField
             labelHidden
             value={queryValue}
-            placeholder={t("searchPlaceholder")}
+            placeholder={translatedText.searchPlaceholder}
             onChange={onQueryChange}
             clearButton
             onClearButtonClick={onQueryClear}
@@ -94,7 +123,7 @@ const ProductsFilters = memo(function ProductsFilters({
           active={isPopoverOpen}
           activator={
             <Button onClick={handleOpenPicker}>
-              {t("addFilter")}
+              {translatedText.addFilter}
             </Button>
           }
           autofocusTarget="first-node"
@@ -107,7 +136,7 @@ const ProductsFilters = memo(function ProductsFilters({
               filter={activeFilter}
               initialFilter={appliedFilterMap[activeFilter.key]}
               onApply={handleApplyFilter}
-              onCancel={() => setActiveFilterKey(null)}
+              onCancel={handleBackToList}
               t={t}
             />
           )}
@@ -115,7 +144,7 @@ const ProductsFilters = memo(function ProductsFilters({
 
         {appliedFilters.length > 0 && (
           <Button variant="plain" onClick={onClearAll}>
-            {t("clearAll", "Clear all")}
+            {translatedText.clearAll}
           </Button>
         )}
       </InlineStack>
@@ -133,19 +162,17 @@ const ProductsFilters = memo(function ProductsFilters({
   );
 });
 
-function InlineHeader() {
-  const { t } = useTranslation();
-
+const InlineHeader = memo(function InlineHeader({ heading, description }) {
   return (
     <BlockStack gap="100">
       <Text as="h3" variant="headingSm">
-        {t("filters")}
+        {heading}
       </Text>
       <Text as="p" variant="bodySm" tone="subdued">
-        {t("filtersDescription")}
+        {description}
       </Text>
     </BlockStack>
   );
-}
+});
 
 export default ProductsFilters;

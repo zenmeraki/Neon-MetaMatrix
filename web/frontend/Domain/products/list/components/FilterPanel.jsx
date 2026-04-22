@@ -4,14 +4,24 @@ import React, {
   useRef,
   useCallback,
   useEffect,
+  useMemo,
 } from "react";
-import { Box, BlockStack, Select, Button, InlineStack, Text } from "@shopify/polaris";
+import {
+  Box,
+  BlockStack,
+  Select,
+  Button,
+  InlineStack,
+  Text,
+} from "@shopify/polaris";
 import FilterValueInput from "./FilterValueInput";
 import {
   operatorRequiresValue,
   getTranslatedOperatorLabel,
   normalizeAutocompleteOption,
 } from "../utils/filterUtils";
+
+const MIN_AUTOCOMPLETE_QUERY_LENGTH = 2;
 
 async function fetchAutocompleteOptions({
   filter,
@@ -29,25 +39,15 @@ async function fetchAutocompleteOptions({
       `${filter.api}?search=${encodeURIComponent(query)}&isNameOnly=true`,
       {
         method: "GET",
-        headers: {
-          Accept: "application/json",
-        },
+        headers: { Accept: "application/json" },
         credentials: "same-origin",
         signal,
       }
     );
 
-    if (!res.ok) {
-      throw new Error(`Autocomplete request failed with ${res.status}`);
-    }
-
-    const contentType = res.headers.get("content-type") || "";
-    if (!contentType.includes("application/json")) {
-      throw new Error("Autocomplete endpoint did not return JSON");
-    }
+    if (!res.ok) throw new Error(`Autocomplete failed ${res.status}`);
 
     const data = await res.json();
-
     if (signal.aborted) return;
 
     const items = Array.isArray(data?.data)
@@ -58,22 +58,12 @@ async function fetchAutocompleteOptions({
 
     setOptions(items.map(normalizeAutocompleteOption).filter(Boolean));
   } catch (error) {
-    if (error?.name === "AbortError") {
-      return;
+    if (error?.name !== "AbortError") {
+      console.error("Autocomplete error", { filter: filter.key, error });
+      setOptions([]);
     }
-
-    console.error("Autocomplete fetch failed:", {
-      filterKey: filter?.key,
-      filterApi: filter?.api,
-      query,
-      error,
-    });
-
-    setOptions([]);
   } finally {
-    if (!signal.aborted) {
-      setLoading(false);
-    }
+    if (!signal.aborted) setLoading(false);
   }
 }
 
@@ -89,12 +79,14 @@ const FilterPanel = memo(function FilterPanel({
     value: initialFilter?.value || "",
     inputText: initialFilter?.value || "",
   });
+
   const [options, setOptions] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const debounceTimer = useRef(null);
   const abortControllerRef = useRef(null);
 
+  // Reset when filter changes
   useEffect(() => {
     setDraft({
       operator: initialFilter?.operator || filter.operators[0] || "",
@@ -103,8 +95,9 @@ const FilterPanel = memo(function FilterPanel({
     });
     setOptions([]);
     setLoading(false);
-  }, [filter.key, filter.operators, initialFilter?.operator, initialFilter?.value]);
+  }, [filter.key, initialFilter]);
 
+  // Cleanup
   useEffect(() => {
     return () => {
       clearTimeout(debounceTimer.current);
@@ -112,84 +105,106 @@ const FilterPanel = memo(function FilterPanel({
     };
   }, []);
 
+  // Sync label after selection
   useEffect(() => {
-    if (!filter.isSearchable || !draft.value || options.length === 0) return;
+    if (!filter.isSearchable || !draft.value) return;
 
-    const selectedOption = options.find((option) => option.value === draft.value);
-    if (selectedOption?.label && selectedOption.label !== draft.inputText) {
+    const match = options.find((o) => o.value === draft.value);
+    if (match?.label && match.label !== draft.inputText) {
+      setDraft((prev) => ({ ...prev, inputText: match.label }));
+    }
+  }, [options, draft.value, draft.inputText, filter.isSearchable]);
+
+  // Memoized operator labels
+  const operatorOptions = useMemo(
+    () =>
+      filter.operators.map((op) => ({
+        label: getTranslatedOperatorLabel(t, op),
+        value: op,
+      })),
+    [filter.operators, t]
+  );
+
+  // Placeholder (only dynamic part)
+  const placeholder = useMemo(
+    () =>
+      t("searchPlaceholderField", {
+        field: filter.translatedLabel || filter.label,
+      }),
+    [t, filter.translatedLabel, filter.label]
+  );
+
+  // Enum labels
+  const enumChoices = useMemo(() => {
+    if (filter.type !== "enum") return [];
+    return filter.values.map((entry) => ({
+      label: t(`filterValueLabels.${entry}`, entry),
+      value: entry,
+    }));
+  }, [filter.type, filter.values, t]);
+
+  const handleSearch = useCallback(
+    (query) => {
+      const q = String(query || "").trimStart();
+
       setDraft((prev) => ({
         ...prev,
-        inputText: selectedOption.label,
+        inputText: query,
+        value: q ? prev.value : "",
       }));
-    }
-  }, [filter.isSearchable, draft.value, draft.inputText, options]);
 
- const MIN_AUTOCOMPLETE_QUERY_LENGTH = 2;
+      clearTimeout(debounceTimer.current);
+      abortControllerRef.current?.abort();
 
-const handleSearch = useCallback(
-  (query) => {
-    const normalizedQuery = String(query || "").trimStart();
+      const allowEmpty = Boolean(filter.allowEmptySearchPreload);
 
+      if (!allowEmpty && q.length < MIN_AUTOCOMPLETE_QUERY_LENGTH) {
+        setOptions([]);
+        setLoading(false);
+        return;
+      }
+
+      if (allowEmpty && q.length === 0) {
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+
+        fetchAutocompleteOptions({
+          filter,
+          query: "",
+          signal: controller.signal,
+          setOptions,
+          setLoading,
+        });
+        return;
+      }
+
+      debounceTimer.current = setTimeout(() => {
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+
+        fetchAutocompleteOptions({
+          filter,
+          query: q,
+          signal: controller.signal,
+          setOptions,
+          setLoading,
+        });
+      }, 300);
+    },
+    [filter]
+  );
+
+  const handleValueChange = useCallback((val, text = val) => {
     setDraft((prev) => ({
       ...prev,
-      inputText: query,
-      value: normalizedQuery ? prev.value : "",
+      value: val,
+      inputText: text,
     }));
+  }, []);
 
-    clearTimeout(debounceTimer.current);
-    abortControllerRef.current?.abort();
-
-    const allowEmptyPreload = Boolean(filter.allowEmptySearchPreload);
-
-    if (
-      !allowEmptyPreload &&
-      normalizedQuery.length < MIN_AUTOCOMPLETE_QUERY_LENGTH
-    ) {
-      setOptions([]);
-      setLoading(false);
-      return;
-    }
-
-    if (allowEmptyPreload && normalizedQuery.length === 0) {
-      const controller = new AbortController();
-      abortControllerRef.current = controller;
-
-      fetchAutocompleteOptions({
-        filter,
-        query: "",
-        signal: controller.signal,
-        setOptions,
-        setLoading,
-      });
-      return;
-    }
-
-    debounceTimer.current = setTimeout(() => {
-      const controller = new AbortController();
-      abortControllerRef.current = controller;
-
-      fetchAutocompleteOptions({
-        filter,
-        query: normalizedQuery,
-        signal: controller.signal,
-        setOptions,
-        setLoading,
-      });
-    }, 300);
-  },
-  [filter]
-);
-
-  const handleValueChange = useCallback(
-    (nextValue, nextInputText = nextValue) => {
-      setDraft((prev) => ({
-        ...prev,
-        value: nextValue,
-        inputText: nextInputText,
-      }));
-    },
-    []
-  );
+  const handleOperatorChange = useCallback((op) => {
+    setDraft((prev) => ({ ...prev, operator: op }));
+  }, []);
 
   const handleApply = useCallback(() => {
     onApply({
@@ -197,28 +212,23 @@ const handleSearch = useCallback(
       operator: draft.operator,
       value: draft.value,
     });
-  }, [filter.key, draft.operator, draft.value, onApply]);
+  }, [filter.key, draft, onApply]);
 
   return (
     <Box width="280px" padding="200">
       <BlockStack gap="300">
         <Text as="p" variant="bodySm" tone="subdued">
           {t("configureField", {
-            field: t(`fieldLabels.${filter.key}`, filter.label),
+            field: filter.translatedLabel || filter.label,
           })}
         </Text>
 
         {filter.operators.length > 0 && (
           <Select
             labelHidden
-            options={filter.operators.map((op) => ({
-              label: getTranslatedOperatorLabel(t, op),
-              value: op,
-            }))}
+            options={operatorOptions}
             value={draft.operator}
-            onChange={(nextOperator) =>
-              setDraft((prev) => ({ ...prev, operator: nextOperator }))
-            }
+            onChange={handleOperatorChange}
           />
         )}
 
@@ -228,7 +238,8 @@ const handleSearch = useCallback(
           inputText={draft.inputText}
           options={options}
           loading={loading}
-          t={t}
+          placeholder={placeholder}
+          enumChoices={enumChoices}
           onChange={handleValueChange}
           onSearch={handleSearch}
         />
