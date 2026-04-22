@@ -70,31 +70,26 @@ export default function ProductsPage() {
     }
   }, []);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!search) {
-        dispatch(setFilters(filterState.filter((f) => f.field !== "search")));
-        return;
-      }
+const effectiveFilters = useMemo(() => {
+  const baseFilters = filterState.filter((f) => f.field !== "search");
 
-      dispatch(
-        setFilters([
-          ...filterState.filter((f) => f.field !== "search"),
-          {
-            field: "search",
-            operator: "contains",
-            value: search,
-          },
-        ]),
-      );
-    }, 500);
+  if (!search?.trim()) {
+    return baseFilters;
+  }
 
-    return () => clearTimeout(timer);
-  }, [search, dispatch]);
+  return [
+    ...baseFilters,
+    {
+      field: "search",
+      operator: "contains",
+      value: search.trim(),
+    },
+  ];
+}, [filterState, search]);
 
-  useEffect(() => {
-    fetchProducts(1, filterState);
-  }, [filterState, fetchProducts]);
+useEffect(() => {
+  fetchProducts(1, effectiveFilters);
+}, [effectiveFilters, fetchProducts]);
 
  useEffect(() => {
   fetchSyncStatus().then((status) => {
@@ -137,7 +132,7 @@ useEffect(() => {
 
   if (justCompleted) {
     setSyncCompleted(true);
-    fetchProducts(1, filterState);
+    fetchProducts(1, effectiveFilters);
   }
 
   wasSyncingRef.current = isSyncing;
@@ -326,8 +321,8 @@ useEffect(() => {
               products={products}
               loading={shouldShowLoadingState}
               pagination={pagination}
-              onNext={() => fetchProducts(page + 1, filterState)}
-              onPrev={() => fetchProducts(page - 1, filterState)}
+              onNext={() => fetchProducts(page + 1, effectiveFilters)}
+              onPrev={() => fetchProducts(page - 1, effectiveFilters)}
             />
           </Card>
         </Layout.Section>

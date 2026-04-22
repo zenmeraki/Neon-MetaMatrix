@@ -124,33 +124,61 @@ const FilterPanel = memo(function FilterPanel({
     }
   }, [filter.isSearchable, draft.value, draft.inputText, options]);
 
-  const handleSearch = useCallback(
-    (query) => {
-      setDraft((prev) => ({
-        ...prev,
-        inputText: query,
-        value: query ? prev.value : "",
-      }));
+ const MIN_AUTOCOMPLETE_QUERY_LENGTH = 2;
 
-      clearTimeout(debounceTimer.current);
+const handleSearch = useCallback(
+  (query) => {
+    const normalizedQuery = String(query || "").trimStart();
 
-      debounceTimer.current = setTimeout(() => {
-        abortControllerRef.current?.abort();
+    setDraft((prev) => ({
+      ...prev,
+      inputText: query,
+      value: normalizedQuery ? prev.value : "",
+    }));
 
-        const controller = new AbortController();
-        abortControllerRef.current = controller;
+    clearTimeout(debounceTimer.current);
+    abortControllerRef.current?.abort();
 
-        fetchAutocompleteOptions({
-          filter,
-          query,
-          signal: controller.signal,
-          setOptions,
-          setLoading,
-        });
-      }, 300);
-    },
-    [filter]
-  );
+    const allowEmptyPreload = Boolean(filter.allowEmptySearchPreload);
+
+    if (
+      !allowEmptyPreload &&
+      normalizedQuery.length < MIN_AUTOCOMPLETE_QUERY_LENGTH
+    ) {
+      setOptions([]);
+      setLoading(false);
+      return;
+    }
+
+    if (allowEmptyPreload && normalizedQuery.length === 0) {
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
+      fetchAutocompleteOptions({
+        filter,
+        query: "",
+        signal: controller.signal,
+        setOptions,
+        setLoading,
+      });
+      return;
+    }
+
+    debounceTimer.current = setTimeout(() => {
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
+      fetchAutocompleteOptions({
+        filter,
+        query: normalizedQuery,
+        signal: controller.signal,
+        setOptions,
+        setLoading,
+      });
+    }, 300);
+  },
+  [filter]
+);
 
   const handleValueChange = useCallback(
     (nextValue, nextInputText = nextValue) => {
