@@ -1,28 +1,59 @@
 // src/components/products/ProductCell.jsx
+
+import React, { memo } from "react";
 import { InlineStack, Box, Thumbnail, Text } from "@shopify/polaris";
 
-export default function ProductCell({ product }) {
-    const imageUrl =
-        product.featuredImageUrl ||
-        product.featuredMedia?.preview?.image?.url ||
-        "https://www.otithee.com/img/fallback/fallback-2.png";
+function ProductCellComponent({
+  title = "",
+  handle = "",
+  imageUrl = "",
+}) {
+  return (
+    <InlineStack
+      gap="300"
+      blockAlign="center"
+      wrap={false}
+    >
+      {/* Thumbnail — fixed width */}
+      <Box minWidth="40px">
+        <Thumbnail
+          source={imageUrl}
+          alt="" // decorative image
+          size="small"
+        />
+      </Box>
 
-    return (
-        <InlineStack gap="300" blockAlign="center" wrap={false}>
-            <Box minWidth="40px">
-                <Thumbnail source={imageUrl} alt={product.title} size="small" />
-            </Box>
+      {/* Text container — CRITICAL FIX */}
+      <Box
+        maxWidth="320px"
+        minWidth="0"   // ✅ REQUIRED for truncation
+      >
+        <Text
+          as="p"
+          fontWeight="medium"
+          truncate
+        >
+          {title}
+        </Text>
 
-            <Box maxWidth="320px">
-                <Text as="p" fontWeight="medium" truncate>
-                    {product.title}
-                </Text>
-                {product.handle && (
-                    <Text as="p" tone="subdued" variant="bodySm" truncate>
-                        {product.handle}
-                    </Text>
-                )}
-            </Box>
-        </InlineStack>
-    );
+        {handle && (
+          <Text
+            as="p"
+            tone="subdued"
+            variant="bodySm"
+            truncate
+          >
+            {handle}
+          </Text>
+        )}
+      </Box>
+    </InlineStack>
+  );
 }
+
+/**
+ * Memoized component
+ */
+const ProductCell = memo(ProductCellComponent);
+
+export default ProductCell;

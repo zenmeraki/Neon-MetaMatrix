@@ -10,43 +10,10 @@ import {
   Autocomplete,
   Text,
 } from "@shopify/polaris";
-import { getAllFilters } from "../constants";
+
+import { ALL_FILTERS } from "../constants";
 import { useTranslation } from "react-i18next";
-
-const VALUE_OPTION_OPERATORS = new Set([
-  "contains",
-  "does not contain",
-  "equals",
-  "does not equal",
-  "starts with",
-  "ends with",
-  "is",
-  "is not",
-]);
-
-const OPERATOR_TRANSLATION_KEY_MAP = {
-  contains: "filtersOperators.contains",
-  "does not contain": "filtersOperators.doesNotContain",
-  equals: "filtersOperators.equals",
-  "does not equal": "filtersOperators.doesNotEqual",
-  "starts with": "filtersOperators.startsWith",
-  "ends with": "filtersOperators.endsWith",
-  "is empty/blank": "filtersOperators.isEmptyBlank",
-  "is not empty": "filtersOperators.isNotEmpty",
-  "is before": "filtersOperators.isBefore",
-  "is after": "filtersOperators.isAfter",
-  is: "filtersOperators.is",
-  "is not": "filtersOperators.isNot",
-  "<": "filtersOperators.lessThan",
-  ">": "filtersOperators.greaterThan",
-  "=": "filtersOperators.equalTo",
-  "!=": "filtersOperators.notEqualTo",
-};
-
-function getTranslatedOperatorLabel(t, operator) {
-  const key = OPERATOR_TRANSLATION_KEY_MAP[operator];
-  return key ? t(key) : operator;
-}
+import FilterPanel from "./FilterPanel";
 
 function normalizeAutocompleteOption(item) {
   if (item === null || item === undefined) return null;
@@ -81,79 +48,6 @@ function normalizeAutocompleteOption(item) {
   };
 }
 
-function operatorRequiresValue(operator) {
-  return VALUE_OPTION_OPERATORS.has(operator);
-}
-
-function FilterValueInput({
-  filter,
-  value,
-  onChange,
-  onSearch,
-  options,
-  loading,
-  t,
-}) {
-  const [inputValue, setInputValue] = useState("");
-
-  if (filter.isSearchable) {
-    return (
-      <Autocomplete
-        options={options}
-        selected={value ? [value] : []}
-        loading={loading}
-        onSelect={([selected]) => {
-          onChange(selected);
-
-          const selectedOption = options.find((option) => option.value === selected);
-          if (selectedOption) {
-            setInputValue(selectedOption.label);
-          }
-        }}
-        textField={
-          <Autocomplete.TextField
-            labelHidden
-            placeholder={t("searchPlaceholderField", {
-              field: t(`fieldLabels.${filter.key}`, filter.label),
-            })}
-            autoComplete="off"
-            value={inputValue}
-            onFocus={() => onSearch(inputValue)}
-            onChange={(text) => {
-              setInputValue(text);
-              onSearch(text);
-            }}
-          />
-        }
-      />
-    );
-  }
-
-  if (filter.type === "enum") {
-    return (
-      <ChoiceList
-        titleHidden
-        choices={filter.values.map((entry) => ({
-         label: t(`filterValueLabels.${entry}`, entry),
-          value: entry,
-        }))}
-        selected={value ? [value] : []}
-        onChange={([next]) => onChange(next)}
-      />
-    );
-  }
-
-  if (filter.type === "number") {
-    return <TextField type="number" labelHidden value={value} onChange={onChange} />;
-  }
-
-  if (filter.type === "date") {
-    return <TextField type="date" labelHidden value={value} onChange={onChange} />;
-  }
-
-  return <TextField labelHidden value={value} onChange={onChange} />;
-}
-
 const ProductsFilters = memo(function ProductsFilters({
   queryValue,
   appliedFilters,
@@ -164,7 +58,7 @@ const ProductsFilters = memo(function ProductsFilters({
   onClearAll,
 }) {
   const { t } = useTranslation();
-  const allFilters = getAllFilters();
+const allFilters = ALL_FILTERS;
   const [draftFilters, setDraftFilters] = useState({});
   const [filtersKey, setFiltersKey] = useState(0);
   const [autocompleteOptions, setAutocompleteOptions] = useState({});
@@ -218,75 +112,31 @@ const ProductsFilters = memo(function ProductsFilters({
           key: filter.key,
           label: t(`fieldLabels.${filter.key}`, filter.label),
           filter: (
-            <Box width="280px">
-              <BlockStack gap="300">
-                <Text as="p" variant="bodySm" tone="subdued">
-                  {t("configureField", {
-                    field: t(`fieldLabels.${filter.key}`, filter.label),
-                  })}
-                </Text>
+  <FilterPanel
+    filter={filter}
+    draft={draft}
+    options={autocompleteOptions[filter.key] || []}
+    loading={autocompleteLoading[filter.key]}
+    t={t}
+    onDraftChange={(nextDraft) =>
+      setDraftFilters((prev) => ({
+        ...prev,
+        [filter.key]: nextDraft,
+      }))
+    }
+    onSearch={(query) => {
+      clearTimeout(debounceTimers.current[filter.key]);
 
-                {filter.operators.length > 0 && (
-                  <Select
-                    labelHidden
-                    options={filter.operators.map((operator) => ({
-                      label: getTranslatedOperatorLabel(t, operator),
-                      value: operator,
-                    }))}
-                    value={draft.operator}
-                    onChange={(nextOperator) =>
-                      setDraftFilters((prev) => ({
-                        ...prev,
-                        [filter.key]: {
-                          ...draft,
-                          operator: nextOperator,
-                        },
-                      }))
-                    }
-                  />
-                )}
-
-                <FilterValueInput
-                  filter={filter}
-                  value={draft.value}
-                  options={autocompleteOptions[filter.key] || []}
-                  loading={autocompleteLoading[filter.key]}
-                  t={t}
-                  onChange={(nextValue) =>
-                    setDraftFilters((prev) => ({
-                      ...prev,
-                      [filter.key]: {
-                        ...draft,
-                        value: nextValue,
-                      },
-                    }))
-                  }
-                  onSearch={(query) => {
-                    clearTimeout(debounceTimers.current[filter.key]);
-
-                    debounceTimers.current[filter.key] = setTimeout(() => {
-                      fetchAutocompleteOptions(filter, query);
-                    }, 300);
-                  }}
-                />
-
-                <Button
-                  variant="primary"
-                  disabled={
-                    operatorRequiresValue(draft.operator)
-                      ? !String(draft.value || "").trim()
-                      : false
-                  }
-                  onClick={() => {
-                    onFilterChange(filter.key, draft);
-                    setFiltersKey((key) => key + 1);
-                  }}
-                >
-                  {t("addFilter")}
-                </Button>
-              </BlockStack>
-            </Box>
-          ),
+      debounceTimers.current[filter.key] = setTimeout(() => {
+        fetchAutocompleteOptions(filter, query);
+      }, 300);
+    }}
+    onApply={() => {
+      onFilterChange(filter.key, draft);
+      setFiltersKey((key) => key + 1);
+    }}
+  />
+),
         };
       }),
     [allFilters, autocompleteLoading, autocompleteOptions, draftFilters, t, onFilterChange],

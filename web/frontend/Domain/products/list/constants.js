@@ -1,3 +1,4 @@
+//frontend/Domain/products/list/constants.js
 /* ===============================
    Operator Definitions
 ================================ */
@@ -530,10 +531,12 @@ export const FILTER_CONFIG = {
    Helpers
 ================================ */
 
-export const getAllFilters = () => [
+export const ALL_FILTERS = [
   ...FILTER_CONFIG.product,
   ...FILTER_CONFIG.variant,
 ];
 
+export const getAllFilters = () => ALL_FILTERS;
+
 export const getFilterByKey = (key) =>
-  getAllFilters().find((f) => f.key === key);
+  ALL_FILTERS.find((f) => f.key === key);

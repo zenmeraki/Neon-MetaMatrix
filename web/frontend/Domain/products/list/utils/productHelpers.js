@@ -1,13 +1,21 @@
 export const getStatusColor = (status) => {
-    switch (status) {
-        case "ACTIVE":
-            return "success";
-        case "DRAFT":
-            return "attention";
-        case "ARCHIVED":
-        default:
-            return "critical";
-    }
+
+  switch (status) {
+
+    case "ACTIVE":
+      return "success";
+
+    case "DRAFT":
+      return "attention";
+
+    case "ARCHIVED":
+      return "critical";
+
+    default:
+      return "subdued";
+
+  }
+
 };
 
 export const isEmpty = (value) =>
