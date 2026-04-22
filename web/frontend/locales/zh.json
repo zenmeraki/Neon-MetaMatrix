@@ -897,20 +897,20 @@
   "Up to 100 products": "最多 100 个产品",
   "Email support": "电子邮件支持",
   "Get Started": "开始使用",
-  "Advanced Monthly": "Advanced 月付",
+  "Advanced Monthly": "高级版月付",
   "For growing businesses": "适合成长型企业",
   "Everything you need to scale": "扩展业务所需的一切",
   "All Free features": "免费套餐的所有功能",
   "Up to 1,000 products - Manual Edits": "最多 1,000 个产品 - 手动编辑",
   "Up to 1,000 products - Scheduled Edits": "最多 1,000 个产品 - 定时编辑",
-  "Upgrade to Advanced": "升级到 Advanced",
-  "Pro Monthly": "Pro 月付",
+  "Upgrade to Advanced": "升级到高级版",
+  "Pro Monthly": "专业版月付",
   "For established stores": "适合成熟店铺",
   "Premium features and dedicated support": "高级功能和专属支持",
-  "All Advanced features": "Advanced 的所有功能",
+  "All Advanced features": "高级版的所有功能",
   "Unlimited products": "无限产品",
   "Unlimited Scheduled Edit": "无限定时编辑",
-  "Start Pro": "开始 Pro",
+  "Start Pro": "开始使用专业版",
   "PerMonth": "/月",
   "historySummaryTotal": "全部的",
   "historySummaryActive": "积极的",
@@ -1054,7 +1054,8 @@
     "dateLabel": "日期",
     "dateHelpText": "选择运行导出的日期",
     "timeLabel": "时间",
-    "timeHelpText": "选择运行导出的时间"
+    "timeHelpText": "选择运行导出的时间",
+    "modalTitle": "计划导出"
   },
   "UndoProgress": "撤消进度",
   "errorPageTitle": "错误",
@@ -1293,5 +1294,6 @@
   "syncAlreadyRunning": "另一个同步正在运行...",
   "syncStarted": "同步开始",
   "syncFailed": "同步失败",
-  "syncStatusLoadFailed": "无法加载同步状态"
+  "syncStatusLoadFailed": "无法加载同步状态",
+  "modalTitle": "安排导出"
 }
