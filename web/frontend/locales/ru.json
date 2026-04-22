@@ -1271,6 +1271,29 @@
   
   "categorySearch": {
     "label": "Найдите и выберите"
-  }
+  },
 
+  
+  "numeric": {
+    "enterAmount": "Введите сумму"
+  },
+  
+  "taxInput": {
+    "shouldProductBeTaxable": "Облагается ли этот товар налогом?"
+  },
+  "commonChoices": {
+    "yes": "Да",
+    "no": "Нет"
+  },
+  
+  "inventoryPolicyInput": {
+    "shouldContinueSellingOutOfStock": "Продолжать продавать товар при отсутствии на складе?"
+  },
+  "inventoryPolicyChoices": {
+    "continueSelling": "Продолжать продавать при отсутствии на складе",
+    "denySelling": "Не продавать при отсутствии на складе"
+  }
 }
+
+
+
