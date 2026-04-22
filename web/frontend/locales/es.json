@@ -1295,5 +1295,12 @@
   "syncAlreadyRunning": "Se está ejecutando otra sincronización...",
   "syncStarted": "sincronización iniciada",
   "syncFailed": "No se pudo sincronizar",
-  "syncStatusLoadFailed": "No se pudo cargar el estado de sincronización"
+  "syncStatusLoadFailed": "No se pudo cargar el estado de sincronización",
+  "numeric": {
+    "enterAmount": "Ingrese el monto"
+  },
+  "searchFor": "Buscar",
+  "replaceWith": "Reemplazar con",
+  "selectCategory": "Seleccionar categoría",
+  "permanentAction": "Esta acción es permanente y no se puede deshacer."
 }

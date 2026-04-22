@@ -1293,5 +1293,12 @@
   "syncAlreadyRunning": "Une autre synchronisation est en cours...",
   "syncStarted": "la synchronisation a commencé",
   "syncFailed": "Échec de la synchronisation",
-  "syncStatusLoadFailed": "Échec du chargement de l'état de synchronisation"
+  "syncStatusLoadFailed": "Échec du chargement de l'état de synchronisation",
+  "numeric": {
+    "enterAmount": "Entrez le montant"
+  },
+  "searchFor": "Rechercher",
+  "replaceWith": "Remplacer par",
+  "selectCategory": "Sélectionnez une catégorie",
+  "permanentAction": "Cette action est permanente et ne peut être annulée."
 }

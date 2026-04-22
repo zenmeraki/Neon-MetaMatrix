@@ -1306,5 +1306,12 @@
   "syncAlreadyRunning": "एक अन्य सिंक चल रहा है...",
   "syncStarted": "सिंक प्रारंभ हुआ",
   "syncFailed": "सिंक करने में विफल",
-  "syncStatusLoadFailed": "समन्वयन स्थिति लोड करने में विफल"
+  "syncStatusLoadFailed": "समन्वयन स्थिति लोड करने में विफल",
+  "numeric": {
+    "enterAmount": "राशि दर्ज करें"
+  },
+  "searchFor": "निम्न को खोजें",
+  "replaceWith": "के साथ बदलें",
+  "selectCategory": "श्रेणी चुनना",
+  "permanentAction": "यह क्रिया स्थायी है और इसे पूर्ववत नहीं किया जा सकता."
 }

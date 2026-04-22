@@ -1328,5 +1328,12 @@
   "syncAlreadyRunning": "Another sync is running...",
   "syncStarted": "sync started",
   "syncFailed": "Failed to sync",
-  "syncStatusLoadFailed": "Failed to load sync status"
+  "syncStatusLoadFailed": "Failed to load sync status",
+  "numeric": {
+    "enterAmount": "Enter the amount"
+  },
+  "searchFor": "Search for",
+  "replaceWith": "Replace With",
+  "selectCategory": "Select Category",
+  "permanentAction": "This action is permanent and cannot be undone."
 }

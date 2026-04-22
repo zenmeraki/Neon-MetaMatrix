@@ -1298,5 +1298,12 @@
   "syncAlreadyRunning": "別の同期が実行中です...",
   "syncStarted": "同期が開始されました",
   "syncFailed": "同期に失敗しました",
-  "syncStatusLoadFailed": "同期ステータスのロードに失敗しました"
+  "syncStatusLoadFailed": "同期ステータスのロードに失敗しました",
+  "numeric": {
+    "enterAmount": "金額を入力してください"
+  },
+  "searchFor": "検索する",
+  "replaceWith": "次で置換",
+  "selectCategory": "カテゴリの選択",
+  "permanentAction": "このアクションは永続的であり、元に戻すことはできません。"
 }
