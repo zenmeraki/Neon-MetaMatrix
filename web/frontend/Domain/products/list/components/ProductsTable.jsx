@@ -96,7 +96,7 @@ export default function ProductsTable({
     return (
       <Box padding="1200">
         <EmptyState
-          heading="No products matched these filters"
+           heading={t("filteredProductsEmptyHeading")}
         >
           <p>
             {t("filteredProductsEmptyText")}

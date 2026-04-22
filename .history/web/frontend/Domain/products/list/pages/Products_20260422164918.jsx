@@ -166,35 +166,23 @@ useEffect(() => {
     fetchProducts(1, []);
   };
 
-const appliedFilters = useMemo(
+  const appliedFilters = useMemo(
   () =>
     filterState
       .filter((f) => f.field !== "search")
       .map(({ field, operator, value }) => {
         const filter = getFilterByKey(field);
 
-        const translatedFieldLabel = t(
-          `fieldLabels.${field}`,
-          filter?.label || field
-        );
-
-        const translatedOperator = getTranslatedOperatorLabel(t, operator);
-
-        const translatedValue =
-          filter?.type === "enum"
-            ? t(`filterValueLabels.${value}`, value)
-            : value;
-
         return {
           key: field,
-          label: `${translatedFieldLabel} ${translatedOperator} ${translatedValue}`,
+          label: `${filter?.label || field} ${operator} ${value}`,
           operator,
           value,
           onRemove: () =>
             dispatch(setFilters(filterState.filter((f) => f.field !== field))),
         };
       }),
-  [filterState, dispatch, t]
+  [filterState, dispatch]
 );
 
   const isSyncInProgress =

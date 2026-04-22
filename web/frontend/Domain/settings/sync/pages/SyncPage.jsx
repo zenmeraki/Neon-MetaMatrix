@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo , useRef} from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   Badge,
   Banner,
@@ -18,7 +18,7 @@ import { RefreshIcon, ArrowLeftIcon } from "@shopify/polaris-icons";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
-const rows = [{ name: "Products", api: "/api/sync/products" }];
+const rows = [{ key: "products", api: "/api/sync/products" }];
 
 export default function DataSyncPage() {
   const navigate = useNavigate();
@@ -38,7 +38,19 @@ export default function DataSyncPage() {
   const showToast = (message, error = false) =>
     setToast({ active: true, message, error });
 
-  const hideToast = () => setToast((current) => ({ ...current, active: false }));
+  const hideToast = () =>
+    setToast((current) => ({ ...current, active: false }));
+
+  const getRowLabel = useCallback(
+    (key) => {
+      const map = {
+        products: t("products"),
+      };
+
+      return map[key] || key;
+    },
+    [t],
+  );
 
   const fetchSyncStatus = useCallback(async () => {
     try {
@@ -61,7 +73,7 @@ export default function DataSyncPage() {
         setShouldPoll(anyRunning || waitingForSync);
       }
     } catch {
-      showToast("Failed to load sync status", true);
+      showToast(t("syncStatusLoadFailed"), true);
     }
   }, [waitingForSync]);
 
@@ -79,37 +91,45 @@ export default function DataSyncPage() {
     dataSources?.isProductTypeSyncing ||
     dataSources?.isCollectionSyncing;
 
-useEffect(() => {
-  if (dataSources && syncingItem && !isAnySyncRunning) {
-    setSyncingItem("");
-  }
-}, [dataSources, isAnySyncRunning, syncingItem]);
+  useEffect(() => {
+    if (dataSources && syncingItem && !isAnySyncRunning) {
+      setSyncingItem("");
+    }
+  }, [dataSources, isAnySyncRunning, syncingItem]);
 
   useEffect(() => {
-   const isSyncing = isAnySyncRunning || waitingForSync;
-   if (wasSyncingRef.current && !isSyncing && dataSources) {
-     showToast("Sync completed successfully ✓");
-   }
-   wasSyncingRef.current = Boolean(isSyncing);
- }, [isAnySyncRunning, waitingForSync, dataSources]);
+    const isSyncing = isAnySyncRunning || waitingForSync;
+
+    if (wasSyncingRef.current && !isSyncing && dataSources) {
+      showToast(t("syncCompletedSuccess"));
+    }
+
+    wasSyncingRef.current = Boolean(isSyncing);
+  }, [isAnySyncRunning, waitingForSync, dataSources]);
 
   const handleRefresh = async (row) => {
     if (isAnySyncRunning || syncingItem) {
-      showToast("Another sync is running...", true);
+      showToast(t("syncAlreadyRunning"), true);
       return;
     }
 
-    setSyncingItem(row.name);
+    setSyncingItem(row.key);
     setWaitingForSync(true);
     setShouldPoll(true);
 
     try {
       const response = await fetch(`${row.api}?force=true`);
       const result = await response.json();
+
       if (!response.ok) throw new Error(result?.error);
-      showToast(`${row.name} sync started`);
+
+      showToast(
+        t("syncStarted", { item: getRowLabel(row.key) })
+      );
     } catch {
-      showToast(`Failed to sync ${row.name}`, true);
+      showToast(
+        t("syncFailed", { item: getRowLabel(row.key) }),
+        true);
       setSyncingItem("");
       setWaitingForSync(false);
       setShouldPoll(false);
@@ -117,48 +137,56 @@ useEffect(() => {
   };
 
   const getDate = useCallback(
-    (name) => {
+    (key) => {
       if (!dataSources) return null;
+
       const map = {
-        Products: dataSources.lastProductSyncAt,
-        "Product Types": dataSources.lastProductTypeSyncAt,
-        Collections: dataSources.lastCollectionSyncAt,
+        products: dataSources.lastProductSyncAt,
       };
 
-      return map[name] ? new Date(map[name]).toLocaleString() : "Never synced";
+      return map[key] ? new Date(map[key]).toLocaleString() : t("neverSynced");
     },
     [dataSources],
   );
 
   const getStatus = useCallback(
-    (name) => {
+    (key) => {
       if (!dataSources) return null;
+
       const map = {
-        Products: dataSources.isProductSyncing || waitingForSync || syncingItem === "Products",
-        "Product Types": dataSources.isProductTypeSyncing,
-        Collections: dataSources.isCollectionSyncing,
+        products:
+          dataSources.isProductSyncing ||
+          waitingForSync ||
+          syncingItem === "products",
       };
-     return map[name] ? t("syncing") : t("synced");
+
+      return map[key] ? t("syncing") : t("synced");
     },
     [dataSources, waitingForSync, syncingItem, t],
   );
 
-  const summaryTone = isAnySyncRunning || waitingForSync ? "warning" : "success";
+  const summaryTone =
+    isAnySyncRunning || waitingForSync ? "warning" : "success";
 
   const syncCards = useMemo(
     () =>
       rows.map((item) => (
-        <Card key={item.name} roundedAbove="sm">
+        <Card key={item.key} roundedAbove="sm">
           <Box padding="500">
-            <InlineStack align="space-between" blockAlign="center" wrap gap="400">
+            <InlineStack
+              align="space-between"
+              blockAlign="center"
+              wrap
+              gap="400"
+            >
               <BlockStack gap="150">
                 <Text as="h3" variant="headingMd">
-                  {item.name}
+                  {getRowLabel(item.key)}
                 </Text>
 
                 {dataSources ? (
                   <Text variant="bodyMd" tone="subdued">
-                    {t("lastSync")}: {getDate(item.name)}
+                    {t("lastSync")}: {getDate(item.key)}
                   </Text>
                 ) : (
                   <SkeletonBodyText lines={1} />
@@ -168,27 +196,27 @@ useEffect(() => {
               <InlineStack gap="300" blockAlign="center">
                 {dataSources ? (
                   <Badge
-                    tone={getStatus(item.name) === "Synced" ? "success" : "attention"}
+                    tone={getStatus(item.key) === t("synced") ? "success" : "attention"}
                   >
-                    {getStatus(item.name)}
+                    {getStatus(item.key)}
                   </Badge>
                 ) : null}
 
                 <Button
                   icon={RefreshIcon}
                   variant="primary"
-                  loading={syncingItem === item.name}
+                  loading={syncingItem === item.key}
                   disabled={isAnySyncRunning || Boolean(syncingItem)}
                   onClick={() => handleRefresh(item)}
                 >
-                  {t("refreshButton",)}
+                  {t("refreshButton")}
                 </Button>
               </InlineStack>
             </InlineStack>
           </Box>
         </Card>
       )),
-    [dataSources, getDate, getStatus, isAnySyncRunning, syncingItem, waitingForSync, t],
+    [dataSources, getDate, getRowLabel, getStatus, isAnySyncRunning, syncingItem, t],
   );
 
   return (
@@ -216,22 +244,27 @@ useEffect(() => {
                 }}
               >
                 <BlockStack gap="400">
-                  <InlineStack align="space-between" blockAlign="start" wrap gap="400">
+                  <InlineStack
+                    align="space-between"
+                    blockAlign="start"
+                    wrap
+                    gap="400"
+                  >
                     <BlockStack gap="150">
                       <Text as="h2" variant="headingLg">
-                        {t("syncHeroTitle",)}
+                        {t("syncHeroTitle")}
                       </Text>
                       <Box maxWidth="720px">
                         <Text as="p" tone="subdued" variant="bodyMd">
-                          {t("syncHeroText",)}
+                          {t("syncHeroText")}
                         </Text>
                       </Box>
                     </BlockStack>
 
                     <Badge tone={summaryTone}>
                       {isAnySyncRunning || waitingForSync
-                        ? t("syncBadgeInProgress",)
-                        : t("syncBadgeReady",)}
+                        ? t("syncBadgeInProgress")
+                        : t("syncBadgeReady")}
                     </Badge>
                   </InlineStack>
 
@@ -243,19 +276,22 @@ useEffect(() => {
                     borderStyle="solid"
                     borderColor="border-secondary"
                   >
-                    <InlineStack align="space-between" blockAlign="center" wrap gap="400">
+                    <InlineStack
+                      align="space-between"
+                      blockAlign="center"
+                      wrap
+                      gap="400"
+                    >
                       <BlockStack gap="100">
                         <Text as="h3" variant="headingSm">
-                          {t("syncGuidanceTitle",)}
+                          {t("syncGuidanceTitle")}
                         </Text>
                         <Text as="p" tone="subdued" variant="bodyMd">
-                          {t("syncGuidanceText",)}
+                          {t("syncGuidanceText")}
                         </Text>
                       </BlockStack>
 
-                      <Badge tone="info">
-                        {t("syncWorkflowBadge",)}
-                      </Badge>
+                      <Badge tone="info">{t("syncWorkflowBadge")}</Badge>
                     </InlineStack>
                   </Box>
                 </BlockStack>
@@ -263,9 +299,7 @@ useEffect(() => {
             </Card>
 
             {(waitingForSync || isAnySyncRunning) && (
-              <Banner tone="warning">
-                {t("syncRunningBanner",)}
-              </Banner>
+              <Banner tone="warning">{t("syncRunningBanner")}</Banner>
             )}
 
             <BlockStack gap="300">{syncCards}</BlockStack>
@@ -277,11 +311,11 @@ useEffect(() => {
             <Box padding="500">
               <BlockStack gap="300">
                 <Text as="h3" variant="headingMd">
-                  {t("mirrorDetailsTitle",)}
+                  {t("mirrorDetailsTitle")}
                 </Text>
 
                 <Text as="p" tone="subdued" variant="bodyMd">
-                  {t("mirrorDetailsText",)}
+                  {t("mirrorDetailsText")}
                 </Text>
 
                 <Divider />
@@ -296,7 +330,7 @@ useEffect(() => {
                 >
                   <BlockStack gap="200">
                     <Text as="p" variant="bodyMd">
-                      {t("syncRefreshHint",)}
+                      {t("syncRefreshHint")}
                     </Text>
                   </BlockStack>
                 </Box>

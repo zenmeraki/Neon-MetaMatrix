@@ -16,7 +16,7 @@ import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { t } from "i18next";
 import { useTranslation } from "react-i18next";
-import { getTranslatedOperatorLabel } from "../utils/filterUtils";
+import { getTranslatedOperatorLabel } from "../utils/";
 import ProductsFilters from "../components/ProductsFilters";
 import ProductsTable from "../components/ProductsTable";
 import useProducts from "../hooks/useProducts";
@@ -44,7 +44,6 @@ export default function ProductsPage() {
   const pagination = useSelector(selectPagination);
   const page = useSelector(selectPage);
   const search = useSelector(selectSearch);
-const { t } = useTranslation();
 
   const { loading, error, hasFetched, fetchProducts } = useProducts();
 
@@ -166,35 +165,23 @@ useEffect(() => {
     fetchProducts(1, []);
   };
 
-const appliedFilters = useMemo(
+  const appliedFilters = useMemo(
   () =>
     filterState
       .filter((f) => f.field !== "search")
       .map(({ field, operator, value }) => {
         const filter = getFilterByKey(field);
 
-        const translatedFieldLabel = t(
-          `fieldLabels.${field}`,
-          filter?.label || field
-        );
-
-        const translatedOperator = getTranslatedOperatorLabel(t, operator);
-
-        const translatedValue =
-          filter?.type === "enum"
-            ? t(`filterValueLabels.${value}`, value)
-            : value;
-
         return {
           key: field,
-          label: `${translatedFieldLabel} ${translatedOperator} ${translatedValue}`,
+          label: `${filter?.label || field} ${operator} ${value}`,
           operator,
           value,
           onRemove: () =>
             dispatch(setFilters(filterState.filter((f) => f.field !== field))),
         };
       }),
-  [filterState, dispatch, t]
+  [filterState, dispatch]
 );
 
   const isSyncInProgress =
