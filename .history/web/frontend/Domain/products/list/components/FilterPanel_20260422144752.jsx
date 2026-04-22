@@ -1,4 +1,4 @@
-import React, { memo, useState, useRef, useCallback, useEffect } from "react";
+import React, { memo, useState, useRef, useCallback } from "react";
 import { Box, BlockStack, Select, Button, Text } from "@shopify/polaris";
 import FilterValueInput from "./FilterValueInput";
 import {
@@ -6,34 +6,47 @@ import {
   getTranslatedOperatorLabel,
   normalizeAutocompleteOption,
 } from "../utils/filterUtils";
+import { useAuthenticatedFetch } from "../../../../h";
 
-async function fetchAutocompleteOptions(filter, query, setOptions, setLoading) {
-  if (!filter.api) return;
+async function fetchAutocompleteOptions({
+  fetchFn,
+  filter,
+  query,
+  setOptions,
+  setLoading,
+}) {
+  if (!filter.api || !fetchFn) return;
 
   setLoading(true);
 
   try {
-    const res = await fetch(
+    const response = await fetchFn(
       `${filter.api}?search=${encodeURIComponent(query)}&isNameOnly=true`,
       {
         method: "GET",
         headers: {
           Accept: "application/json",
         },
-        credentials: "same-origin",
       }
     );
 
-    if (!res.ok) {
-      throw new Error(`Autocomplete request failed with ${res.status}`);
+    if (!response) {
+      // Reauth flow triggered
+      return;
     }
 
-    const contentType = res.headers.get("content-type") || "";
+    const contentType = response.headers.get("content-type") || "";
+
+    if (!response.ok) {
+      throw new Error(`Autocomplete request failed with ${response.status}`);
+    }
+
     if (!contentType.includes("application/json")) {
       throw new Error("Autocomplete endpoint did not return JSON");
     }
 
-    const data = await res.json();
+    const data = await response.json();
+
     const items = Array.isArray(data?.data)
       ? data.data
       : Array.isArray(data)
@@ -60,6 +73,8 @@ const FilterPanel = memo(function FilterPanel({
   onApplied,
   t,
 }) {
+  const authenticatedFetch = useAuthenticatedFetch();
+
   const [draft, setDraft] = useState({
     operator: filter.operators[0] || "",
     value: "",
@@ -68,20 +83,21 @@ const FilterPanel = memo(function FilterPanel({
   const [loading, setLoading] = useState(false);
   const debounceTimer = useRef(null);
 
-  useEffect(() => {
-    return () => {
-      clearTimeout(debounceTimer.current);
-    };
-  }, []);
-
   const handleSearch = useCallback(
     (query) => {
       clearTimeout(debounceTimer.current);
+
       debounceTimer.current = setTimeout(() => {
-        fetchAutocompleteOptions(filter, query, setOptions, setLoading);
+        fetchAutocompleteOptions({
+          fetchFn: authenticatedFetch,
+          filter,
+          query,
+          setOptions,
+          setLoading,
+        });
       }, 300);
     },
-    [filter]
+    [authenticatedFetch, filter]
   );
 
   const handleApply = useCallback(() => {

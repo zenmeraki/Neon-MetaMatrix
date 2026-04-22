@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ChoiceList,
   TextField,
@@ -43,20 +43,18 @@ function FilterValueInput({
         onSelect={([selected]) => {
           onChange(selected);
 
-          const selectedOption =
-            options.find((option) => option.value === selected);
-
-          setInputValue(selectedOption?.label || selected || "");
+          const option = options.find((entry) => entry.value === selected);
+          setInputValue(option?.label || selected || "");
         }}
         textField={
           <Autocomplete.TextField
             labelHidden
+            autoComplete="off"
+            value={inputValue}
             placeholder={t("searchPlaceholderField", {
               field: t(`fieldLabels.${filter.key}`, filter.label),
             })}
-            autoComplete="off"
-            value={inputValue}
-            onFocus={() => onSearch(inputValue || "")}
+            onFocus={() => onSearch(inputValue)}
             onChange={(text) => {
               setInputValue(text);
               onSearch(text);

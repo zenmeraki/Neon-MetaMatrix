@@ -1,65 +1,29 @@
-import React, { memo, useState, useRef, useCallback, useEffect } from "react";
+// FilterPanel.jsx
+import React, { memo, useState, useRef, useCallback } from "react";
 import { Box, BlockStack, Select, Button, Text } from "@shopify/polaris";
 import FilterValueInput from "./FilterValueInput";
-import {
-  operatorRequiresValue,
-  getTranslatedOperatorLabel,
-  normalizeAutocompleteOption,
-} from "../utils/filterUtils";
+import { operatorRequiresValue, getTranslatedOperatorLabel,normalizeAutocompleteOption } from "../utils/filterUtils";
 
 async function fetchAutocompleteOptions(filter, query, setOptions, setLoading) {
   if (!filter.api) return;
-
   setLoading(true);
-
   try {
     const res = await fetch(
-      `${filter.api}?search=${encodeURIComponent(query)}&isNameOnly=true`,
-      {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-        },
-        credentials: "same-origin",
-      }
+      `${filter.api}?search=${encodeURIComponent(query)}&isNameOnly=true`
     );
-
-    if (!res.ok) {
-      throw new Error(`Autocomplete request failed with ${res.status}`);
-    }
-
-    const contentType = res.headers.get("content-type") || "";
-    if (!contentType.includes("application/json")) {
-      throw new Error("Autocomplete endpoint did not return JSON");
-    }
-
+    if (!res.ok) throw new Error("Failed");
     const data = await res.json();
-    const items = Array.isArray(data?.data)
-      ? data.data
-      : Array.isArray(data)
-        ? data
-        : [];
-
+    const items = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
     setOptions(items.map(normalizeAutocompleteOption).filter(Boolean));
-  } catch (error) {
-    console.error("Autocomplete fetch failed:", {
-      filterKey: filter?.key,
-      filterApi: filter?.api,
-      query,
-      error,
-    });
+  } catch {
     setOptions([]);
   } finally {
     setLoading(false);
   }
 }
 
-const FilterPanel = memo(function FilterPanel({
-  filter,
-  onFilterChange,
-  onApplied,
-  t,
-}) {
+const FilterPanel = memo(function FilterPanel({ filter, onFilterChange,onApplied, t }) {
+  // ✅ Each filter owns its own state — no cross-filter re-renders
   const [draft, setDraft] = useState({
     operator: filter.operators[0] || "",
     value: "",
@@ -68,26 +32,17 @@ const FilterPanel = memo(function FilterPanel({
   const [loading, setLoading] = useState(false);
   const debounceTimer = useRef(null);
 
-  useEffect(() => {
-    return () => {
-      clearTimeout(debounceTimer.current);
-    };
-  }, []);
-
-  const handleSearch = useCallback(
-    (query) => {
-      clearTimeout(debounceTimer.current);
-      debounceTimer.current = setTimeout(() => {
-        fetchAutocompleteOptions(filter, query, setOptions, setLoading);
-      }, 300);
-    },
-    [filter]
-  );
+  const handleSearch = useCallback((query) => {
+    clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => {
+      fetchAutocompleteOptions(filter, query, setOptions, setLoading);
+    }, 300);
+  }, [filter]);
 
   const handleApply = useCallback(() => {
     onFilterChange(filter.key, draft);
     onApplied();
-  }, [filter.key, draft, onFilterChange, onApplied]);
+  }, [filter.key, draft, onFilterChange,onApplied]);
 
   return (
     <Box width="280px">

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState } from "react";
 import {
   ChoiceList,
   TextField,
@@ -16,24 +16,6 @@ function FilterValueInput({
 }) {
   const [inputValue, setInputValue] = useState("");
 
-  const selectedOption = useMemo(
-    () => options.find((option) => option.value === value),
-    [options, value]
-  );
-
-  useEffect(() => {
-    if (!filter.isSearchable) return;
-
-    if (!value) {
-      setInputValue("");
-      return;
-    }
-
-    if (selectedOption?.label) {
-      setInputValue(selectedOption.label);
-    }
-  }, [filter.isSearchable, value, selectedOption]);
-
   if (filter.isSearchable) {
     return (
       <Autocomplete
@@ -46,7 +28,9 @@ function FilterValueInput({
           const selectedOption =
             options.find((option) => option.value === selected);
 
-          setInputValue(selectedOption?.label || selected || "");
+          if (selectedOption) {
+            setInputValue(selectedOption.label);
+          }
         }}
         textField={
           <Autocomplete.TextField
@@ -56,7 +40,7 @@ function FilterValueInput({
             })}
             autoComplete="off"
             value={inputValue}
-            onFocus={() => onSearch(inputValue || "")}
+            onFocus={() => onSearch(inputValue)}
             onChange={(text) => {
               setInputValue(text);
               onSearch(text);

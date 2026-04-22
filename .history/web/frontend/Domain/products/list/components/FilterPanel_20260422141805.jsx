@@ -1,5 +1,6 @@
 import React, { memo, useState, useRef, useCallback, useEffect } from "react";
 import { Box, BlockStack, Select, Button, Text } from "@shopify/polaris";
+import { useAuthenticatedFetch } from "../../../../hooks/useAuthenticatedFetch.js";
 import FilterValueInput from "./FilterValueInput";
 import {
   operatorRequiresValue,
@@ -7,87 +8,66 @@ import {
   normalizeAutocompleteOption,
 } from "../utils/filterUtils";
 
-async function fetchAutocompleteOptions(filter, query, setOptions, setLoading) {
+async function fetchAutocompleteOptions(filter, query, authenticatedFetch, setOptions, setLoading, signal) {
   if (!filter.api) return;
-
   setLoading(true);
-
   try {
-    const res = await fetch(
+    const res = await authenticatedFetch(
       `${filter.api}?search=${encodeURIComponent(query)}&isNameOnly=true`,
-      {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-        },
-        credentials: "same-origin",
-      }
+      { signal }
     );
-
-    if (!res.ok) {
-      throw new Error(`Autocomplete request failed with ${res.status}`);
-    }
-
-    const contentType = res.headers.get("content-type") || "";
-    if (!contentType.includes("application/json")) {
-      throw new Error("Autocomplete endpoint did not return JSON");
-    }
-
+    if (!res.ok) throw new Error("Failed");
     const data = await res.json();
-    const items = Array.isArray(data?.data)
-      ? data.data
-      : Array.isArray(data)
-        ? data
-        : [];
-
+    const items = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
     setOptions(items.map(normalizeAutocompleteOption).filter(Boolean));
-  } catch (error) {
-    console.error("Autocomplete fetch failed:", {
-      filterKey: filter?.key,
-      filterApi: filter?.api,
-      query,
-      error,
-    });
+  } catch (err) {
+    if (err?.name === "AbortError") return;
     setOptions([]);
   } finally {
-    setLoading(false);
+    if (!signal.aborted) setLoading(false);
   }
 }
 
-const FilterPanel = memo(function FilterPanel({
-  filter,
-  onFilterChange,
-  onApplied,
-  t,
-}) {
-  const [draft, setDraft] = useState({
-    operator: filter.operators[0] || "",
-    value: "",
-  });
+// ✅ initial draft extracted so it can be reused for reset
+const getInitialDraft = (filter) => ({
+  operator: filter.operators[0] || "",
+  value: "",
+});
+
+const FilterPanel = memo(function FilterPanel({ filter, onFilterChange, t }) {
+  // ✅ onApplied prop removed — no longer needed
+  const authenticatedFetch = useAuthenticatedFetch();
+  const [draft, setDraft] = useState(() => getInitialDraft(filter));
   const [options, setOptions] = useState([]);
   const [loading, setLoading] = useState(false);
   const debounceTimer = useRef(null);
+  const abortControllerRef = useRef(null);
 
   useEffect(() => {
     return () => {
       clearTimeout(debounceTimer.current);
+      abortControllerRef.current?.abort();
     };
   }, []);
 
-  const handleSearch = useCallback(
-    (query) => {
-      clearTimeout(debounceTimer.current);
-      debounceTimer.current = setTimeout(() => {
-        fetchAutocompleteOptions(filter, query, setOptions, setLoading);
-      }, 300);
-    },
-    [filter]
-  );
+  const handleSearch = useCallback((query) => {
+    clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => {
+      abortControllerRef.current?.abort();
+      abortControllerRef.current = new AbortController();
+      fetchAutocompleteOptions(
+        filter, query, authenticatedFetch,
+        setOptions, setLoading,
+        abortControllerRef.current.signal
+      );
+    }, 300);
+  }, [filter, authenticatedFetch]);
 
   const handleApply = useCallback(() => {
     onFilterChange(filter.key, draft);
-    onApplied();
-  }, [filter.key, draft, onFilterChange, onApplied]);
+    setDraft(getInitialDraft(filter)); // ✅ reset draft internally — no remount needed
+    setOptions([]);                    // ✅ clear stale autocomplete results
+  }, [filter, draft, onFilterChange]);
 
   return (
     <Box width="280px">

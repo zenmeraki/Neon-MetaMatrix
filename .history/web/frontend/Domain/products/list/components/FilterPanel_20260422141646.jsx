@@ -1,5 +1,6 @@
 import React, { memo, useState, useRef, useCallback, useEffect } from "react";
 import { Box, BlockStack, Select, Button, Text } from "@shopify/polaris";
+import { useAuthenticatedFetch } from "@shopify/app-bridge-react";
 import FilterValueInput from "./FilterValueInput";
 import {
   operatorRequiresValue,
@@ -7,59 +8,33 @@ import {
   normalizeAutocompleteOption,
 } from "../utils/filterUtils";
 
-async function fetchAutocompleteOptions(filter, query, setOptions, setLoading) {
+// ✅ accepts signal to cancel stale requests
+async function fetchAutocompleteOptions(filter, query, authenticatedFetch, setOptions, setLoading, signal) {
   if (!filter.api) return;
-
   setLoading(true);
-
   try {
-    const res = await fetch(
+    const res = await authenticatedFetch(
       `${filter.api}?search=${encodeURIComponent(query)}&isNameOnly=true`,
-      {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-        },
-        credentials: "same-origin",
-      }
+      { signal } // ✅ pass signal to the request
     );
-
-    if (!res.ok) {
-      throw new Error(`Autocomplete request failed with ${res.status}`);
-    }
-
-    const contentType = res.headers.get("content-type") || "";
-    if (!contentType.includes("application/json")) {
-      throw new Error("Autocomplete endpoint did not return JSON");
-    }
-
+    if (!res.ok) throw new Error("Failed");
     const data = await res.json();
-    const items = Array.isArray(data?.data)
-      ? data.data
-      : Array.isArray(data)
-        ? data
-        : [];
-
+    const items = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
     setOptions(items.map(normalizeAutocompleteOption).filter(Boolean));
-  } catch (error) {
-    console.error("Autocomplete fetch failed:", {
-      filterKey: filter?.key,
-      filterApi: filter?.api,
-      query,
-      error,
-    });
+  } catch (err) {
+    // ✅ AbortError means a newer request replaced this one — don't clear options
+    if (err?.name === "AbortError") return;
     setOptions([]);
   } finally {
-    setLoading(false);
+    // ✅ only clear loading if this request wasn't aborted
+    if (!signal.aborted) {
+      setLoading(false);
+    }
   }
 }
 
-const FilterPanel = memo(function FilterPanel({
-  filter,
-  onFilterChange,
-  onApplied,
-  t,
-}) {
+const FilterPanel = memo(function FilterPanel({ filter, onFilterChange, onApplied, t }) {
+  const authenticatedFetch = useAuthenticatedFetch();
   const [draft, setDraft] = useState({
     operator: filter.operators[0] || "",
     value: "",
@@ -67,22 +42,33 @@ const FilterPanel = memo(function FilterPanel({
   const [options, setOptions] = useState([]);
   const [loading, setLoading] = useState(false);
   const debounceTimer = useRef(null);
+  const abortControllerRef = useRef(null); // ✅ track the current in-flight request
 
   useEffect(() => {
     return () => {
       clearTimeout(debounceTimer.current);
+      abortControllerRef.current?.abort(); // ✅ cancel any in-flight request on unmount
     };
   }, []);
 
-  const handleSearch = useCallback(
-    (query) => {
-      clearTimeout(debounceTimer.current);
-      debounceTimer.current = setTimeout(() => {
-        fetchAutocompleteOptions(filter, query, setOptions, setLoading);
-      }, 300);
-    },
-    [filter]
-  );
+  const handleSearch = useCallback((query) => {
+    clearTimeout(debounceTimer.current);
+
+    debounceTimer.current = setTimeout(() => {
+      // ✅ abort the previous request before starting a new one
+      abortControllerRef.current?.abort();
+      abortControllerRef.current = new AbortController();
+
+      fetchAutocompleteOptions(
+        filter,
+        query,
+        authenticatedFetch,
+        setOptions,
+        setLoading,
+        abortControllerRef.current.signal // ✅ pass the signal
+      );
+    }, 300);
+  }, [filter, authenticatedFetch]);
 
   const handleApply = useCallback(() => {
     onFilterChange(filter.key, draft);

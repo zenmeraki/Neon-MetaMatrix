@@ -1,9 +1,5 @@
-import React, { useState, useEffect, useMemo } from "react";
-import {
-  ChoiceList,
-  TextField,
-  Autocomplete,
-} from "@shopify/polaris";
+import React, { useState, useEffect } from "react";
+import { ChoiceList, TextField, Autocomplete } from "@shopify/polaris";
 
 function FilterValueInput({
   filter,
@@ -14,25 +10,14 @@ function FilterValueInput({
   loading,
   t,
 }) {
-  const [inputValue, setInputValue] = useState("");
+  const [inputValue, setInputValue] = useState(value || "");
 
-  const selectedOption = useMemo(
-    () => options.find((option) => option.value === value),
-    [options, value]
-  );
-
+  // ✅ keep display in sync if draft.value is reset externally (e.g. after apply)
   useEffect(() => {
-    if (!filter.isSearchable) return;
-
     if (!value) {
       setInputValue("");
-      return;
     }
-
-    if (selectedOption?.label) {
-      setInputValue(selectedOption.label);
-    }
-  }, [filter.isSearchable, value, selectedOption]);
+  }, [value]);
 
   if (filter.isSearchable) {
     return (
@@ -41,12 +26,10 @@ function FilterValueInput({
         selected={value ? [value] : []}
         loading={loading}
         onSelect={([selected]) => {
-          onChange(selected);
-
-          const selectedOption =
-            options.find((option) => option.value === selected);
-
-          setInputValue(selectedOption?.label || selected || "");
+          const selectedOption = options.find((o) => o.value === selected);
+          const label = selectedOption?.label ?? selected;
+          onChange(selected);        // ✅ set draft.value to selected option value
+          setInputValue(label);      // ✅ show readable label in the input
         }}
         textField={
           <Autocomplete.TextField
@@ -56,10 +39,11 @@ function FilterValueInput({
             })}
             autoComplete="off"
             value={inputValue}
-            onFocus={() => onSearch(inputValue || "")}
+            onFocus={() => onSearch(inputValue)}
             onChange={(text) => {
               setInputValue(text);
-              onSearch(text);
+              onChange(text);   // ✅ update draft.value as user types — enables the button
+              onSearch(text);   // ✅ fetch matching options
             }}
           />
         }
@@ -82,34 +66,14 @@ function FilterValueInput({
   }
 
   if (filter.type === "number") {
-    return (
-      <TextField
-        type="number"
-        labelHidden
-        value={value}
-        onChange={onChange}
-      />
-    );
+    return <TextField type="number" labelHidden value={value} onChange={onChange} />;
   }
 
   if (filter.type === "date") {
-    return (
-      <TextField
-        type="date"
-        labelHidden
-        value={value}
-        onChange={onChange}
-      />
-    );
+    return <TextField type="date" labelHidden value={value} onChange={onChange} />;
   }
 
-  return (
-    <TextField
-      labelHidden
-      value={value}
-      onChange={onChange}
-    />
-  );
+  return <TextField labelHidden value={value} onChange={onChange} />;
 }
 
 export default FilterValueInput;
