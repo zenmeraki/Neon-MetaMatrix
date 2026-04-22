@@ -170,21 +170,23 @@ useEffect(() => {
   };
 
   const appliedFilters = useMemo(
-    () =>
-      filterState
-        .filter((f) => f.field !== "search")
-        .map(({ field, operator, value }) => {
-          const filter = getFilterByKey(field);
+  () =>
+    filterState
+      .filter((f) => f.field !== "search")
+      .map(({ field, operator, value }) => {
+        const filter = getFilterByKey(field);
 
-          return {
-            key: field,
-            label: `${filter?.label || field} ${operator} ${value}`,
-            onRemove: () =>
-              dispatch(setFilters(filterState.filter((f) => f.field !== field))),
-          };
-        }),
-    [filterState, dispatch],
-  );
+        return {
+          key: field,
+          label: `${filter?.label || field} ${operator} ${value}`,
+          operator,
+          value,
+          onRemove: () =>
+            dispatch(setFilters(filterState.filter((f) => f.field !== field))),
+        };
+      }),
+  [filterState, dispatch]
+);
 
   const isSyncInProgress =
     Boolean(syncStatus?.isProductSyncing) ||
@@ -311,7 +313,7 @@ useEffect(() => {
                 appliedFilters={appliedFilters}
                 onFilterChange={onFilterChange}
                 onQueryChange={(value) => dispatch(setSearch(value))}
-                onQueryClear={onClearAll}
+                onQueryClear={() => dispatch(setSearch(""))}
                 onClearAll={onClearAll}
               />
             </Box>

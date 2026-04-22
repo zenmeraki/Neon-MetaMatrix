@@ -1,16 +1,15 @@
-import React, { memo, useMemo, useRef, useState, useCallback } from "react";
+import React, { memo, useMemo, useState, useCallback } from "react";
 import {
-  Filters,
-  ChoiceList,
-  TextField,
-  Box,
-  Select,
-  Button,
   BlockStack,
-  Autocomplete,
   Text,
+  InlineStack,
+  Button,
+  Popover,
+  ActionList,
+  Box,
+  TextField,
+  Tag,
 } from "@shopify/polaris";
-
 import { ALL_FILTERS } from "../constants";
 import { useTranslation } from "react-i18next";
 import FilterPanel from "./FilterPanel";
@@ -24,43 +23,112 @@ const ProductsFilters = memo(function ProductsFilters({
   onClearAll,
 }) {
   const { t } = useTranslation();
-  const [filtersKey, setFiltersKey] = useState(0); // ✅ re-add this
 
-  const handleApplied = useCallback(() => {
-    setFiltersKey((k) => k + 1); // ✅ increments → Filters remounts → popover closes
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const [activeFilterKey, setActiveFilterKey] = useState(null);
+
+  const activeFilter = useMemo(
+    () => ALL_FILTERS.find((filter) => filter.key === activeFilterKey) || null,
+    [activeFilterKey]
+  );
+
+  const appliedFilterMap = useMemo(() => {
+    return appliedFilters.reduce((acc, item) => {
+      acc[item.key] = item;
+      return acc;
+    }, {});
+  }, [appliedFilters]);
+
+  const handleOpenPicker = useCallback(() => {
+    setActiveFilterKey(null);
+    setIsPopoverOpen(true);
   }, []);
 
-  // ✅ No more draftFilters / autocompleteOptions / autocompleteLoading here
-  const filters = useMemo(
+  const handleClosePopover = useCallback(() => {
+    setIsPopoverOpen(false);
+    setActiveFilterKey(null);
+  }, []);
+
+  const handleSelectFilter = useCallback((filterKey) => {
+    setActiveFilterKey(filterKey);
+  }, []);
+
+  const handleApplyFilter = useCallback(
+    (nextFilter) => {
+      onFilterChange(nextFilter.field, {
+        operator: nextFilter.operator,
+        value: nextFilter.value,
+      });
+      handleClosePopover();
+    },
+    [onFilterChange, handleClosePopover]
+  );
+
+  const actionItems = useMemo(
     () =>
       ALL_FILTERS.map((filter) => ({
-        key: filter.key,
-        label: t(`fieldLabels.${filter.key}`, filter.label),
-        filter: (
-          <FilterPanel
-            filter={filter}
-            onFilterChange={onFilterChange}
-            onApplied={handleApplied}
-            t={t}
-          />
-        ),
+        content: t(`fieldLabels.${filter.key}`, filter.label),
+        onAction: () => handleSelectFilter(filter.key),
       })),
-    [t, onFilterChange, handleApplied] 
+    [t, handleSelectFilter]
   );
 
   return (
     <BlockStack gap="300">
       <InlineHeader />
-      <Filters
-        key={filtersKey}
-        queryValue={queryValue}
-        queryPlaceholder={t("searchPlaceholder")}
-        filters={filters}
-        appliedFilters={appliedFilters}
-        onQueryChange={onQueryChange}
-        onQueryClear={onQueryClear}
-        onClearAll={onClearAll}
-      />
+
+      <InlineStack gap="200" wrap blockAlign="center">
+        <Box minWidth="320px">
+          <TextField
+            labelHidden
+            value={queryValue}
+            placeholder={t("searchPlaceholder")}
+            onChange={onQueryChange}
+            clearButton
+            onClearButtonClick={onQueryClear}
+            autoComplete="off"
+          />
+        </Box>
+
+        <Popover
+          active={isPopoverOpen}
+          activator={
+            <Button onClick={handleOpenPicker}>
+              {t("addFilter")}
+            </Button>
+          }
+          autofocusTarget="first-node"
+          onClose={handleClosePopover}
+        >
+          {!activeFilter ? (
+            <ActionList items={actionItems} />
+          ) : (
+            <FilterPanel
+              filter={activeFilter}
+              initialFilter={appliedFilterMap[activeFilter.key]}
+              onApply={handleApplyFilter}
+              onCancel={() => setActiveFilterKey(null)}
+              t={t}
+            />
+          )}
+        </Popover>
+
+        {appliedFilters.length > 0 && (
+          <Button variant="plain" onClick={onClearAll}>
+            {t("clearAll", "Clear all")}
+          </Button>
+        )}
+      </InlineStack>
+
+      {appliedFilters.length > 0 && (
+        <InlineStack gap="200" wrap>
+          {appliedFilters.map((item) => (
+            <Tag key={item.key} onRemove={item.onRemove}>
+              {item.label}
+            </Tag>
+          ))}
+        </InlineStack>
+      )}
     </BlockStack>
   );
 });

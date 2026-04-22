@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React from "react";
 import {
   ChoiceList,
   TextField,
@@ -8,32 +8,13 @@ import {
 function FilterValueInput({
   filter,
   value,
+  inputText,
   onChange,
   onSearch,
   options,
   loading,
   t,
 }) {
-  const [inputValue, setInputValue] = useState("");
-
-  const selectedOption = useMemo(
-    () => options.find((option) => option.value === value),
-    [options, value]
-  );
-
-  useEffect(() => {
-    if (!filter.isSearchable) return;
-
-    if (!value) {
-      setInputValue("");
-      return;
-    }
-
-    if (selectedOption?.label) {
-      setInputValue(selectedOption.label);
-    }
-  }, [filter.isSearchable, value, selectedOption]);
-
   if (filter.isSearchable) {
     return (
       <Autocomplete
@@ -41,12 +22,12 @@ function FilterValueInput({
         selected={value ? [value] : []}
         loading={loading}
         onSelect={([selected]) => {
-          onChange(selected);
+          const option = options.find((entry) => entry.value === selected);
 
-          const selectedOption =
-            options.find((option) => option.value === selected);
-
-          setInputValue(selectedOption?.label || selected || "");
+          onChange(
+            selected,
+            option?.label || selected || ""
+          );
         }}
         textField={
           <Autocomplete.TextField
@@ -55,10 +36,9 @@ function FilterValueInput({
               field: t(`fieldLabels.${filter.key}`, filter.label),
             })}
             autoComplete="off"
-            value={inputValue}
-            onFocus={() => onSearch(inputValue || "")}
+            value={inputText}
+            onFocus={() => onSearch(inputText || "")}
             onChange={(text) => {
-              setInputValue(text);
               onSearch(text);
             }}
           />
@@ -76,7 +56,7 @@ function FilterValueInput({
           value: entry,
         }))}
         selected={value ? [value] : []}
-        onChange={([next]) => onChange(next)}
+        onChange={([next]) => onChange(next, next)}
       />
     );
   }
@@ -87,7 +67,7 @@ function FilterValueInput({
         type="number"
         labelHidden
         value={value}
-        onChange={onChange}
+        onChange={(next) => onChange(next, next)}
       />
     );
   }
@@ -98,7 +78,7 @@ function FilterValueInput({
         type="date"
         labelHidden
         value={value}
-        onChange={onChange}
+        onChange={(next) => onChange(next, next)}
       />
     );
   }
@@ -107,7 +87,7 @@ function FilterValueInput({
     <TextField
       labelHidden
       value={value}
-      onChange={onChange}
+      onChange={(next) => onChange(next, next)}
     />
   );
 }

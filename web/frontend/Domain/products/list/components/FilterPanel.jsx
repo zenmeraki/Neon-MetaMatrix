@@ -1,5 +1,11 @@
-import React, { memo, useState, useRef, useCallback, useEffect } from "react";
-import { Box, BlockStack, Select, Button, Text } from "@shopify/polaris";
+import React, {
+  memo,
+  useState,
+  useRef,
+  useCallback,
+  useEffect,
+} from "react";
+import { Box, BlockStack, Select, Button, InlineStack, Text } from "@shopify/polaris";
 import FilterValueInput from "./FilterValueInput";
 import {
   operatorRequiresValue,
@@ -7,7 +13,13 @@ import {
   normalizeAutocompleteOption,
 } from "../utils/filterUtils";
 
-async function fetchAutocompleteOptions(filter, query, setOptions, setLoading) {
+async function fetchAutocompleteOptions({
+  filter,
+  query,
+  signal,
+  setOptions,
+  setLoading,
+}) {
   if (!filter.api) return;
 
   setLoading(true);
@@ -21,6 +33,7 @@ async function fetchAutocompleteOptions(filter, query, setOptions, setLoading) {
           Accept: "application/json",
         },
         credentials: "same-origin",
+        signal,
       }
     );
 
@@ -34,6 +47,9 @@ async function fetchAutocompleteOptions(filter, query, setOptions, setLoading) {
     }
 
     const data = await res.json();
+
+    if (signal.aborted) return;
+
     const items = Array.isArray(data?.data)
       ? data.data
       : Array.isArray(data)
@@ -42,55 +58,121 @@ async function fetchAutocompleteOptions(filter, query, setOptions, setLoading) {
 
     setOptions(items.map(normalizeAutocompleteOption).filter(Boolean));
   } catch (error) {
+    if (error?.name === "AbortError") {
+      return;
+    }
+
     console.error("Autocomplete fetch failed:", {
       filterKey: filter?.key,
       filterApi: filter?.api,
       query,
       error,
     });
+
     setOptions([]);
   } finally {
-    setLoading(false);
+    if (!signal.aborted) {
+      setLoading(false);
+    }
   }
 }
 
 const FilterPanel = memo(function FilterPanel({
   filter,
-  onFilterChange,
-  onApplied,
+  initialFilter,
+  onApply,
+  onCancel,
   t,
 }) {
   const [draft, setDraft] = useState({
-    operator: filter.operators[0] || "",
-    value: "",
+    operator: initialFilter?.operator || filter.operators[0] || "",
+    value: initialFilter?.value || "",
+    inputText: initialFilter?.value || "",
   });
   const [options, setOptions] = useState([]);
   const [loading, setLoading] = useState(false);
+
   const debounceTimer = useRef(null);
+  const abortControllerRef = useRef(null);
+
+  useEffect(() => {
+    setDraft({
+      operator: initialFilter?.operator || filter.operators[0] || "",
+      value: initialFilter?.value || "",
+      inputText: initialFilter?.value || "",
+    });
+    setOptions([]);
+    setLoading(false);
+  }, [filter.key, filter.operators, initialFilter?.operator, initialFilter?.value]);
 
   useEffect(() => {
     return () => {
       clearTimeout(debounceTimer.current);
+      abortControllerRef.current?.abort();
     };
   }, []);
 
+  useEffect(() => {
+    if (!filter.isSearchable || !draft.value || options.length === 0) return;
+
+    const selectedOption = options.find((option) => option.value === draft.value);
+    if (selectedOption?.label && selectedOption.label !== draft.inputText) {
+      setDraft((prev) => ({
+        ...prev,
+        inputText: selectedOption.label,
+      }));
+    }
+  }, [filter.isSearchable, draft.value, draft.inputText, options]);
+
   const handleSearch = useCallback(
     (query) => {
+      setDraft((prev) => ({
+        ...prev,
+        inputText: query,
+        value: query ? prev.value : "",
+      }));
+
       clearTimeout(debounceTimer.current);
+
       debounceTimer.current = setTimeout(() => {
-        fetchAutocompleteOptions(filter, query, setOptions, setLoading);
+        abortControllerRef.current?.abort();
+
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+
+        fetchAutocompleteOptions({
+          filter,
+          query,
+          signal: controller.signal,
+          setOptions,
+          setLoading,
+        });
       }, 300);
     },
     [filter]
   );
 
+  const handleValueChange = useCallback(
+    (nextValue, nextInputText = nextValue) => {
+      setDraft((prev) => ({
+        ...prev,
+        value: nextValue,
+        inputText: nextInputText,
+      }));
+    },
+    []
+  );
+
   const handleApply = useCallback(() => {
-    onFilterChange(filter.key, draft);
-    onApplied();
-  }, [filter.key, draft, onFilterChange, onApplied]);
+    onApply({
+      field: filter.key,
+      operator: draft.operator,
+      value: draft.value,
+    });
+  }, [filter.key, draft.operator, draft.value, onApply]);
 
   return (
-    <Box width="280px">
+    <Box width="280px" padding="200">
       <BlockStack gap="300">
         <Text as="p" variant="bodySm" tone="subdued">
           {t("configureField", {
@@ -115,26 +197,30 @@ const FilterPanel = memo(function FilterPanel({
         <FilterValueInput
           filter={filter}
           value={draft.value}
+          inputText={draft.inputText}
           options={options}
           loading={loading}
           t={t}
-          onChange={(nextValue) =>
-            setDraft((prev) => ({ ...prev, value: nextValue }))
-          }
+          onChange={handleValueChange}
           onSearch={handleSearch}
         />
 
-        <Button
-          variant="primary"
-          disabled={
-            operatorRequiresValue(draft.operator)
-              ? !String(draft.value || "").trim()
-              : false
-          }
-          onClick={handleApply}
-        >
-          {t("addFilter")}
-        </Button>
+        <InlineStack gap="200" align="end">
+          <Button onClick={onCancel}>
+            {t("cancel", "Cancel")}
+          </Button>
+          <Button
+            variant="primary"
+            disabled={
+              operatorRequiresValue(draft.operator)
+                ? !String(draft.value || "").trim()
+                : false
+            }
+            onClick={handleApply}
+          >
+            {t("addFilter")}
+          </Button>
+        </InlineStack>
       </BlockStack>
     </Box>
   );
