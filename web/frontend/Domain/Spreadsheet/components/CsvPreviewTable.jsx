@@ -18,9 +18,7 @@ export default function CsvPreviewTable({
         <Card>
             <BlockStack gap="300">
                 <Text variant="headingSm">
-                    {t("spreadsheetPreviewMapColumns", {
-                        defaultValue: "Preview & Map Columns",
-                    })}
+                    {t("spreadsheetPreviewMapColumns", )}
                 </Text>
 
                 <DataTable

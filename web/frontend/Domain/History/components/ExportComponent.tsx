@@ -5,6 +5,11 @@ import ExportTable from "./ExportTable";
 import { useToast } from "./useToast";
 import { useTranslation } from "react-i18next";
 
+const EXPORT_TYPE = {
+  MANUAL: "Manual export",
+  SCHEDULED: "Scheduled export",
+} as const;
+
 const ExportComponent: React.FC = () => {
   const { t } = useTranslation();
   const [selectedTab, setSelectedTab] = React.useState(0);
@@ -24,21 +29,18 @@ const ExportComponent: React.FC = () => {
   );
 
   const selectedExportType = React.useMemo(
-    () => (selectedTab === 1 ? "Scheduled export" : "Manual export"),
+    () => (selectedTab === 1 ? EXPORT_TYPE.SCHEDULED : EXPORT_TYPE.MANUAL),
     [selectedTab],
   );
 
-  // Toast hook
   const { toastMarkup, triggerToast } = useToast();
 
-  // Success handler
   const handleExportSuccess = React.useCallback(() => {
     triggerToast({
       content: t("exportSuccess"),
     });
   }, [triggerToast, t]);
 
-  // Error handler
   const handleExportError = React.useCallback(
     (errorMessage: string) => {
       triggerToast({ content: errorMessage, isError: true });
@@ -51,15 +53,17 @@ const ExportComponent: React.FC = () => {
       <Card>
         <BlockStack gap="200">
           <Box paddingInlineStart="600">
-          <Text as="h2" variant="headingLg">
-            {t("exportHistory")}
-          </Text>
-          <Box paddingBlockStart="200">
-          <Text as="p" tone="subdued" variant="bodyMd">
-            {t("exportOverviewText")}
-          </Text>
+            <Text as="h2" variant="headingLg">
+              {t("exportHistory")}
+            </Text>
+
+            <Box paddingBlockStart="200">
+              <Text as="p" tone="subdued" variant="bodyMd">
+                {t("exportOverviewText")}
+              </Text>
+            </Box>
           </Box>
-          </Box>
+
           <Tabs tabs={tabs} selected={selectedTab} onSelect={setSelectedTab} />
         </BlockStack>
       </Card>
