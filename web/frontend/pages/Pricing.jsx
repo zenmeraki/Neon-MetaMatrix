@@ -284,18 +284,42 @@ export default function PricingPage() {
                         </Text>
                         <BlockStack gap="300">
                           {plan.features.map((feature, featureIndex) => (
-                            <InlineStack key={featureIndex} gap="300" blockAlign="start">
-                              <div style={{
-                                marginTop: '2px',
-                                color: '#008060',
-                                flexShrink: 0
-                              }}>
+                            <div
+                              key={featureIndex}
+                              style={{
+                                display: "flex",
+                                alignItems: "flex-start",
+                                columnGap: "12px",
+                                width: "100%",
+                              }}
+                            >
+                              <div
+                                style={{
+                                  flexShrink: 0,
+                                  width: "20px",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  marginTop: "2px",
+                                }}
+                              >
                                 <Icon source={CheckIcon} tone="success" />
                               </div>
-                              <Text variant="bodyMd" as="p">
-                                {t(feature)}
-                              </Text>
-                            </InlineStack>
+
+                              <div
+                                style={{
+                                  flex: 1,
+                                  minWidth: 0,
+                                }}
+                              >
+                                <Text
+                                  variant="bodyMd"
+                                  as="p"
+                                >
+                                  {t(feature)}
+                                </Text>
+                              </div>
+                            </div>
                           ))}
                         </BlockStack>
                       </BlockStack>

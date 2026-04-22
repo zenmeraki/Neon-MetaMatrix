@@ -897,20 +897,20 @@
   "Up to 100 products": "До 100 товаров",
   "Email support": "Поддержка по электронной почте",
   "Get Started": "Начать",
-  "Advanced Monthly": "Advanced ежемесячно",
+  "Advanced Monthly": "Ежемесячный расширенный тариф",
   "For growing businesses": "Для растущего бизнеса",
   "Everything you need to scale": "Все, что нужно для масштабирования",
   "All Free features": "Все функции бесплатного плана",
   "Up to 1,000 products - Manual Edits": "До 1 000 товаров - Ручные изменения",
   "Up to 1,000 products - Scheduled Edits": "До 1 000 товаров - Запланированные изменения",
-  "Upgrade to Advanced": "Перейти на Advanced",
-  "Pro Monthly": "Pro ежемесячно",
+  "Upgrade to Advanced": "Перейти на расширенный тариф",
+  "Pro Monthly": "Ежемесячный профессиональный тариф",
   "For established stores": "Для развитых магазинов",
   "Premium features and dedicated support": "Премиальные функции и выделенная поддержка",
-  "All Advanced features": "Все функции Advanced",
+  "All Advanced features": "Все функции расширенного тарифа",
   "Unlimited products": "Неограниченное количество товаров",
   "Unlimited Scheduled Edit": "Неограниченные запланированные изменения",
-  "Start Pro": "Начать Pro",
+  "Start Pro": "Начать использовать профессиональный тариф",
   "PerMonth": "/месяц",
   "historySummaryTotal": "общий",
   "historySummaryActive": "активный",
@@ -1218,5 +1218,59 @@
   "syncAlreadyRunning": "Идет еще одна синхронизация...",
   "syncStarted": "синхронизация началась",
   "syncFailed": "Не удалось синхронизировать",
-  "syncStatusLoadFailed": "Не удалось загрузить статус синхронизации."
+  "syncStatusLoadFailed": "Не удалось загрузить статус синхронизации.",
+  "IncreaseValue": "Увеличение ценности",
+  "collectionSearch": {
+    "label": "Поиск и выбор коллекций"
+  },
+  "searchFor": "Искать",
+  "replaceWith": "Заменить на",
+  "selectCategory": "Выберите категорию",
+  "permanentAction": "Это действие является постоянным и не может быть отменено.",
+  "textInput": {
+    "enterText": "Введите текст",
+    "enterTextToAdd": "Введите текст для добавления",
+    "enterTextToRemove": "Введите текст для удаления",
+    "enterMaxCharacterLength": "Введите максимальную длину текста",
+    "enterSearchAndReplaceValues": "Введите значения для поиска и замены",
+    "enterWord": "Введите слово"
+  },
+  "statusActions": {
+    "setStatus": "Установить статус"
+  },
+  "statusInput": {
+    "selectProductStatus": "Выберите статус товара"
+  },
+  "statusChoices": {
+    "active": "Активный",
+    "draft": "Черновик",
+    "archived": "Архивный"
+  },
+  "tagInput": {
+    "commaSeparated": "Теги, разделённые запятыми",
+    "rename": "Старый тег → Новый тег",
+    "old": "Старый тег",
+    "new": "Новый тег",
+    "searchReplace": "Найти → Заменить",
+    "search": "Поиск по тегам",
+    "replace": "Заменить на"
+  },
+  "tagActions": {
+    "add": "Добавить тег(и) к товару",
+    "remove": "Удалить тег(и) из товара",
+    "rename": "Переименовать тег",
+    "searchReplace": "Поиск и замена в названии тега",
+    "setAll": "Установить теги (перезаписывает существующие)",
+    "search_multiple": "Найдите и выберите несколько..."
+  },
+  "collectionActions": {
+    "addToCollection": "Добавить в коллекцию",
+    "removeFromCollection": "Удалить из коллекции"
+  },
+  "search_multiple": "Найдите и выберите несколько...",
+  
+  "categorySearch": {
+    "label": "Найдите и выберите"
+  }
+
 }

@@ -179,17 +179,17 @@ const ValueInput = ({
 
   const getLabel = () => {
     if (editType?.value?.toLowerCase().includes("decrease"))
-      return t("DecreaseValue", { defaultValue: "Decrease Value" });
+      return t("DecreaseValue");
 
     if (editType?.value?.toLowerCase().includes("increase"))
-      return t("IncreaseValue", { defaultValue: "Increase Value" });
+      return t("IncreaseValue");
 
     if (editType?.value?.toLowerCase().includes("set"))
-      return t("new_value", { defaultValue: "New Value" });
+      return t("new_value");
 
-    return t(config.inputHelperLabel || "value", {
-      defaultValue: config.inputHelperLabel || "Value",
-    });
+    return config.inputHelperLabel
+      ? t(config.inputHelperLabel)
+      : t("value");
   };
 
   // Autocomplete handlers with proper debounce
@@ -260,9 +260,11 @@ const ValueInput = ({
   const autocompleteTextField = (
     <Autocomplete.TextField
       onChange={updateAutocompleteText}
-      label={t(config.inputHelperLabel || "select_category", {
-        defaultValue: config.inputHelperLabel || "Select Category",
-      })}
+      label={
+        config.inputHelperLabel
+          ? t(config.inputHelperLabel)
+          : t("selectCategory")
+      }
       value={autocompleteInputValue}
       prefix={<Icon source={SearchIcon} />}
       placeholder={
@@ -298,9 +300,11 @@ const ValueInput = ({
         <FormLayout>
           <FormLayout.Group condensed>
             <TextField
-              label={t(config.searchLabel || "search_for", {
-                defaultValue: config.searchLabel || "Search For",
-              })}
+              label={
+                config.searchLabel
+                  ? t(config.searchLabel)
+                  : t("searchFor")
+              }
               value={
                 typeof searchReplace?.search === "string"
                   ? searchReplace.search
@@ -316,9 +320,11 @@ const ValueInput = ({
             />
 
             <TextField
-              label={t(config.replaceLabel || "replace_with", {
-                defaultValue: config.replaceLabel || "Replace With",
-              })}
+              label={
+                config.replaceLabel
+                  ? t(config.replaceLabel)
+                  : t("replaceWith")
+              }
               value={
                 typeof searchReplace?.replace === "string"
                   ? searchReplace.replace
@@ -373,10 +379,9 @@ const ValueInput = ({
       return (
         <Banner tone="critical">
           <Text as="p">
-            {editType?.inputHelperLabel ||
-              t("permanent_action", {
-                defaultValue: "This action is permanent and cannot be undone.",
-              })}
+            {editType?.inputHelperLabel
+              ? t(editType.inputHelperLabel)
+              : t("permanentAction")}
           </Text>
         </Banner>
       );

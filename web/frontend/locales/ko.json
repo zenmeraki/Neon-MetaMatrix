@@ -897,17 +897,17 @@
   "Up to 100 products": "최대 100개 상품",
   "Email support": "이메일 지원",
   "Get Started": "시작하기",
-  "Advanced Monthly": "Advanced 월간",
+  "Advanced Monthly": "고급 요금제 월간",
   "For growing businesses": "성장하는 비즈니스를 위해",
   "Everything you need to scale": "확장에 필요한 모든 것",
   "All Free features": "무료 요금제의 모든 기능",
   "Up to 1,000 products - Manual Edits": "최대 1,000개 상품 - 수동 편집",
   "Up to 1,000 products - Scheduled Edits": "최대 1,000개 상품 - 예약 편집",
   "Upgrade to Advanced": "고급 버전으로 업그레이드",
-  "Pro Monthly": "Pro 월간",
+  "Pro Monthly": "프로 요금제 월간",
   "For established stores": "안정된 스토어를 위해",
   "Premium features and dedicated support": "프리미엄 기능과 전담 지원",
-  "All Advanced features": "Advanced의 모든 기능",
+  "All Advanced features": "고급 요금제의 모든 기능",
   "Unlimited products": "무제한 상품",
   "Unlimited Scheduled Edit": "무제한 예약 편집",
   "Start Pro": "프로 시작",
@@ -1295,5 +1295,12 @@
   "syncAlreadyRunning": "다른 동기화가 실행 중입니다...",
   "syncStarted": "동기화가 시작되었습니다",
   "syncFailed": "동기화하지 못했습니다.",
-  "syncStatusLoadFailed": "동기화 상태를 로드하지 못했습니다."
+  "syncStatusLoadFailed": "동기화 상태를 로드하지 못했습니다.",
+  "numeric": {
+    "enterAmount": "금액을 입력하세요"
+  },
+  "searchFor": "검색",
+  "replaceWith": "다음으로 바꾸기",
+  "selectCategory": "카테고리 선택",
+  "permanentAction": "이 작업은 영구적이며 취소할 수 없습니다."
 }

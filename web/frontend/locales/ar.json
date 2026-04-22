@@ -1308,5 +1308,12 @@
   "syncAlreadyRunning": "جارٍ تشغيل مزامنة أخرى...",
   "syncStarted": "بدأت المزامنة",
   "syncFailed": "فشلت المزامنة",
-  "syncStatusLoadFailed": "فشل تحميل حالة المزامنة"
+  "syncStatusLoadFailed": "فشل تحميل حالة المزامنة",
+  "numeric": {
+    "enterAmount": "أدخل المبلغ"
+  },
+  "searchFor": "بحث عن",
+  "replaceWith": "استبدال ب",
+  "selectCategory": "حدد الفئة",
+  "permanentAction": "هذا الإجراء دائم ولا يمكن التراجع عنه."
 }

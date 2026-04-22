@@ -73,9 +73,10 @@ const ActionTemplates = {
       createAction(
         "Changed by fixed amount",
         "Changed by fixed amount",
-        "Enter the amount",
+        "numeric.enterAmount", 
         FieldType.NUMERIC
       ),
+      
 
     setToValue: () =>
       createAction(
