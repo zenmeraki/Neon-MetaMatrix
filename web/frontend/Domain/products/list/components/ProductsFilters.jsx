@@ -1,4 +1,4 @@
-import React, { memo, useMemo, useRef, useState } from "react";
+import React, { memo, useMemo, useRef, useState, useCallback } from "react";
 import {
   Filters,
   ChoiceList,
@@ -15,131 +15,37 @@ import { ALL_FILTERS } from "../constants";
 import { useTranslation } from "react-i18next";
 import FilterPanel from "./FilterPanel";
 
-function normalizeAutocompleteOption(item) {
-  if (item === null || item === undefined) return null;
-
-  if (typeof item === "string" || typeof item === "number") {
-    const normalized = String(item).trim();
-    if (!normalized) return null;
-
-    return {
-      label: normalized,
-      value: normalized,
-    };
-  }
-
-  const label = item.label ?? item.title ?? item.name ?? item.value ?? item.id;
-  const value = item.value ?? item.title ?? item.name ?? item.label ?? item.id;
-
-  if (label === undefined || value === undefined) {
-    return null;
-  }
-
-  const normalizedLabel = String(label).trim();
-  const normalizedValue = String(value).trim();
-
-  if (!normalizedLabel || !normalizedValue) {
-    return null;
-  }
-
-  return {
-    label: normalizedLabel,
-    value: normalizedValue,
-  };
-}
-
 const ProductsFilters = memo(function ProductsFilters({
   queryValue,
   appliedFilters,
-  filterState,
   onFilterChange,
   onQueryChange,
   onQueryClear,
   onClearAll,
 }) {
   const { t } = useTranslation();
-const allFilters = ALL_FILTERS;
-  const [draftFilters, setDraftFilters] = useState({});
-  const [filtersKey, setFiltersKey] = useState(0);
-  const [autocompleteOptions, setAutocompleteOptions] = useState({});
-  const [autocompleteLoading, setAutocompleteLoading] = useState({});
-  const debounceTimers = useRef({});
+  const [filtersKey, setFiltersKey] = useState(0); // ✅ re-add this
 
-  const fetchAutocompleteOptions = async (filter, query) => {
-    if (!filter.api) return;
+  const handleApplied = useCallback(() => {
+    setFiltersKey((k) => k + 1); // ✅ increments → Filters remounts → popover closes
+  }, []);
 
-    setAutocompleteLoading((prev) => ({
-      ...prev,
-      [filter.key]: true,
-    }));
-
-    try {
-      const res = await fetch(
-        `${filter.api}?search=${encodeURIComponent(query)}&isNameOnly=true`,
-      );
-
-      if (!res.ok) throw new Error("Failed");
-
-      const data = await res.json();
-      const items = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
-
-      setAutocompleteOptions((prev) => ({
-        ...prev,
-        [filter.key]: items.map(normalizeAutocompleteOption).filter(Boolean),
-      }));
-    } catch {
-      setAutocompleteOptions((prev) => ({
-        ...prev,
-        [filter.key]: [],
-      }));
-    } finally {
-      setAutocompleteLoading((prev) => ({
-        ...prev,
-        [filter.key]: false,
-      }));
-    }
-  };
-
+  // ✅ No more draftFilters / autocompleteOptions / autocompleteLoading here
   const filters = useMemo(
     () =>
-      allFilters.map((filter) => {
-        const draft = draftFilters[filter.key] || {
-          operator: filter.operators[0] || "",
-          value: "",
-        };
-
-        return {
-          key: filter.key,
-          label: t(`fieldLabels.${filter.key}`, filter.label),
-          filter: (
-  <FilterPanel
-    filter={filter}
-    draft={draft}
-    options={autocompleteOptions[filter.key] || []}
-    loading={autocompleteLoading[filter.key]}
-    t={t}
-    onDraftChange={(nextDraft) =>
-      setDraftFilters((prev) => ({
-        ...prev,
-        [filter.key]: nextDraft,
-      }))
-    }
-    onSearch={(query) => {
-      clearTimeout(debounceTimers.current[filter.key]);
-
-      debounceTimers.current[filter.key] = setTimeout(() => {
-        fetchAutocompleteOptions(filter, query);
-      }, 300);
-    }}
-    onApply={() => {
-      onFilterChange(filter.key, draft);
-      setFiltersKey((key) => key + 1);
-    }}
-  />
-),
-        };
-      }),
-    [allFilters, autocompleteLoading, autocompleteOptions, draftFilters, t, onFilterChange],
+      ALL_FILTERS.map((filter) => ({
+        key: filter.key,
+        label: t(`fieldLabels.${filter.key}`, filter.label),
+        filter: (
+          <FilterPanel
+            filter={filter}
+            onFilterChange={onFilterChange}
+            onApplied={handleApplied}
+            t={t}
+          />
+        ),
+      })),
+    [t, onFilterChange, handleApplied] 
   );
 
   return (

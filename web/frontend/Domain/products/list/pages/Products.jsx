@@ -150,21 +150,19 @@ useEffect(() => {
   filterState,
 ]);
 
-  const onFilterChange = (field, nextFilter) => {
-    const updated = (() => {
-      const index = filterState.findIndex((f) => f.field === field);
+  const onFilterChange = useCallback((field, nextFilter) => {
+  const updated = (() => {
+    const index = filterState.findIndex((f) => f.field === field);
+    if (index !== -1) {
+      const copy = [...filterState];
+      copy[index] = { field, ...nextFilter };
+      return copy;
+    }
+    return [...filterState, { field, ...nextFilter }];
+  })();
 
-      if (index !== -1) {
-        const copy = [...filterState];
-        copy[index] = { field, ...nextFilter };
-        return copy;
-      }
-
-      return [...filterState, { field, ...nextFilter }];
-    })();
-
-    dispatch(setFilters(updated));
-  };
+  dispatch(setFilters(updated));
+}, [filterState, dispatch]);
 
   const onClearAll = () => {
     dispatch(clearFilters());
@@ -311,7 +309,6 @@ useEffect(() => {
               <ProductsFilters
                 queryValue={search}
                 appliedFilters={appliedFilters}
-                filterState={filterState}
                 onFilterChange={onFilterChange}
                 onQueryChange={(value) => dispatch(setSearch(value))}
                 onQueryClear={onClearAll}
