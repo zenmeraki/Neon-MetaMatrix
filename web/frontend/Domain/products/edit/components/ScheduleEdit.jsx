@@ -333,7 +333,7 @@ function ScheduleEdit({
                       {t("edit_summary")}:
                     </Text>
                     <Text as="p" variant="bodyMd">
-                      {t("field")}: <strong>{t(editedField)}</strong>
+                      {t("field")}: <strong>{t(`fieldLabels.${editedField}`, editedField)}</strong>
 
                     </Text>
                     <Text as="p" variant="bodyMd">

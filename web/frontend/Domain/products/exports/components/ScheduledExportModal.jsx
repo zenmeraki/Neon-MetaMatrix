@@ -58,84 +58,97 @@ function ScheduledExportModal({
     onHide();
   }, [onHide, resetForm]);
 
-  const handleScheduleExport = useCallback(async () => {
-    if (!isFormValid) {
-      return;
-    }
+ const handleScheduleExport = useCallback(async () => {
+  if (!isFormValid) return;
 
-    setSubmitting(true);
-    setError(null);
-    setUpgradeWarning(null);
+  setSubmitting(true);
+  setError(null);
+  setUpgradeWarning(null);
 
-    try {
-      const scheduledAt = new Date(
-        `${startExportDate}T${startExportTime}:00`,
-      ).toISOString();
+  try {
+    const scheduledAt = new Date(
+      `${startExportDate}T${startExportTime}:00`
+    ).toISOString();
 
-      const payload = {
-        title: fileName.replace(/\.csv$/i, ""),
-        filename: fileName,
-        fields: selectedFields,
-        filterParams: filters,
-        scheduledAt,
-        status: "Active",
-      };
+    const payload = {
+      title: fileName.replace(/\.csv$/i, ""),
+      filename: fileName,
+      fields: selectedFields,
+      filterParams: filters,
+      scheduledAt,
+      status: "Active",
+    };
 
-      const response = await fetch("/api/products/create-scheduled-export", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
+    const response = await fetch("/api/products/create-scheduled-export", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
 
-      const data = await response.json();
+    const data = await response.json();
 
-      if (!response.ok) {
-        const message = data?.message || t("scheduledExport.failedMessage");
+    if (!response.ok) {
+      const errorCode =
+        data?.code ||
+        data?.message ||
+        "SCHEDULED_EXPORT_FAILED";
 
-        if (
-          message.toLowerCase().includes("plan") ||
-          message.toLowerCase().includes("advanced") ||
-          message.toLowerCase().includes("pro")
-        ) {
-          setUpgradeWarning(message);
-          return;
-        }
-
-        throw new Error(message);
+      // 🔥 Upgrade case
+      if (errorCode === "SCHEDULED_EXPORT_PLAN_UPGRADE_REQUIRED") {
+        setUpgradeWarning(
+          t("scheduledExport.upgradeRequiredMessage")
+        );
+        return;
       }
 
-      setToastState({
-        active: true,
-         message: t("scheduledExport.successMessage"),
-        error: false,
-      });
-
-      setTimeout(() => {
-        handleClose();
-        navigate("/history");
-      }, 1000);
-    } catch (requestError) {
-      setError(requestError.message || t("scheduledExport.failedMessage"));
-      setToastState({
-        active: true,
-        message: requestError.message || t("scheduledExport.failedMessage"),
-        error: true,
-      });
-    } finally {
-      setSubmitting(false);
+      // 🔥 Generic errors
+      throw new Error(
+        t(
+          `scheduledExport.errors.${errorCode}`,
+          t("scheduledExport.failedMessage")
+        )
+      );
     }
-  }, [
-    fileName,
-    filters,
-    handleClose,
-    isFormValid,
-    navigate,
-    selectedFields,
-    startExportDate,
-    startExportTime,
-  ]);
+
+    // ✅ Success
+    setToastState({
+      active: true,
+      message: t("scheduledExport.successMessage"),
+      error: false,
+    });
+
+    setTimeout(() => {
+      handleClose();
+      navigate("/history");
+    }, 1000);
+
+  } catch (requestError) {
+    const message =
+      requestError?.message || t("scheduledExport.failedMessage");
+
+    setError(message);
+
+    setToastState({
+      active: true,
+      message,
+      error: true,
+    });
+  } finally {
+    setSubmitting(false);
+  }
+}, [
+  fileName,
+  filters,
+  handleClose,
+  isFormValid,
+  navigate,
+  selectedFields,
+  startExportDate,
+  startExportTime,
+  t,
+]);
 
   const toastMarkup = toastState.active ? (
     <Toast

@@ -75,8 +75,9 @@ const RecurringHistoryTable = memo(
     // Render frequency badge
     const renderFrequencyBadge = (frequency) => {
       return (
-        <Badge tone="info">{t(frequency?.toLowerCase()) || frequency}</Badge>
-      );
+ <Badge tone="info">
+      {t(`frequencyRecurring.${frequency?.toLowerCase()}`, { defaultValue: frequency })}
+    </Badge>      );
     };
 
     const onViewDetails = async (id) => {

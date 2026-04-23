@@ -15,9 +15,10 @@ export function hasScheduledExportAccess(subscription = {}) {
 
 export async function assertScheduledExportAccess(subscription = {}) {
   if (!hasScheduledExportAccess(subscription)) {
-    throw new Error(
-      "Scheduled exports are available only on Advanced and Pro plans.",
-    );
+    const error = new Error("SCHEDULED_EXPORT_PLAN_UPGRADE_REQUIRED");
+    error.code = "SCHEDULED_EXPORT_PLAN_UPGRADE_REQUIRED";
+    error.statusCode = 403;
+    throw error;
   }
 }
 

@@ -518,6 +518,7 @@ const getLastRunStatusBadge = (status) => {
       title={t("editRecurringEdit")}
       primaryAction={{
         content: t("updateRecurringEdit"),
+         onAction: handleSubmit, 
         loading: isSubmitting,
         disabled: isSubmitting,
       }}

@@ -1010,21 +1010,30 @@
     "barcode": "Штрихкод",
     "sku": "SKU"
   },
-  "recurringEditEditTypes": {
-    "Decrease by percent": "Уменьшить на процент",
-    "Increase by percent": "Увеличить на процент",
-    "Changed by fixed amount": "Изменить на фиксированную сумму",
-    "Set to fixed value": "Установить фиксированное значение",
-    "setTextToValue": "Установить текст в значение",
-    "addTextToEnd": "Добавить текст в конец",
-    "removeTextFromEnd": "Удалить текст с конца",
-    "addTextToBeginning": "Добавить текст в начало",
-    "removeTextFromBeginning": "Удалить текст с начала",
-    "limitTextLength": "Ограничить длину текста",
-    "removeTextToEndFromWord": "Удалить текст до конца от слова",
-    "removeTextUpToWord": "Удалить текст до слова",
-    "searchReplace": "Найти/Заменить"
-  },
+ "recurringEditEditTypes": {
+  "Decrease by percent": "Уменьшить на процент",
+  "Increase by percent": "Увеличить на процент",
+  "Changed by fixed amount": "Изменить на фиксированную сумму",
+  "Set to fixed value": "Установить фиксированное значение",
+  "setTextToValue": "Установить текст в значение",
+  "Set text to value": "Установить текст в значение",
+  "addTextToEnd": "Добавить текст в конец",
+  "Add text to end": "Добавить текст в конец",
+  "removeTextFromEnd": "Удалить текст с конца",
+  "Remove text from end": "Удалить текст с конца",
+  "addTextToBeginning": "Добавить текст в начало",
+  "Add text to beginning": "Добавить текст в начало",
+  "removeTextFromBeginning": "Удалить текст с начала",
+  "Remove text from beginning": "Удалить текст с начала",
+  "limitTextLength": "Ограничить длину текста",
+  "Limit length of text": "Ограничить длину текста",
+  "removeTextToEndFromWord": "Удалить текст от слова до конца",
+  "Remove text to end from a word to the end": "Удалить текст от слова до конца",
+  "removeTextUpToWord": "Удалить текст до слова включительно",
+  "Remove text up to and including a word": "Удалить текст до слова включительно",
+  "searchReplace": "Найти/Заменить",
+  "Search/Replace": "Найти/Заменить"
+},
   "historyEmptyStateTitle": "Пока нет активности",
   "exportColumnTitle": "Заголовок",
   "exportColumnProgress": "Прогресс",
@@ -1055,7 +1064,8 @@
     "dateLabel": "Дата",
     "dateHelpText": "Выберите дату для запуска экспорта",
     "timeLabel": "Время",
-    "timeHelpText": "Выберите время для запуска экспорта"
+    "timeHelpText": "Выберите время для запуска экспорта",
+    "upgradeRequiredMessage": "Запланированный экспорт доступен только в планах Advanced и Pro."
   },
   "UndoProgress": "Отменить прогресс",
   "errorPageTitle": "Ошибка",
@@ -1121,6 +1131,14 @@
     "weekly": "Еженедельно",
     "monthly": "Ежемесячно"
   },
+  "runStatus": {
+  "success": "Успешно",
+  "failed": "Ошибка",
+  "error": "Сбой",
+  "running": "Выполняется",
+  "processing": "Обрабатывается",
+  "skipped": "Пропущено"
+},
   "spreadsheetConfirmTitle": "Подтвердить импорт продукта",
   "spreadsheetConfirmPrimary": "Да, импортные товары",
   "spreadsheetConfirmMessage": "Вы уверены, что хотите импортировать этот CSV-файл?",
@@ -1268,16 +1286,12 @@
     "removeFromCollection": "Удалить из коллекции"
   },
   "search_multiple": "Найдите и выберите несколько...",
-  
   "categorySearch": {
     "label": "Найдите и выберите"
   },
-
-  
   "numeric": {
     "enterAmount": "Введите сумму"
   },
-  
   "taxInput": {
     "shouldProductBeTaxable": "Облагается ли этот товар налогом?"
   },
@@ -1285,7 +1299,6 @@
     "yes": "Да",
     "no": "Нет"
   },
-  
   "inventoryPolicyInput": {
     "shouldContinueSellingOutOfStock": "Продолжать продавать товар при отсутствии на складе?"
   },
@@ -1294,6 +1307,3 @@
     "denySelling": "Не продавать при отсутствии на складе"
   }
 }
-
-
-

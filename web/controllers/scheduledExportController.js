@@ -41,11 +41,13 @@ export async function createScheduledExportController(req, res) {
       source: "scheduledExportController.create",
     });
 
-    const statusCode = error.message === "Session expired" ? 403 : 400;
-    return res.status(statusCode).json({
-      success: false,
-      message: error.message || "Failed to create scheduled export",
-    });
+   const isSessionError = error.message === "Session expired";
+
+return res.status(error.statusCode || (isSessionError ? 403 : 400)).json({
+  success: false,
+  code: error.code || "SCHEDULED_EXPORT_FAILED",
+  message: error.code || error.message || "SCHEDULED_EXPORT_FAILED",
+});
   }
 }
 

@@ -108,7 +108,6 @@ router.post(
   subscriptionMiddleware,
   createRecurringEditController
 );
-
 router.get("/get-recurring-edits", listRecurringEditsController);
 router.get("/get-recurring-edit/:id", getRecurringEditByIdController);
 router.put(
