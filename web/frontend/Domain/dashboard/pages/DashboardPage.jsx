@@ -102,21 +102,22 @@ function QuickActionCard({ title, description, buttonText, onAction }) {
   return (
     <Card roundedAbove="sm">
       <Box padding="500">
-        <BlockStack gap="300">
-          <BlockStack gap="100">
-            <Text as="h3" variant="headingMd">
-              {title}
-            </Text>
-            <Text as="p" variant="bodyMd" tone="subdued">
-              {description}
-            </Text>
-          </BlockStack>
+        <BlockStack gap="400">
+          <Box minHeight="90px">
+            <BlockStack gap="100">
+              <Text as="h3" variant="headingMd">
+                {title}
+              </Text>
 
-          <Box paddingBlockStart="200">
-            <Button fullWidth variant="primary" onClick={onAction}>
-              {buttonText}
-            </Button>
+              <Text as="p" variant="bodyMd" tone="subdued">
+                {description}
+              </Text>
+            </BlockStack>
           </Box>
+
+          <Button fullWidth variant="primary" onClick={onAction}>
+            {buttonText}
+          </Button>
         </BlockStack>
       </Box>
     </Card>
@@ -256,7 +257,7 @@ export default function DashboardPage() {
                     onAction: () => navigate("/suggestionpage"),
                   }}
                 >
-                 <p>{t("freeAccessMessage")}</p>
+                  <p>{t("freeAccessMessage")}</p>
                 </Banner>
               )}
 
@@ -269,7 +270,7 @@ export default function DashboardPage() {
                     onAction: () => navigate("/refresh"),
                   }}
                 >
-                 <p>{t("productSyncMessage")}</p>
+                  <p>{t("productSyncMessage")}</p>
                 </Banner>
               )}
             </BlockStack>
@@ -313,12 +314,14 @@ export default function DashboardPage() {
 
                 <Grid>
                   <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3, xl: 3 }}>
-                    <QuickActionCard
-                      title={t("products")}
-                      description={t("productsDescription")}
-                      buttonText={t("openProducts")}
-                      onAction={() => navigate("/products")}
-                    />
+                    <Box height="100%">
+                      <QuickActionCard
+                        title={t("products")}
+                        description={t("productsDescription")}
+                        buttonText={t("openProducts")}
+                        onAction={() => navigate("/products")}
+                      />
+                    </Box>
                   </Grid.Cell>
 
                   <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3, xl: 3 }}>
