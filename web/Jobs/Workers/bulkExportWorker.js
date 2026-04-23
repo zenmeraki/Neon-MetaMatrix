@@ -349,17 +349,55 @@ const bulkExportWorker = new Worker(
       }
 
       if (claimResult.state === "shop_busy") {
-        throw new RetryableExportError(
-          "Another export is already processing for this shop",
-          "shop_export_busy",
-        );
-      }
+  await prisma.exportJob.updateMany({
+    where: {
+      id: exportJobId,
+      shop,
+      status: { in: ["PENDING", "PROCESSING"] },
+    },
+    data: {
+      status: "CANCELLED",
+      executionState: EXPORT_EXECUTION_STATES.CANCELLED,
+      failureStage: "duplicate_export_blocked",
+      error: appendSerializedExportError(
+        null,
+        buildExportExecutionError({
+          code: "duplicate_export_blocked",
+          stage: "claim",
+          message: "Another export is already processing for this shop",
+          retryable: false,
+        })
+      ),
+      completedAt: new Date(),
+    },
+  });
+
+  return {
+    skipped: true,
+    reason: "duplicate_export_blocked",
+    shop,
+    exportJobId,
+  };
+}
 
       await clearKeyCaches(`${shop}:fetchExportHistories:`);
 
       filePath = path.join(os.tmpdir(), exportJob.filename);
       const writeStream = fs.createWriteStream(filePath);
-      const csvStream = format({ headers: true });
+      const selectedFields =
+  Array.isArray(fields) && fields.length ? fields : exportJob.fields;
+
+const csvHeaders = ["id"];
+
+if (selectedFields.some((f) => VARIANT_FIELD_RESOLVERS[f])) {
+  csvHeaders.push("variant_id");
+}
+
+csvHeaders.push(...selectedFields);
+
+const csvStream = format({
+  headers: csvHeaders,
+});
       csvStream.pipe(writeStream);
 
       const pageSize = 500;
@@ -404,43 +442,50 @@ const bulkExportWorker = new Worker(
 
           const variants = product.variants ?? [];
 
-          if (!variants.length) {
-            const row = { id: productId };
+         if (!variants.length) {
+  const row = { id: productId };
 
-            for (const field of fields || exportJob.fields) {
-              const productResolver = PRODUCT_FIELD_RESOLVERS[field];
-              if (productResolver) {
-                row[field] = productResolver(product);
-              }
-            }
+  if (csvHeaders.includes("variant_id")) {
+    row.variant_id = "";
+  }
 
-            csvStream.write(row);
-            totalRows += 1;
-            continue;
-          }
+  for (const field of selectedFields) {
+    const productResolver = PRODUCT_FIELD_RESOLVERS[field];
+    row[field] = productResolver ? productResolver(product) : "";
+  }
 
-          for (let index = 0; index < variants.length; index += 1) {
-            const variant = variants[index];
-            const row = {
-              id: productId,
-              variant_id: variant.id,
-            };
+  csvStream.write(row);
+  totalRows += 1;
+  continue;
+}
 
-            for (const field of fields || exportJob.fields) {
-              const productResolver = PRODUCT_FIELD_RESOLVERS[field];
-              if (productResolver) {
-                row[field] = index === 0 ? productResolver(product) : "";
-              }
+         for (let index = 0; index < variants.length; index += 1) {
+  const variant = variants[index];
 
-              const variantResolver = VARIANT_FIELD_RESOLVERS[field];
-              if (variantResolver) {
-                row[field] = variantResolver(variant);
-              }
-            }
+  const row = {
+    id: productId,
+  };
 
-            csvStream.write(row);
-            totalRows += 1;
-          }
+  if (csvHeaders.includes("variant_id")) {
+    row.variant_id = variant.id;
+  }
+
+  for (const field of selectedFields) {
+    const productResolver = PRODUCT_FIELD_RESOLVERS[field];
+    const variantResolver = VARIANT_FIELD_RESOLVERS[field];
+
+    if (variantResolver) {
+      row[field] = variantResolver(variant);
+    } else if (productResolver) {
+      row[field] = index === 0 ? productResolver(product) : "";
+    } else {
+      row[field] = "";
+    }
+  }
+
+  csvStream.write(row);
+  totalRows += 1;
+}
         }
 
         lastProductId = snapshotPage.lastProductId;

@@ -29,6 +29,25 @@ export const handleExportProductsData = async (req, res) => {
 
     const filename = fileName?.endsWith(".csv") ? fileName : `${fileName}.csv`;
 
+    const active = await prisma.exportJob.findFirst({
+  where: {
+    shop:session.shop,
+    OR: [
+      { status: "PROCESSING" },
+      {
+        executionState: {
+          in: ["RUNNING", "FINALIZING"],
+        },
+      },
+    ],
+  },
+});
+
+if (active) {
+  return res.status(400).json({
+    message: "Another export is already running for this shop",
+  });
+}
     const newExportHistory = await prisma.exportHistory.create({
       data: {
         shop: session.shop,
@@ -127,6 +146,26 @@ export const createProductExport = async (req, res) => {
 
     const filename = fileName.endsWith(".csv") ? fileName : `${fileName}.csv`;
 
+// ✅ ADD THIS BLOCK HERE
+const active = await prisma.exportJob.findFirst({
+  where: {
+    shop,
+    OR: [
+      { status: "PROCESSING" },
+      {
+        executionState: {
+          in: ["RUNNING", "FINALIZING"],
+        },
+      },
+    ],
+  },
+});
+
+if (active) {
+  return res.status(400).json({
+    message: "Another export is already running for this shop",
+  });
+}
     const job = await prisma.exportJob.create({
       data: {
         shop,

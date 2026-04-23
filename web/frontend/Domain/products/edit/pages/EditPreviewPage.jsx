@@ -27,12 +27,15 @@ import PreviewTable from "../components/PreviewTable";
 import ScheduleEdit from "../components/ScheduleEdit";
 import RecurringEditModal from "../components/RecurringEditModal";
 import useDebounce from "../hooks/useDebounce";
-import { selectFilters, selectProductCount } from "../../../../store/slices/productSlice";
+import {
+  selectFilters,
+  selectSearch,
+} from "../../../../store/slices/productSlice";
 import useProductSyncStatus from "../../../../hooks/useProductSyncStatus";
 
 export default function EditPreviewPage() {
   const filters = useSelector(selectFilters);
-  const count = useSelector(selectProductCount);
+  const search = useSelector(selectSearch);
   const navigate = useNavigate();
   const { i18n, t } = useTranslation();
   const { isSyncInProgress } = useProductSyncStatus();
@@ -60,7 +63,7 @@ export default function EditPreviewPage() {
     scheduleEdit: false,
     recurringEdit: false,
   });
-
+const [previewTotal, setPreviewTotal] = useState(0);
   const debouncedValue = useDebounce(inputValue, 600);
   const debouncedSearchReplace = useDebounce(searchReplace, 600);
 
@@ -92,6 +95,23 @@ export default function EditPreviewPage() {
   const shouldHideEditTypeSelector =
     selectedField?.value === "status" || selectedField?.actions?.length <= 1;
 
+    const effectiveFilters = useMemo(() => {
+  const baseFilters = filters.filter((f) => f.field !== "search");
+
+  if (!search?.trim()) {
+    return baseFilters;
+  }
+
+  return [
+    ...baseFilters,
+    {
+      field: "search",
+      operator: "contains",
+      value: search.trim(),
+    },
+  ];
+}, [filters, search]);
+
   const fetchPreview = useCallback(async () => {
     if (!editType || !selectedField) return;
 
@@ -122,7 +142,7 @@ export default function EditPreviewPage() {
           searchKey: debouncedSearchReplace.search,
           replaceText: debouncedSearchReplace.replace,
           location: locationValue,
-          filterParams: filters,
+          filterParams: effectiveFilters,
           page: pagination.page,
           limit: pagination.limit,
           supportValue,
@@ -139,6 +159,7 @@ export default function EditPreviewPage() {
       setProducts(json.data.preview);
       setPagination(json.data.pagination);
       setIsVariant(json.data.isVariant);
+      setPreviewTotal(json.data.pagination?.total || 0);
     } catch (err) {
       toast.error(err.message || "Failed to load preview");
     } finally {
@@ -150,7 +171,7 @@ export default function EditPreviewPage() {
     debouncedValue,
     debouncedSearchReplace,
     locationValue,
-    filters,
+    effectiveFilters,
     pagination.page,
     pagination.limit,
     supportValue,
@@ -210,7 +231,7 @@ export default function EditPreviewPage() {
           searchKey: debouncedSearchReplace.search,
           replaceText: debouncedSearchReplace.replace,
           location: locationValue,
-          filterParams: filters,
+          filterParams: effectiveFilters,
           supportValue,
         }),
       });
@@ -235,17 +256,17 @@ export default function EditPreviewPage() {
     }
   };
 
-  const summaryText = useMemo(() => {
-    if (loading) {
-      return t("loadingProductsPreview");
-    }
+const summaryText = useMemo(() => {
+  if (loading) {
+    return t("loadingProductsPreview");
+  }
 
-    if (count > 0) {
-      return `${count} ${t("productsReadyToEdit")}`;
-    }
+  if (previewTotal > 0) {
+    return `${previewTotal} ${t("productsReadyToEdit")}`;
+  }
 
-    return t("noProductsMatch");
-  }, [count, loading, t]);
+  return t("noProductsMatch");
+}, [previewTotal, loading, t]);
 
   return (
     <Page
@@ -357,7 +378,9 @@ export default function EditPreviewPage() {
                   {t("bulkEditPreviewSummaryTitle",)}
                 </Text>
                 <InlineStack gap="200" blockAlign="center">
-                  <Badge tone={count > 0 ? "info" : "attention"}>{count || 0}</Badge>
+                  <Badge tone={previewTotal > 0 ? "info" : "attention"}>
+  {previewTotal || 0}
+</Badge>
                   <Text as="span" variant="bodySm" tone="subdued">
                     {t("bulkEditMatchingProductsLabel",)}
                   </Text>
@@ -389,14 +412,14 @@ export default function EditPreviewPage() {
         <ScheduleEdit
           show
           onHide={() => setModalState((current) => ({ ...current, scheduleEdit: false }))}
-          count={count}
+          count={previewTotal}
           editedField={selectedField.value}
           editedBy={editType?.value}
           value={debouncedValue}
           searchKey={debouncedSearchReplace.search}
           replaceText={debouncedSearchReplace.replace}
           location={locationValue}
-          filters={filters}
+          filters={effectiveFilters}
           supportValue={supportValue}
         />
       )}
@@ -405,14 +428,14 @@ export default function EditPreviewPage() {
         <RecurringEditModal
           show
           onHide={() => setModalState((current) => ({ ...current, recurringEdit: false }))}
-          count={count}
+          count={previewTotal}
           editedField={selectedField.value}
           editedBy={editType?.value}
           value={debouncedValue}
           searchKey={debouncedSearchReplace.search}
           replaceText={debouncedSearchReplace.replace}
           location={locationValue}
-          filters={filters}
+          filters={effectiveFilters}
           supportValue={supportValue}
         />
       )}

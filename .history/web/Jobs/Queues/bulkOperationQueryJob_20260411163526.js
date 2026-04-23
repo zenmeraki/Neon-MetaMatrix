@@ -2,6 +2,7 @@ import { Queue } from "bullmq";
 import { connection } from "../../Config/redis.js";
 import {
   buildDefaultJobOptions,
+  buildWebhookJobId,
   mergeJobOptions,
 } from "../../utils/jobQueueUtils.js";
 
@@ -24,10 +25,14 @@ export const bulkOperationQueryQueue = new Queue(QUEUE_NAME, {
 export async function addbulkOperatonQueryJob(data, options = {}) {
   const entityId =
     data?.admin_graphql_api_id || data?.id || data?.bulkOperationId || "unknown";
-
   const jobId =
     options.jobId ||
-    `bulk-op-query-finish:${data?.shop}:${entityId}`;
+    buildWebhookJobId({
+      topic: "BULK_OPERATIONS_FINISH_QUERY",
+      webhookId: data?.webhookId,
+      shop: data?.shop,
+      entityId,
+    });
 
   return bulkOperationQueryQueue.add(
     "bulk-operation-query",

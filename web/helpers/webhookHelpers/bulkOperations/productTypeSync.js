@@ -27,7 +27,55 @@ export async function handleSyncOperation({ bulkOperationId, shop = null }) {
     });
 
     if (!syncHistory) {
-      return;
+      return {
+        skipped: true,
+        reason: "sync_history_not_found",
+        bulkOperationId,
+      };
+    }
+
+    // Idempotency: do not re-process a sync that already finalized
+    if (
+      syncHistory.operationType === "Product" &&
+      (syncHistory.status === "completed" ||
+        syncHistory.stage === "MIRROR_ACTIVATED" ||
+        syncHistory.stage === "COMPLETED")
+    ) {
+      return {
+        skipped: true,
+        reason: "already_completed",
+        bulkOperationId,
+        syncHistoryId: syncHistory.id,
+      };
+    }
+
+    // Atomic claim: only one worker may transition Shopify-completed -> mirror-processing
+    if (syncHistory.operationType === "Product") {
+      const claimed = await prisma.syncHistory.updateMany({
+        where: {
+          id: syncHistory.id,
+          status: "processing",
+          stage: {
+            in: ["SHOPIFY_BULK_RUNNING"],
+          },
+        },
+        data: {
+          stage: "MIRROR_DOWNLOAD_STARTED",
+        },
+      });
+
+      if (claimed.count !== 1) {
+        return {
+          skipped: true,
+          reason: "already_claimed_or_not_processable",
+          bulkOperationId,
+          syncHistoryId: syncHistory.id,
+        };
+      }
+
+      syncHistory = await prisma.syncHistory.findUnique({
+        where: { id: syncHistory.id },
+      });
     }
 
     if (syncHistory.operationType === "Product" && !syncHistory.syncBatchId) {

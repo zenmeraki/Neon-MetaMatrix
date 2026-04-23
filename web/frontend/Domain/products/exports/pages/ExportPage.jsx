@@ -5,6 +5,7 @@ import { useSelector } from "react-redux";
 import {
   selectFilters,
   selectProductCount,
+  selectSearch
 } from "../../../../store/slices/productSlice";
 import { allFields } from "../constants";
 
@@ -21,6 +22,7 @@ export default function CsvExportPage() {
   const { t } = useTranslation();
   const count = useSelector(selectProductCount);
   const filters = useSelector(selectFilters);
+  const search = useSelector(selectSearch);
 
   const [selectedFields, setSelectedFields] = useState([]);
   const [fileName, setFileName] = useState("");
@@ -50,6 +52,22 @@ export default function CsvExportPage() {
     return true;
   };
 
+  const effectiveFilters = useMemo(() => {
+  const baseFilters = filters.filter((f) => f.field !== "search");
+
+  if (!search?.trim()) {
+    return baseFilters;
+  }
+
+  return [
+    ...baseFilters,
+    {
+      field: "search",
+      operator: "contains",
+      value: search.trim(),
+    },
+  ];
+}, [filters, search]);
   const handleExport = async () => {
     if (loading) return;
     if (!validateFileName()) return;
@@ -64,7 +82,7 @@ export default function CsvExportPage() {
       fileName: fileName.endsWith(".csv")
         ? fileName
         : `${fileName}.csv`,
-      filterParams: filters,
+      filterParams: effectiveFilters,
     };
 
     try {
@@ -79,7 +97,7 @@ export default function CsvExportPage() {
       if (!res.ok) {
         setBanner({
           tone: "critical",
-          message: data.error || "Export failed",
+         message: data.message || data.error || "Export failed",
         });
       } else {
         setBanner({
@@ -196,7 +214,7 @@ export default function CsvExportPage() {
           onHide={() => setShowScheduledExportModal(false)}
           fileName={fileName.endsWith(".csv") ? fileName : `${fileName}.csv`}
           selectedFields={selectedFields}
-          filters={filters}
+          filters={effectiveFilters}
           count={count}
         />
       )}
