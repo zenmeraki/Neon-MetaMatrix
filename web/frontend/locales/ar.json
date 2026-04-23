@@ -638,7 +638,9 @@
     "product": "منتج",
     "field": "مجال",
     "previous": "سابق",
-    "new": "جديد"
+    "new": "جديد",
+    "change": "يتغير",
+    "variant": "البديل"
   },
   "pagination": {
     "previous": "سابق",
@@ -1333,5 +1335,8 @@
   "searchFor": "بحث عن",
   "replaceWith": "استبدال ب",
   "selectCategory": "حدد الفئة",
-  "permanentAction": "هذا الإجراء دائم ولا يمكن التراجع عنه."
+  "permanentAction": "هذا الإجراء دائم ولا يمكن التراجع عنه.",
+  "manageStoreOperations": "إدارة العمليات والبيانات المجمعة لمتجرك",
+  "NoProductMatchfilter": "لا يوجد مرشح لمطابقة المنتج",
+  "TryAdjustingYourFiltersResults": "حاول ضبط نتائج عوامل التصفية الخاصة بك"
 }

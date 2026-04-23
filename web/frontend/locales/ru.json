@@ -1305,5 +1305,7 @@
   "inventoryPolicyChoices": {
     "continueSelling": "Продолжать продавать при отсутствии на складе",
     "denySelling": "Не продавать при отсутствии на складе"
-  }
+  },
+  "NoProductMatchfilter": "Нет фильтра соответствия продуктов",
+  "TryAdjustingYourFiltersResults": "Попробуйте настроить результаты фильтров"
 }

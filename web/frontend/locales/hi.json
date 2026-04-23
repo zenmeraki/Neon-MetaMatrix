@@ -1323,5 +1323,7 @@
   "searchFor": "निम्न को खोजें",
   "replaceWith": "के साथ बदलें",
   "selectCategory": "श्रेणी चुनना",
-  "permanentAction": "यह क्रिया स्थायी है और इसे पूर्ववत नहीं किया जा सकता."
+  "permanentAction": "यह क्रिया स्थायी है और इसे पूर्ववत नहीं किया जा सकता.",
+  "NoProductMatchfilter": "कोई उत्पाद मिलान फ़िल्टर नहीं",
+  "TryAdjustingYourFiltersResults": "अपने फ़िल्टर परिणामों को समायोजित करने का प्रयास करें"
 }

@@ -1320,5 +1320,7 @@
   "searchFor": "검색",
   "replaceWith": "다음으로 바꾸기",
   "selectCategory": "카테고리 선택",
-  "permanentAction": "이 작업은 영구적이며 취소할 수 없습니다."
+  "permanentAction": "이 작업은 영구적이며 취소할 수 없습니다.",
+  "NoProductMatchfilter": "제품 일치 필터 없음",
+  "TryAdjustingYourFiltersResults": "필터 결과를 조정해 보세요"
 }
