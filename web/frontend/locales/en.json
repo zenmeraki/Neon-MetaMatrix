@@ -1335,5 +1335,7 @@
   "searchFor": "Search for",
   "replaceWith": "Replace With",
   "selectCategory": "Select Category",
-  "permanentAction": "This action is permanent and cannot be undone."
+  "permanentAction": "This action is permanent and cannot be undone.",
+  "NoProductMatchfilter": "No Product Match Filter",
+  "TryAdjustingYourFiltersResults": "Try Adjusting Your Filters Results"
 }

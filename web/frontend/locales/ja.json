@@ -1305,5 +1305,7 @@
   "searchFor": "検索する",
   "replaceWith": "次で置換",
   "selectCategory": "カテゴリの選択",
-  "permanentAction": "このアクションは永続的であり、元に戻すことはできません。"
+  "permanentAction": "このアクションは永続的であり、元に戻すことはできません。",
+  "NoProductMatchfilter": "製品一致フィルターがありません",
+  "TryAdjustingYourFiltersResults": "フィルター結果を調整してみる"
 }

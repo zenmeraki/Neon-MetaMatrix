@@ -1302,5 +1302,7 @@
   "searchFor": "Buscar",
   "replaceWith": "Reemplazar con",
   "selectCategory": "Seleccionar categoría",
-  "permanentAction": "Esta acción es permanente y no se puede deshacer."
+  "permanentAction": "Esta acción es permanente y no se puede deshacer.",
+  "NoProductMatchfilter": "Ningún filtro de coincidencia de producto",
+  "TryAdjustingYourFiltersResults": "Intente ajustar los resultados de sus filtros"
 }

@@ -1268,16 +1268,12 @@
     "removeFromCollection": "Удалить из коллекции"
   },
   "search_multiple": "Найдите и выберите несколько...",
-  
   "categorySearch": {
     "label": "Найдите и выберите"
   },
-
-  
   "numeric": {
     "enterAmount": "Введите сумму"
   },
-  
   "taxInput": {
     "shouldProductBeTaxable": "Облагается ли этот товар налогом?"
   },
@@ -1285,15 +1281,13 @@
     "yes": "Да",
     "no": "Нет"
   },
-  
   "inventoryPolicyInput": {
     "shouldContinueSellingOutOfStock": "Продолжать продавать товар при отсутствии на складе?"
   },
   "inventoryPolicyChoices": {
     "continueSelling": "Продолжать продавать при отсутствии на складе",
     "denySelling": "Не продавать при отсутствии на складе"
-  }
+  },
+  "NoProductMatchfilter": "Нет фильтра соответствия продуктов",
+  "TryAdjustingYourFiltersResults": "Попробуйте настроить результаты фильтров"
 }
-
-
-

@@ -1302,5 +1302,7 @@
   "searchFor": "Suchen nach",
   "replaceWith": "Ersetzen durch",
   "selectCategory": "Kategorie auswählen",
-  "permanentAction": "Diese Aktion ist dauerhaft und kann nicht rückgängig gemacht werden."
+  "permanentAction": "Diese Aktion ist dauerhaft und kann nicht rückgängig gemacht werden.",
+  "NoProductMatchfilter": "Kein Produktübereinstimmungsfilter",
+  "TryAdjustingYourFiltersResults": "Versuchen Sie, die Ergebnisse Ihrer Filter anzupassen"
 }

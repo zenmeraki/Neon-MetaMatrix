@@ -1300,5 +1300,7 @@
   "searchFor": "Rechercher",
   "replaceWith": "Remplacer par",
   "selectCategory": "Sélectionnez une catégorie",
-  "permanentAction": "Cette action est permanente et ne peut être annulée."
+  "permanentAction": "Cette action est permanente et ne peut être annulée.",
+  "NoProductMatchfilter": "Aucun filtre de correspondance de produit",
+  "TryAdjustingYourFiltersResults": "Essayez d'ajuster les résultats de vos filtres"
 }
