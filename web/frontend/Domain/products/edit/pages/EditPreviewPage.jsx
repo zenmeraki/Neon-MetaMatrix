@@ -128,22 +128,7 @@ const [previewTotal, setPreviewTotal] = useState(0);
   ) {
     return;
   }
-if (submitError) {
-  setProducts([]);
-  setPreviewTotal(0);
-  setIsVariant(false);
-  return;
-}
 
-if (
-  editType.inputType !== InputType.NONE &&
-  editType.inputType !== InputType.SEARCH_REPLACE &&
-  !String(debouncedValue ?? "").trim()
-) {
-  setProducts([]);
-  setPreviewTotal(0);
-  return;
-}
     setLoading(true);
 
     try {
@@ -191,7 +176,6 @@ if (
     pagination.limit,
     supportValue,
     i18n.language,
-    submitError,
   ]);
 
   useEffect(() => {
