@@ -59,7 +59,6 @@ import { uploadCsv } from "../middleware/uploadCsv.js";
 const router = express.Router();
 
 router.post("/get-all", validateQuery(productQuerySchema), getProductsWithQuery);
-
 router.post(
   "/export",
   // restrictSubscribeUserWork,

@@ -330,76 +330,97 @@ async function applyBulkMirrorUpdates(history, bulkOperation) {
     return;
   }
 
-  await prisma.$transaction(
-    async (tx) => {
-      for (const { product, variants } of records) {
-        const existing = await tx.product.findFirst({
-          where: {
-            shop: product.shop,
-            id: product.id,
-            ...(activeMirrorBatchId ? { mirrorBatchId: activeMirrorBatchId } : {}),
-          },
-          select: {
-            shop: true,
-            id: true,
-            title: true,
-            handle: true,
-            status: true,
-            productType: true,
-            vendor: true,
-            tags: true,
-            templateSuffix: true,
-            descriptionHtml: true,    // ← fixed
-            descriptionText: true,
-            createdAt: true,
-            updatedAt: true,
-            publishedAt: true,
-            seoTitle: true,
-            seoDescription: true,
-            totalInventory: true,
-            categoryId: true,
-            categoryName: true,
-            featuredImageUrl: true,
-            featuredImageAltText: true,
-            optionsJson: true,
-            collectionsJson: true,
-            option1Name: true,
-            option2Name: true,
-            option3Name: true,
-            variantCount: true,
-            visibleOnlineStore: true,
-          },
-        });
+await prisma.$transaction(
+  async (tx) => {
+    for (const { product, variants } of records) {
+      const existing = await tx.product.findFirst({
+        where: {
+          shop: product.shop,
+          id: product.id,
+          ...(activeMirrorBatchId ? { mirrorBatchId: activeMirrorBatchId } : {}),
+        },
+        select: {
+          shop: true, id: true, title: true, handle: true, status: true,
+          productType: true, vendor: true, tags: true, templateSuffix: true,
+          descriptionHtml: true, descriptionText: true, createdAt: true,
+          updatedAt: true, publishedAt: true, seoTitle: true, seoDescription: true,
+          totalInventory: true, categoryId: true, categoryName: true,
+          featuredImageUrl: true, featuredImageAltText: true, optionsJson: true,
+          collectionsJson: true, option1Name: true, option2Name: true,
+          option3Name: true, variantCount: true, visibleOnlineStore: true,
+        },
+      });
 
-        const mergedProduct = mergeProductForBulkMirror(existing, product);
+      const mergedProduct = mergeProductForBulkMirror(existing, product);
+      const batchId = activeMirrorBatchId || "legacy";
 
-        await tx.variant.deleteMany({
-          where: {
+      await tx.variant.deleteMany({
+        where: {
+          shop: product.shop,
+          productId: product.id,
+          ...(activeMirrorBatchId ? { mirrorBatchId: activeMirrorBatchId } : {}),
+        },
+      });
+
+      await tx.product.deleteMany({
+        where: {
+          shop: product.shop,
+          id: product.id,
+          ...(activeMirrorBatchId ? { mirrorBatchId: activeMirrorBatchId } : {}),
+        },
+      });
+
+      // Create product WITHOUT nested variants
+      await tx.product.create({
+        data: {
+          shop: String(mergedProduct.shop),
+          id: String(mergedProduct.id),
+          mirrorBatchId: batchId,
+          title: mergedProduct.title ?? "",
+          handle: mergedProduct.handle ?? null,
+          status: mergedProduct.status ?? "ACTIVE",
+          productType: mergedProduct.productType ?? null,
+          vendor: mergedProduct.vendor ?? null,
+          tags: asArray(mergedProduct.tags),
+          templateSuffix: mergedProduct.templateSuffix ?? null,
+          descriptionHtml: mergedProduct.descriptionHtml ?? null,
+          descriptionText: mergedProduct.descriptionText ?? null,
+          createdAt: mergedProduct.createdAt ?? null,
+          updatedAt: mergedProduct.updatedAt ?? null,
+          publishedAt: mergedProduct.publishedAt ?? null,
+          seoTitle: mergedProduct.seoTitle ?? null,
+          seoDescription: mergedProduct.seoDescription ?? null,
+          totalInventory: toNullableInt(mergedProduct.totalInventory),
+          categoryId: mergedProduct.categoryId ?? null,
+          categoryName: mergedProduct.categoryName ?? null,
+          featuredImageUrl: mergedProduct.featuredImageUrl ?? null,
+          featuredImageAltText: mergedProduct.featuredImageAltText ?? null,
+          optionsJson: mergedProduct.optionsJson ?? null,
+          collectionsJson: mergedProduct.collectionsJson ?? null,
+          option1Name: mergedProduct.option1Name ?? null,
+          option2Name: mergedProduct.option2Name ?? null,
+          option3Name: mergedProduct.option3Name ?? null,
+          variantCount: toNullableInt(mergedProduct.variantCount),
+          visibleOnlineStore: toNullableBoolean(mergedProduct.visibleOnlineStore),
+        },
+      });
+
+      // Create variants separately with all required fields
+      if (variants.length > 0) {
+        await tx.variant.createMany({
+          data: variants.map((v) => ({
+            ...toVariantNestedCreateInput(v),
             shop: product.shop,
             productId: product.id,
-            ...(activeMirrorBatchId ? { mirrorBatchId: activeMirrorBatchId } : {}),
-          },
-        });
-
-        await tx.product.deleteMany({
-          where: {
-            shop: product.shop,
-            id: product.id,
-            ...(activeMirrorBatchId ? { mirrorBatchId: activeMirrorBatchId } : {}),
-          },
-        });
-
-        await tx.product.create({
-          data: toProductCreateInput(
-            mergedProduct,
-            variants,
-            activeMirrorBatchId || "legacy",
-          ),
+            mirrorBatchId: batchId,
+          })),
+          skipDuplicates: true,
         });
       }
-    },
-    { maxWait: 10_000, timeout: 60_000 },
-  );
+    }
+  },
+  { maxWait: 10_000, timeout: 60_000 },
+);
 
   await clearKeyCaches(`${history.shop}:ProductFetch`);
   await clearKeyCaches(`${history.shop}:productTypes:`);
@@ -417,6 +438,7 @@ async function finalizeEditSuccess(history) {
 
   await markProcessingBatchStatus(history.processingBatchId, "completed");
 
+  
   if (hasMore) {
     const updatedBatch = {
       ...batch,
@@ -667,17 +689,14 @@ export async function fetchBulkOperationData(url, shop) {
   const operations = [];
   const lines = response.data.split("\n").filter(Boolean);
 
-  for (let i = 0; i < lines.length; i += 1) {
+  for (const line of lines) {
     try {
-      const parsed = JSON.parse(lines[i]);
+      const parsed = JSON.parse(line);
       const product = parsed?.data?.productSet?.product;
+      if (!product?.id) continue;
 
-      if (!product?.id) {
-        continue;
-      }
-
-      const variantEdges = asArray(product?.variants?.edges);
-      const variants = variantEdges
+      // Extract nested variants from edges
+      const variants = asArray(product?.variants?.edges)
         .map((edge) => edge?.node)
         .filter((node) => node?.id)
         .map((node) => ({
@@ -693,16 +712,12 @@ export async function fetchBulkOperationData(url, shop) {
           taxCode: node.taxCode ?? null,
           position: node.position != null ? Number(node.position) : null,
           selectedOptionsJson: node.selectedOptions ?? null,
-          cost:
-            node.inventoryItem?.unitCost?.amount != null
-              ? Number(node.inventoryItem.unitCost.amount)
-              : null,
+          cost: node.inventoryItem?.unitCost?.amount != null
+            ? Number(node.inventoryItem.unitCost.amount) : null,
           countryOfOrigin: node.inventoryItem?.countryCodeOfOrigin ?? null,
           hsTariffCode: node.inventoryItem?.harmonizedSystemCode ?? null,
-          weight:
-            node.inventoryItem?.measurement?.weight?.value != null
-              ? Number(node.inventoryItem.measurement.weight.value)
-              : null,
+          weight: node.inventoryItem?.measurement?.weight?.value != null
+            ? Number(node.inventoryItem.measurement.weight.value) : null,
           weightUnit: node.inventoryItem?.measurement?.weight?.unit ?? null,
           option1Value: node.selectedOptions?.[0]?.value ?? null,
           option2Value: node.selectedOptions?.[1]?.value ?? null,
@@ -751,7 +766,7 @@ export async function fetchBulkOperationData(url, shop) {
         variants,
       });
     } catch (_error) {
-      // Skip malformed lines while preserving valid rows.
+      // skip malformed lines
     }
   }
 
