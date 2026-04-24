@@ -66,6 +66,21 @@ function buildProductInclude(fields = []) {
   return undefined;
 }
 
+function normalizeField(field) {
+  if (!field) return field;
+
+  const map = {
+    compare_at_price: "compareAtPrice",
+    compareatprice: "compareAtPrice",
+    option1values: "option1Values",
+    option2values: "option2Values",
+    option3values: "option3Values",
+  };
+
+  const key = field.toString().trim();
+
+  return map[key] || key;
+}
 function determineMutationMode(fields = []) {
   const normalizedFields = Array.isArray(fields) ? fields.filter(Boolean) : [];
   const includesDelete = normalizedFields.includes("deleteProducts");
@@ -189,7 +204,7 @@ function groupFallbackVariantsByProduct(variants) {
   return resolved;
 }
 
-async function hydrateMissingVariantsForProducts(products, shop) {
+async function hydrateMissingVariantsForProducts(products, shop,mirrorBatchId = null){
   const list = Array.isArray(products) ? products : [];
   const missingProductIds = list
     .filter((product) => Array.isArray(product?.variants) && product.variants.length === 0)
@@ -200,13 +215,17 @@ async function hydrateMissingVariantsForProducts(products, shop) {
     return list;
   }
 
-  const fallbackVariants = await prisma.variant.findMany({
-    where: {
-      shop,
-      productId: { in: missingProductIds },
-    },
-    orderBy: [{ productId: "asc" }, { mirrorBatchId: "asc" }, { position: "asc" }],
-  });
+const fallbackVariants = await prisma.variant.findMany({
+  where: {
+    shop,
+    productId: { in: missingProductIds },
+    ...(mirrorBatchId ? { mirrorBatchId } : {}),
+  },
+  orderBy: [
+    { productId: "asc" },
+    { position: "asc" },
+  ],
+});
 
   if (!fallbackVariants.length) {
     return list;
@@ -568,7 +587,10 @@ export default class ProductBulkService {
     });
 
     if (include?.variants) {
-      products = await hydrateMissingVariantsForProducts(products, history.shop);
+      products = await hydrateMissingVariantsForProducts(products, history.shop,
+        history.targetMirrorBatchId
+
+      );
     }
 
     const productsById = new Map(products.map((product) => [product.id, product]));
@@ -658,6 +680,8 @@ export default class ProductBulkService {
   }) {
     try {
       const changes = [];
+      field = normalizeField(field);
+
       const isVariant = isVariantLevelField(field);
 
       const target = await resolveCanonicalProductTarget({
@@ -688,8 +712,9 @@ export default class ProductBulkService {
         }
       }
 
-      const include = buildProductInclude([field]);
-      const productIds = target.sampleProducts.map((product) => product.id);
+
+const include = isVariant ? { variants: true } : undefined; 
+   const productIds = target.sampleProducts.map((product) => product.id);
       let products = await prisma.product.findMany({
         where: {
           shop: this.session.shop,
@@ -699,9 +724,13 @@ export default class ProductBulkService {
         ...(include ? { include } : {}),
       });
 
-      if (include?.variants) {
-        products = await hydrateMissingVariantsForProducts(products, this.session.shop);
-      }
+    if (isVariant) {
+  products = await hydrateMissingVariantsForProducts(
+    products,
+    this.session.shop,
+    target.mirrorBatchId
+  );
+}
 
       const productMap = new Map(products.map((product) => [product.id, product]));
       const formattedProducts = [];

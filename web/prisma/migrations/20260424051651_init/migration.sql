@@ -76,7 +76,8 @@ CREATE TABLE "Product" (
     "vendor" TEXT,
     "tags" TEXT[],
     "templateSuffix" TEXT,
-    "description" TEXT,
+    "descriptionHtml" TEXT,
+    "descriptionText" TEXT,
     "createdAt" TIMESTAMP(3),
     "updatedAt" TIMESTAMP(3),
     "publishedAt" TIMESTAMP(3),
@@ -118,6 +119,10 @@ CREATE TABLE "Product" (
     "option3Name" TEXT,
     "variantCount" INTEGER DEFAULT 0,
     "visibleOnlineStore" BOOLEAN,
+    "lastSourceUpdatedAt" TIMESTAMP(3),
+    "lastSourceEventAt" TIMESTAMP(3),
+    "lastSourceKind" TEXT,
+    "lastReconciledAt" TIMESTAMP(3),
 
     CONSTRAINT "Product_pkey" PRIMARY KEY ("shop","id","mirrorBatchId")
 );
@@ -258,13 +263,17 @@ CREATE TABLE "SyncHistory" (
     "responseUrl" TEXT,
     "status" "SyncStatus" NOT NULL DEFAULT 'processing',
     "stage" TEXT,
-    "errorSummary" TEXT,
+    "errorMessage" TEXT,
     "duration" INTEGER DEFAULT 0,
     "recordCount" INTEGER,
     "operationType" "SyncOperationType",
     "isInitialProductSync" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "executionState" TEXT NOT NULL DEFAULT 'planned',
+    "executionIdentity" TEXT,
+    "lastHeartbeatAt" TIMESTAMP(3),
+    "completedAt" TIMESTAMP(3),
 
     CONSTRAINT "SyncHistory_pkey" PRIMARY KEY ("id")
 );
@@ -312,6 +321,8 @@ CREATE TABLE "EditHistory" (
     "error" JSONB,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "filterVersion" INTEGER,
+    "canonicalFilterKey" TEXT,
 
     CONSTRAINT "EditHistory_pkey" PRIMARY KEY ("id")
 );
@@ -340,6 +351,8 @@ CREATE TABLE "RecurringEdit" (
     "isDeleted" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "filterVersion" INTEGER NOT NULL DEFAULT 1,
+    "canonicalFilterKey" TEXT,
 
     CONSTRAINT "RecurringEdit_pkey" PRIMARY KEY ("id")
 );
@@ -394,6 +407,8 @@ CREATE TABLE "AutomaticProductRule" (
     "isDeleted" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "filterVersion" INTEGER NOT NULL DEFAULT 1,
+    "canonicalFilterKey" TEXT,
 
     CONSTRAINT "AutomaticProductRule_pkey" PRIMARY KEY ("id")
 );
@@ -517,6 +532,8 @@ CREATE TABLE "ScheduledExport" (
     "isDeleted" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "filterVersion" INTEGER NOT NULL DEFAULT 1,
+    "canonicalFilterKey" TEXT,
 
     CONSTRAINT "ScheduledExport_pkey" PRIMARY KEY ("id")
 );
@@ -567,6 +584,8 @@ CREATE TABLE "ExportJob" (
     "error" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "filterVersion" INTEGER,
+    "canonicalFilterKey" TEXT,
 
     CONSTRAINT "ExportJob_pkey" PRIMARY KEY ("id")
 );
@@ -716,6 +735,82 @@ CREATE TABLE "shopify_sessions_migrations" (
     CONSTRAINT "shopify_sessions_migrations_pkey" PRIMARY KEY ("migration_name")
 );
 
+-- CreateTable
+CREATE TABLE "MirrorReconcileSignal" (
+    "id" TEXT NOT NULL,
+    "shop" TEXT NOT NULL,
+    "entityType" TEXT NOT NULL,
+    "entityId" TEXT NOT NULL,
+    "topic" TEXT,
+    "status" TEXT NOT NULL DEFAULT 'pending',
+    "signalCount" INTEGER NOT NULL DEFAULT 1,
+    "latestWebhookId" TEXT,
+    "latestPayloadHash" TEXT,
+    "latestEventAt" TIMESTAMP(3),
+    "latestSourceUpdatedAt" TIMESTAMP(3),
+    "latestSourceKind" TEXT,
+    "processingToken" TEXT,
+    "processingStartedAt" TIMESTAMP(3),
+    "reconciledAt" TIMESTAMP(3),
+    "lastError" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "MirrorReconcileSignal_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "OperationFingerprint" (
+    "id" TEXT NOT NULL,
+    "shop" TEXT NOT NULL,
+    "operationType" TEXT NOT NULL,
+    "fingerprint" TEXT NOT NULL,
+    "resourceType" TEXT NOT NULL,
+    "resourceId" TEXT,
+    "status" TEXT NOT NULL DEFAULT 'RESERVED',
+    "lastError" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "OperationFingerprint_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ProductTombstone" (
+    "id" TEXT NOT NULL,
+    "shop" TEXT NOT NULL,
+    "productId" TEXT NOT NULL,
+    "sourceUpdatedAt" TIMESTAMP(3),
+    "sourceEventAt" TIMESTAMP(3),
+    "deletedAt" TIMESTAMP(3),
+    "sourceKind" TEXT,
+    "lastReconciledAt" TIMESTAMP(3),
+    "purgeAfter" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "ProductTombstone_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "WebhookDelivery" (
+    "id" TEXT NOT NULL,
+    "topic" TEXT NOT NULL,
+    "shop" TEXT NOT NULL,
+    "webhookId" TEXT,
+    "entityId" TEXT,
+    "dedupeKey" TEXT NOT NULL,
+    "payloadHash" TEXT,
+    "status" TEXT NOT NULL DEFAULT 'RECEIVED',
+    "processedAt" TIMESTAMP(3),
+    "lastError" TEXT,
+    "attemptCount" INTEGER NOT NULL DEFAULT 1,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "WebhookDelivery_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE INDEX "Product_shop_mirrorBatchId_idx" ON "Product"("shop", "mirrorBatchId");
 
@@ -789,6 +884,90 @@ CREATE INDEX "Product_shop_variantCount_idx" ON "Product"("shop", "variantCount"
 CREATE INDEX "Product_shop_visibleOnlineStore_idx" ON "Product"("shop", "visibleOnlineStore");
 
 -- CreateIndex
+CREATE INDEX "Product_shop_lastReconciledAt_idx" ON "Product"("shop", "lastReconciledAt");
+
+-- CreateIndex
+CREATE INDEX "Product_shop_lastSourceEventAt_idx" ON "Product"("shop", "lastSourceEventAt");
+
+-- CreateIndex
+CREATE INDEX "Product_shop_lastSourceKind_idx" ON "Product"("shop", "lastSourceKind");
+
+-- CreateIndex
+CREATE INDEX "Product_shop_lastSourceUpdatedAt_idx" ON "Product"("shop", "lastSourceUpdatedAt");
+
+-- CreateIndex
+CREATE INDEX "Product_shop_mirrorBatchId_categoryAgeGroup_idx" ON "Product"("shop", "mirrorBatchId", "categoryAgeGroup");
+
+-- CreateIndex
+CREATE INDEX "Product_shop_mirrorBatchId_categoryColor_idx" ON "Product"("shop", "mirrorBatchId", "categoryColor");
+
+-- CreateIndex
+CREATE INDEX "Product_shop_mirrorBatchId_categoryFabric_idx" ON "Product"("shop", "mirrorBatchId", "categoryFabric");
+
+-- CreateIndex
+CREATE INDEX "Product_shop_mirrorBatchId_categoryFit_idx" ON "Product"("shop", "mirrorBatchId", "categoryFit");
+
+-- CreateIndex
+CREATE INDEX "Product_shop_mirrorBatchId_categoryName_idx" ON "Product"("shop", "mirrorBatchId", "categoryName");
+
+-- CreateIndex
+CREATE INDEX "Product_shop_mirrorBatchId_categorySize_idx" ON "Product"("shop", "mirrorBatchId", "categorySize");
+
+-- CreateIndex
+CREATE INDEX "Product_shop_mirrorBatchId_categoryTargetGender_idx" ON "Product"("shop", "mirrorBatchId", "categoryTargetGender");
+
+-- CreateIndex
+CREATE INDEX "Product_shop_mirrorBatchId_categoryWaistRise_idx" ON "Product"("shop", "mirrorBatchId", "categoryWaistRise");
+
+-- CreateIndex
+CREATE INDEX "Product_shop_mirrorBatchId_googleShoppingCategory_idx" ON "Product"("shop", "mirrorBatchId", "googleShoppingCategory");
+
+-- CreateIndex
+CREATE INDEX "Product_shop_mirrorBatchId_googleShoppingColor_idx" ON "Product"("shop", "mirrorBatchId", "googleShoppingColor");
+
+-- CreateIndex
+CREATE INDEX "Product_shop_mirrorBatchId_googleShoppingCustomLabel0_idx" ON "Product"("shop", "mirrorBatchId", "googleShoppingCustomLabel0");
+
+-- CreateIndex
+CREATE INDEX "Product_shop_mirrorBatchId_googleShoppingCustomLabel1_idx" ON "Product"("shop", "mirrorBatchId", "googleShoppingCustomLabel1");
+
+-- CreateIndex
+CREATE INDEX "Product_shop_mirrorBatchId_googleShoppingCustomLabel2_idx" ON "Product"("shop", "mirrorBatchId", "googleShoppingCustomLabel2");
+
+-- CreateIndex
+CREATE INDEX "Product_shop_mirrorBatchId_googleShoppingCustomLabel3_idx" ON "Product"("shop", "mirrorBatchId", "googleShoppingCustomLabel3");
+
+-- CreateIndex
+CREATE INDEX "Product_shop_mirrorBatchId_googleShoppingCustomLabel4_idx" ON "Product"("shop", "mirrorBatchId", "googleShoppingCustomLabel4");
+
+-- CreateIndex
+CREATE INDEX "Product_shop_mirrorBatchId_googleShoppingMaterial_idx" ON "Product"("shop", "mirrorBatchId", "googleShoppingMaterial");
+
+-- CreateIndex
+CREATE INDEX "Product_shop_mirrorBatchId_googleShoppingMpn_idx" ON "Product"("shop", "mirrorBatchId", "googleShoppingMpn");
+
+-- CreateIndex
+CREATE INDEX "Product_shop_mirrorBatchId_googleShoppingSize_idx" ON "Product"("shop", "mirrorBatchId", "googleShoppingSize");
+
+-- CreateIndex
+CREATE INDEX "Product_shop_mirrorBatchId_option1Name_idx" ON "Product"("shop", "mirrorBatchId", "option1Name");
+
+-- CreateIndex
+CREATE INDEX "Product_shop_mirrorBatchId_option2Name_idx" ON "Product"("shop", "mirrorBatchId", "option2Name");
+
+-- CreateIndex
+CREATE INDEX "Product_shop_mirrorBatchId_option3Name_idx" ON "Product"("shop", "mirrorBatchId", "option3Name");
+
+-- CreateIndex
+CREATE INDEX "Product_shop_mirrorBatchId_productType_idx" ON "Product"("shop", "mirrorBatchId", "productType");
+
+-- CreateIndex
+CREATE INDEX "Product_shop_mirrorBatchId_vendor_idx" ON "Product"("shop", "mirrorBatchId", "vendor");
+
+-- CreateIndex
+CREATE INDEX "Product_shop_mirrorBatchId_descriptionText_idx" ON "Product"("shop", "mirrorBatchId", "descriptionText");
+
+-- CreateIndex
 CREATE INDEX "Variant_shop_mirrorBatchId_idx" ON "Variant"("shop", "mirrorBatchId");
 
 -- CreateIndex
@@ -852,6 +1031,24 @@ CREATE INDEX "Variant_shop_physicalProduct_idx" ON "Variant"("shop", "physicalPr
 CREATE INDEX "Variant_shop_profitMargin_idx" ON "Variant"("shop", "profitMargin");
 
 -- CreateIndex
+CREATE INDEX "Variant_shop_mirrorBatchId_countryOfOrigin_idx" ON "Variant"("shop", "mirrorBatchId", "countryOfOrigin");
+
+-- CreateIndex
+CREATE INDEX "Variant_shop_mirrorBatchId_inventoryPolicy_idx" ON "Variant"("shop", "mirrorBatchId", "inventoryPolicy");
+
+-- CreateIndex
+CREATE INDEX "Variant_shop_mirrorBatchId_option1Value_idx" ON "Variant"("shop", "mirrorBatchId", "option1Value");
+
+-- CreateIndex
+CREATE INDEX "Variant_shop_mirrorBatchId_option2Value_idx" ON "Variant"("shop", "mirrorBatchId", "option2Value");
+
+-- CreateIndex
+CREATE INDEX "Variant_shop_mirrorBatchId_option3Value_idx" ON "Variant"("shop", "mirrorBatchId", "option3Value");
+
+-- CreateIndex
+CREATE INDEX "Variant_shop_mirrorBatchId_weightUnit_idx" ON "Variant"("shop", "mirrorBatchId", "weightUnit");
+
+-- CreateIndex
 CREATE INDEX "SpreadsheetFile_shop_idx" ON "SpreadsheetFile"("shop");
 
 -- CreateIndex
@@ -897,6 +1094,9 @@ CREATE INDEX "Store_installedAt_idx" ON "Store"("installedAt");
 CREATE INDEX "Store_createdAt_idx" ON "Store"("createdAt");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "Subscription_shop_key" ON "Subscription"("shop");
+
+-- CreateIndex
 CREATE INDEX "Subscription_shop_idx" ON "Subscription"("shop");
 
 -- CreateIndex
@@ -910,6 +1110,9 @@ CREATE INDEX "SyncHistory_shop_status_idx" ON "SyncHistory"("shop", "status");
 
 -- CreateIndex
 CREATE INDEX "SyncHistory_shop_operationType_idx" ON "SyncHistory"("shop", "operationType");
+
+-- CreateIndex
+CREATE INDEX "SyncHistory_shop_executionState_idx" ON "SyncHistory"("shop", "executionState");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "EditHistory_executionIdentity_key" ON "EditHistory"("executionIdentity");
@@ -942,6 +1145,9 @@ CREATE INDEX "EditHistory_automaticProductRuleId_idx" ON "EditHistory"("automati
 CREATE INDEX "EditHistory_automaticProductRuleRunId_idx" ON "EditHistory"("automaticProductRuleRunId");
 
 -- CreateIndex
+CREATE INDEX "EditHistory_shop_canonicalFilterKey_idx" ON "EditHistory"("shop", "canonicalFilterKey");
+
+-- CreateIndex
 CREATE INDEX "RecurringEdit_shop_idx" ON "RecurringEdit"("shop");
 
 -- CreateIndex
@@ -952,6 +1158,9 @@ CREATE INDEX "RecurringEdit_shop_nextRunAt_idx" ON "RecurringEdit"("shop", "next
 
 -- CreateIndex
 CREATE INDEX "RecurringEdit_nextRunAt_idx" ON "RecurringEdit"("nextRunAt");
+
+-- CreateIndex
+CREATE INDEX "RecurringEdit_shop_canonicalFilterKey_idx" ON "RecurringEdit"("shop", "canonicalFilterKey");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "RecurringEditRun_executionKey_key" ON "RecurringEditRun"("executionKey");
@@ -982,6 +1191,9 @@ CREATE INDEX "AutomaticProductRule_shop_priority_status_idx" ON "AutomaticProduc
 
 -- CreateIndex
 CREATE INDEX "AutomaticProductRule_shop_createdAt_idx" ON "AutomaticProductRule"("shop", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "AutomaticProductRule_shop_canonicalFilterKey_idx" ON "AutomaticProductRule"("shop", "canonicalFilterKey");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "AutomaticProductRuleRun_executionKey_key" ON "AutomaticProductRuleRun"("executionKey");
@@ -1026,6 +1238,9 @@ CREATE INDEX "Collection_shop_mirrorBatchId_idx" ON "Collection"("shop", "mirror
 CREATE INDEX "Collection_shop_title_idx" ON "Collection"("shop", "title");
 
 -- CreateIndex
+CREATE INDEX "Collection_shop_mirrorBatchId_title_idx" ON "Collection"("shop", "mirrorBatchId", "title");
+
+-- CreateIndex
 CREATE INDEX "ExportHistory_shop_createdAt_idx" ON "ExportHistory"("shop", "createdAt");
 
 -- CreateIndex
@@ -1041,6 +1256,9 @@ CREATE INDEX "ExportHistory_shop_type_idx" ON "ExportHistory"("shop", "type");
 CREATE INDEX "ExportHistory_shop_exportTime_idx" ON "ExportHistory"("shop", "exportTime");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "ExportHistory_scheduledTask_key" ON "ExportHistory"("scheduledTask");
+
+-- CreateIndex
 CREATE INDEX "ScheduledExport_shop_idx" ON "ScheduledExport"("shop");
 
 -- CreateIndex
@@ -1051,6 +1269,9 @@ CREATE INDEX "ScheduledExport_shop_nextRunAt_idx" ON "ScheduledExport"("shop", "
 
 -- CreateIndex
 CREATE INDEX "ScheduledExport_nextRunAt_idx" ON "ScheduledExport"("nextRunAt");
+
+-- CreateIndex
+CREATE INDEX "ScheduledExport_shop_canonicalFilterKey_idx" ON "ScheduledExport"("shop", "canonicalFilterKey");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "ScheduledExportRun_executionKey_key" ON "ScheduledExportRun"("executionKey");
@@ -1081,6 +1302,9 @@ CREATE INDEX "ExportJob_scheduledExportId_idx" ON "ExportJob"("scheduledExportId
 
 -- CreateIndex
 CREATE INDEX "ExportJob_scheduledExportRunId_idx" ON "ExportJob"("scheduledExportRunId");
+
+-- CreateIndex
+CREATE INDEX "ExportJob_shop_canonicalFilterKey_idx" ON "ExportJob"("shop", "canonicalFilterKey");
 
 -- CreateIndex
 CREATE INDEX "ChangeRecord_editHistoryId_idx" ON "ChangeRecord"("editHistoryId");
@@ -1153,6 +1377,45 @@ CREATE INDEX "MirrorAnomaly_shop_severity_createdAt_idx" ON "MirrorAnomaly"("sho
 
 -- CreateIndex
 CREATE INDEX "MirrorAnomaly_shop_type_createdAt_idx" ON "MirrorAnomaly"("shop", "type", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "MirrorReconcileSignal_shop_status_updatedAt_idx" ON "MirrorReconcileSignal"("shop", "status", "updatedAt");
+
+-- CreateIndex
+CREATE INDEX "MirrorReconcileSignal_status_updatedAt_idx" ON "MirrorReconcileSignal"("status", "updatedAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "MirrorReconcileSignal_shop_entityType_entityId_key" ON "MirrorReconcileSignal"("shop", "entityType", "entityId");
+
+-- CreateIndex
+CREATE INDEX "OperationFingerprint_resource_idx" ON "OperationFingerprint"("resourceType", "resourceId");
+
+-- CreateIndex
+CREATE INDEX "OperationFingerprint_shop_status_createdAt_idx" ON "OperationFingerprint"("shop", "status", "createdAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "OperationFingerprint_shop_operationType_fingerprint_key" ON "OperationFingerprint"("shop", "operationType", "fingerprint");
+
+-- CreateIndex
+CREATE INDEX "ProductTombstone_shop_deletedAt_idx" ON "ProductTombstone"("shop", "deletedAt");
+
+-- CreateIndex
+CREATE INDEX "ProductTombstone_shop_purgeAfter_idx" ON "ProductTombstone"("shop", "purgeAfter");
+
+-- CreateIndex
+CREATE INDEX "ProductTombstone_shop_updatedAt_idx" ON "ProductTombstone"("shop", "updatedAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ProductTombstone_shop_productId_key" ON "ProductTombstone"("shop", "productId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "WebhookDelivery_dedupeKey_key" ON "WebhookDelivery"("dedupeKey");
+
+-- CreateIndex
+CREATE INDEX "WebhookDelivery_shop_topic_createdAt_idx" ON "WebhookDelivery"("shop", "topic", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "WebhookDelivery_status_createdAt_idx" ON "WebhookDelivery"("status", "createdAt");
 
 -- AddForeignKey
 ALTER TABLE "Variant" ADD CONSTRAINT "Variant_shop_productId_mirrorBatchId_fkey" FOREIGN KEY ("shop", "productId", "mirrorBatchId") REFERENCES "Product"("shop", "id", "mirrorBatchId") ON DELETE RESTRICT ON UPDATE CASCADE;

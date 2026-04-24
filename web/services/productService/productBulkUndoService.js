@@ -15,6 +15,7 @@ import {
   normalizeUndoState,
 } from "../bulkEditExecutionStateService.js";
 
+
 const OPTION_NAME_FIELDS = new Set([
   "option1Name",
   "option2Name",
@@ -278,7 +279,8 @@ class UndoEditService {
     const value = revertValue ?? oldValue;
 
     const fieldMap = {
-      description: { descriptionHtml: value },
+         description: { descriptionHtml: value ?? "" },
+    descriptionHtml: { descriptionHtml: value ?? "" },
       "Meta Title": {
         seo: { title: value },
       },
