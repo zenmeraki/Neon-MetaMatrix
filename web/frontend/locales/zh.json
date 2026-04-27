@@ -369,6 +369,7 @@
   "fieldLabels": {
     "title": "标题",
     "description": "描述",
+    "descriptionHtml": "描述",
     "vendor": "供应商",
     "productType": "产品类型",
     "option1Name": "选项1名称",

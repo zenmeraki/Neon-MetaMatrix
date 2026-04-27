@@ -370,6 +370,7 @@
   "fieldLabels": {
     "title": "शीर्षक",
     "description": "विवरण",
+    "descriptionHtml": "विवरण",
     "vendor": "विक्रेता",
     "productType": "उत्पाद प्रकार",
     "option1Name": "विकल्प 1 नाम",

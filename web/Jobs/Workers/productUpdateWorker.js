@@ -80,13 +80,13 @@ const productUpdateWorker = new Worker(
           reason: MIRROR_STALE_REASONS.PRODUCT_WEBHOOK_MISSING_VARIANTS,
           summary: "Product update webhook missing variants payload; repair sync required",
           details: { productId: id },
-        }).catch(() => {});
+        }).catch(() => { });
 
         await addShopSyncJob({
           shop,
           syncType: "product",
           reason: "product_update_missing_variants",
-        }).catch(() => {});
+        }).catch(() => { });
       }
 
       await prisma.$transaction(async (tx) => {
@@ -112,18 +112,18 @@ const productUpdateWorker = new Worker(
           });
         }
 
-        if (variants) {
-          await tx.variant.deleteMany({
-            where: {
-              shop,
-              productId: id,
-              mirrorBatchId: activeBatchId,
-            },
-          });
-
-          if (variants.length > 0) {
-            await tx.variant.createMany({
-              data: variants.map((variant) => ({
+        // ↓ REPLACE everything below this line inside the transaction
+        if (variants && variants.length > 0) {
+          for (const variant of variants) {
+            await tx.variant.upsert({
+              where: {
+                shop_id_mirrorBatchId: {
+                  shop,
+                  id: variant.id,
+                  mirrorBatchId: activeBatchId,
+                },
+              },
+              create: {
                 shop,
                 id: variant.id,
                 productId: id,
@@ -139,15 +139,45 @@ const productUpdateWorker = new Worker(
                 taxCode: variant.taxCode ?? null,
                 position: variant.position ?? null,
                 selectedOptionsJson: variant.selectedOptionsJson ?? null,
-              })),
+                option1Value: variant.selectedOptionsJson?.[0]?.value ?? null,
+                option2Value: variant.selectedOptionsJson?.[1]?.value ?? null,
+                option3Value: variant.selectedOptionsJson?.[2]?.value ?? null,
+              },
+              update: {
+                title: variant.title ?? undefined,
+                sku: variant.sku ?? undefined,
+                barcode: variant.barcode ?? undefined,
+                price: variant.price ?? undefined,
+                compareAtPrice: variant.compareAtPrice ?? undefined,
+                inventoryQuantity: variant.inventoryQuantity ?? undefined,
+                inventoryPolicy: variant.inventoryPolicy ?? undefined,
+                taxable: variant.taxable ?? undefined,
+                taxCode: variant.taxCode ?? undefined,
+                position: variant.position ?? undefined,
+                selectedOptionsJson: variant.selectedOptionsJson ?? undefined,
+                option1Value: variant.selectedOptionsJson?.[0]?.value ?? undefined,
+                option2Value: variant.selectedOptionsJson?.[1]?.value ?? undefined,
+                option3Value: variant.selectedOptionsJson?.[2]?.value ?? undefined,
+              },
             });
           }
+
+          // Remove variants deleted from Shopify
+          const incomingIds = variants.map((v) => v.id);
+          await tx.variant.deleteMany({
+            where: {
+              shop,
+              productId: id,
+              mirrorBatchId: activeBatchId,
+              id: { notIn: incomingIds },
+            },
+          });
         }
       });
 
       await markWebhookProcessed(shop, {
         lastIncrementalSyncAt: new Date(),
-      }).catch(() => {});
+      }).catch(() => { });
 
       await clearKeyCaches(`${shop}:ProductFetch:`);
       await clearKeyCaches(`${shop}:productTypes:`);
@@ -168,7 +198,7 @@ const productUpdateWorker = new Worker(
         entityType: "product",
         entityId: job.data?.id || null,
         message: err.message,
-      }).catch(() => {});
+      }).catch(() => { });
       throw err;
     }
   },

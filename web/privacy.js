@@ -1,3 +1,4 @@
+//web/privacy.js
 import { DeliveryMethod } from "@shopify/shopify-api";
 import { addProductCreateJob } from "./Jobs/Queues/productCreateJob.js";
 import { addProductUpdateJob } from "./Jobs/Queues/productUpdateJob.js";

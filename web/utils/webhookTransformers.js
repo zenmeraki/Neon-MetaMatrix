@@ -6,6 +6,7 @@ const normalizeNullableString = (value) => {
   return normalized === "" ? null : normalized;
 };
 
+
 const normalizeNullableBoolean = (value) => {
   if (value === undefined || value === null || value === "") return undefined;
   if (typeof value === "boolean") return value;
@@ -430,21 +431,22 @@ export const extractVariantsForPrisma = (payload, productId, shop) => {
   const options = payload.options || [];
 
   return payload.variants.map((variant, index) => ({
-    shop,
-    id: variant.admin_graphql_api_id,
-    productId,
-    title: variant.title,
-    sku: variant.sku || null,
-    barcode: variant.barcode || null,
-    price: variant.price ? parseFloat(variant.price) : null,
-    compareAtPrice: variant.compare_at_price
-      ? parseFloat(variant.compare_at_price)
-      : null,
-    inventoryQuantity: variant.inventory_quantity || 0,
-    inventoryPolicy: variant.inventory_policy === "continue" ? "CONTINUE" : "DENY",
-    taxable: variant.taxable || false,
-    taxCode: variant.tax_code || null,
-    position: variant.position || index + 1,
-    selectedOptionsJson: transformSelectedOptions(variant, options),
-  }));
+  shop,
+  id: variant.admin_graphql_api_id,
+  productId,
+  title: variant.title,
+  sku: variant.sku || null,
+  barcode: variant.barcode || null,
+  price: variant.price ? parseFloat(variant.price) : null,
+  compareAtPrice: variant.compare_at_price ? parseFloat(variant.compare_at_price) : null,
+  inventoryQuantity: variant.inventory_quantity || 0,
+  inventoryPolicy: variant.inventory_policy === "continue" ? "CONTINUE" : "DENY",
+  taxable: variant.taxable || false,
+  taxCode: variant.tax_code || null,
+  position: variant.position || index + 1,
+  selectedOptionsJson: transformSelectedOptions(variant, options),
+  option1Value: variant.option1 ?? null,  // REST payload has these directly
+  option2Value: variant.option2 ?? null,
+  option3Value: variant.option3 ?? null,
+}));
 };

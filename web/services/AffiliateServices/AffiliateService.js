@@ -6,7 +6,6 @@
 // import { OAuth2Client } from "google-auth-library";
 // import { getReferralWelcomeEmailContent } from "../../Config/templates/referralTemplate.js";
 
-
 // export class ReferralService {
 //   constructor() {}
 

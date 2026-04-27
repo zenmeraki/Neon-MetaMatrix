@@ -369,6 +369,7 @@
   "fieldLabels": {
     "title": "タイトル",
     "description": "説明",
+    "descriptionHtml": "説明",
     "vendor": "ベンダー",
     "productType": "商品タイプ",
     "option1Name": "オプション1名",

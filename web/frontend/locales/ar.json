@@ -386,6 +386,7 @@
   "fieldLabels": {
     "title": "عنوان",
     "description": "وصف",
+    "descriptionHtml": "وصف",
     "vendor": "المورد",
     "productType": "نوع المنتج",
     "option1Name": "اسم الخيار 1",

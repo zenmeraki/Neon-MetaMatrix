@@ -1,3 +1,4 @@
+//web/helpers/productBilkOperationHelpers/productUpdateHandler.js
 import {
   FIELD_CONFIGS,
   TEXT_OPERATIONS,

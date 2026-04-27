@@ -369,6 +369,7 @@
   "fieldLabels": {
     "title": "Título",
     "description": "Descrição",
+    "descriptionHtml": "Descrição",
     "vendor": "Fornecedor",
     "productType": "Tipo de produto",
     "option1Name": "Nome da opção 1",
