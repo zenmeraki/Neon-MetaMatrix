@@ -1,6 +1,12 @@
 // web/frontend/domains/subscription/components/PlanGrid.jsx
 import React, { memo } from "react";
-import { Spinner, Text, Banner, Box, InlineStack, BlockStack } from "@shopify/polaris";
+import {
+  Spinner,
+  Text,
+  Banner,
+  Grid,
+  BlockStack,
+} from "@shopify/polaris";
 import PlanCard from "./PlanCard";
 
 /**
@@ -17,14 +23,16 @@ const PlanGrid = memo(
     getPlanColor,
     getPlanBackgroundColor,
     getPlanBorderColor,
-    isSubscribing, // track subscription processing
-    selectedPlan, // identify which plan is being processed
+    isSubscribing,
+    selectedPlan,
   }) => {
     if (isLoading) {
       return (
-        <BlockStack alignment="center" blockAlignment="center" spacing="500">
+        <BlockStack gap="500" inlineAlign="center" align="center">
           <Spinner size="large" />
-          <Text variant="bodyMd">Loading subscription plans...</Text>
+          <Text variant="bodyMd" as="p">
+            Loading subscription plans...
+          </Text>
         </BlockStack>
       );
     }
@@ -37,7 +45,7 @@ const PlanGrid = memo(
       );
     }
 
-    if (!plans || plans.length === 0) {
+    if (!Array.isArray(plans) || plans.length === 0) {
       return (
         <Banner tone="info" title="No Plans Available">
           <Text as="p">
@@ -49,14 +57,23 @@ const PlanGrid = memo(
     }
 
     return (
-      <InlineStack wrap gap="500">
-        {plans.map((plan, index) => (
-          <Box key={index} width="45%">
+      <Grid>
+        {plans.map((plan) => (
+          <Grid.Cell
+            key={plan.key || plan.name}
+            columnSpan={{
+              xs: 6,
+              sm: 6,
+              md: 6,
+              lg: 4,
+              xl: 4,
+            }}
+          >
             <PlanCard
               plan={plan}
               isActive={
-                activePlan?.key === plan.key
-                || activePlan?.name === plan.name
+                activePlan?.key === plan.key ||
+                activePlan?.name === plan.name
               }
               onSubscribe={onSubscribe}
               getPlanColor={getPlanColor}
@@ -65,11 +82,11 @@ const PlanGrid = memo(
               isSubscribing={isSubscribing}
               selectedPlan={selectedPlan}
             />
-          </Box>
+          </Grid.Cell>
         ))}
-      </InlineStack>
+      </Grid>
     );
-  }
+  },
 );
 
 PlanGrid.displayName = "PlanGrid";

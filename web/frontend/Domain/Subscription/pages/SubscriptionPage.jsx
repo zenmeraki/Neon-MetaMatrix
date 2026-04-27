@@ -123,8 +123,9 @@ const SubscriptionPage = () => {
 
   return (
     <Frame>
-      <Page fullWidth>
-        <Box maxWidth="1200px" margin="0 auto" paddingInline="1rem" paddingBlock="2rem">
+        <Page fullWidth>
+ 
+       <Box maxWidth="1200px" marginInline="auto" paddingInline="400" paddingBlock="500">
           <Layout>
             {/* Header */}
             <Layout.Section>
@@ -167,7 +168,8 @@ const SubscriptionPage = () => {
 
             {/* FAQ Section */}
             <Layout.Section>
-              <Box maxWidth="900px" marginInline="auto">
+                <InlineStack align="center">
+                <Box width="100%" maxWidth="900px">
                 <Card padding="400">
                   <BlockStack gap="400" align="center">
                     {/* FAQ Header */}
@@ -240,6 +242,7 @@ const SubscriptionPage = () => {
                   </BlockStack>
                 </Card>
               </Box>
+              </InlineStack>
             </Layout.Section>
 
           </Layout>
