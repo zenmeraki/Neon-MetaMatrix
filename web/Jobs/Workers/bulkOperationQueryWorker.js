@@ -1,9 +1,14 @@
 import { Worker } from "bullmq";
 import { connection } from "../../Config/redis.js";
 import { handleSyncOperation } from "../../helpers/webhookHelpers/bulkOperations/productTypeSync.js";
+import { handleBulkEditOperation } from "../../helpers/webhookHelpers/bulkOperations/bulkEditFinalize.js";
 import { logWebhookError } from "../../utils/errorLogUtils.js";
 import logger from "../../utils/loggerUtils.js";
-import { getJobAttempt, isRetryExhausted, recordRetryExhausted } from "../../utils/workerTelemetry.js";
+import {
+  getJobAttempt,
+  isRetryExhausted,
+  recordRetryExhausted,
+} from "../../utils/workerTelemetry.js";
 
 const QUEUE_NAME =
   process.env.BULK_OPERATION_QUERY_QUEUE || "bulk-operation-query";
@@ -15,18 +20,38 @@ export const bulkOperationQueryWorker = new Worker(
     const bulkOperationId = job.data?.admin_graphql_api_id;
 
     if (!shop || !bulkOperationId) {
-      throw new Error("bulk-operation-query job requires shop and admin_graphql_api_id");
+      throw new Error(
+        "bulk-operation-query job requires shop and admin_graphql_api_id",
+      );
     }
 
     try {
-      await handleSyncOperation({
+      const editResult = await handleBulkEditOperation({
         bulkOperationId,
         shop,
       });
+
+      if (editResult?.handled) {
+        return {
+          success: true,
+          routedTo: "EditHistory",
+          shop,
+          bulkOperationId,
+          result: editResult,
+        };
+      }
+
+      const syncResult = await handleSyncOperation({
+        bulkOperationId,
+        shop,
+      });
+
       return {
         success: true,
+        routedTo: "SyncHistory",
         shop,
         bulkOperationId,
+        result: syncResult,
       };
     } catch (error) {
       await logWebhookError({
