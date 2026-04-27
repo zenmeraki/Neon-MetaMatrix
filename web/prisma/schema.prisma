@@ -993,6 +993,7 @@ enum MirrorHealthState {
 
 enum SyncProgressStage {
   IDLE
+  SHOPIFY_BULK_STARTING
   SHOPIFY_BULK_RUNNING
   MIRROR_STAGING
   RECONCILING

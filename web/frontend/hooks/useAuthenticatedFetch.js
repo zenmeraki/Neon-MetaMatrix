@@ -1,7 +1,3 @@
-// web/frontend/hooks/useAuthenticatedFetch.js
-
-import { useAppBridge } from '@shopify/app-bridge-react';
-import { authenticatedFetch } from '@shopify/app-bridge/utilities';
 import { useCallback, useEffect } from 'react';
 
 let registeredAuthenticatedFetch = fetch;
@@ -15,11 +11,8 @@ export function getAuthenticatedFetch() {
  * Automatically handles Shopify's reauthentication flow.
  */
 export function useAuthenticatedFetch() {
-  const app = useAppBridge();
-  const fetchFunction = authenticatedFetch(app);
-
   const wrappedFetch = useCallback(async (uri, options = {}) => {
-    const response = await fetchFunction(uri, options);
+    const response = await fetch(uri, options);
 
     // Check for reauthentication header
     if (
@@ -37,7 +30,7 @@ export function useAuthenticatedFetch() {
     }
 
     return response;
-  }, [fetchFunction]);
+  }, []);
 
   useEffect(() => {
     registeredAuthenticatedFetch = wrappedFetch;

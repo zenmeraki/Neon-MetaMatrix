@@ -148,7 +148,24 @@ export async function getProductsWithFilters({
 
   const mirrorBatchId = store?.activeMirrorBatchId || null;
   if (!mirrorBatchId) {
-    throw new Error(`Active mirror batch not found for shop: ${shop}`);
+    const emptyResult = {
+      products: [],
+      count: 0,
+      pagination: {
+        total: 0,
+        page: Math.max(Number.parseInt(page, 10) || 1, 1),
+        limit: Math.max(Number.parseInt(limit, 10) || 20, 1),
+        totalPages: 0,
+        hasNextPage: false,
+        hasPrevPage: false,
+      },
+      mirrorBatchId: null,
+      engine: "none",
+      engineReason: "product mirror has not been synced yet",
+    };
+
+    await setCache(cacheKey, emptyResult, 30);
+    return emptyResult;
   }
 
   const normalizedPage = Math.max(Number.parseInt(page, 10) || 1, 1);
@@ -226,7 +243,7 @@ export async function getDistinctProductFilterValues({
 
   if (fieldConfig.source === "product") {
     if (!mirrorBatchId) {
-      throw new Error(`Active mirror batch not found for shop: ${shop}`);
+      return [];
     }
 
     rows = await findDistinctProductFieldValues({
@@ -238,7 +255,7 @@ export async function getDistinctProductFilterValues({
     });
   } else if (fieldConfig.source === "variant") {
     if (!mirrorBatchId) {
-      throw new Error(`Active mirror batch not found for shop: ${shop}`);
+      return [];
     }
 
     rows = await findDistinctVariantFieldValues({
@@ -257,7 +274,7 @@ export async function getDistinctProductFilterValues({
     });
   } else if (fieldConfig.source === "product_tags") {
     if (!mirrorBatchId) {
-      throw new Error(`Active mirror batch not found for shop: ${shop}`);
+      return [];
     }
 
     rows = await findDistinctProductTagValues({

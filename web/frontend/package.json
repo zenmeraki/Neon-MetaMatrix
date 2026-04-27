@@ -22,6 +22,7 @@
     "@formatjs/intl-localematcher": "^0.4.0",
     "@formatjs/intl-pluralrules": "^5.2.4",
     "@heroicons/react": "^2.2.0",
+    "@prisma/adapter-pg": "^6.19.2",
     "@reduxjs/toolkit": "^2.6.1",
     "@sentry/webpack-plugin": "^3.5.0",
     "@shopify/app-bridge": "^3.7.7",

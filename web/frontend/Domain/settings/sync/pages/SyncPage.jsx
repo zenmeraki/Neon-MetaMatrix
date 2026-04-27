@@ -138,34 +138,41 @@ export default function DataSyncPage() {
     }
   };
 
-  const getDate = useCallback(
-    (key) => {
-      if (!dataSources) return null;
+ const getDate = useCallback(
+  (key) => {
+    if (!dataSources) return null;
 
-      const map = {
-        products: dataSources.lastProductSyncAt,
-      };
+    const map = {
+      products: dataSources.lastProductSyncAt,
+    };
 
-      return map[key] ? new Date(map[key]).toLocaleString() : t("neverSynced");
-    },
-    [dataSources],
-  );
+    return map[key]
+      ? new Date(map[key]).toLocaleString()
+      : t("neverSynced");
+  },
+  [dataSources, t],
+);
+
 
   const getStatus = useCallback(
-    (key) => {
-      if (!dataSources) return null;
+  (key) => {
+    if (!dataSources) return null;
 
-      const map = {
-        products:
-          dataSources.isProductSyncing ||
-          waitingForSync ||
-          syncingItem === "products",
-      };
+    const isRunning =
+      dataSources.isProductSyncing ||
+      waitingForSync ||
+      syncingItem === "products";
 
-      return map[key] ? t("syncing") : t("synced");
-    },
-    [dataSources, waitingForSync, syncingItem, t],
-  );
+    if (isRunning) return t("syncing");
+
+    const hasSynced =
+      Boolean(dataSources.lastProductSyncAt) ||
+      Boolean(dataSources.shopifyBulkJobCompleted);
+
+    return hasSynced ? t("synced") : t("neverSynced");
+  },
+  [dataSources, waitingForSync, syncingItem, t],
+);
 
   const summaryTone =
     isAnySyncRunning || waitingForSync ? "warning" : "success";

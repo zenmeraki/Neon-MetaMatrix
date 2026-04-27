@@ -96,15 +96,24 @@ useEffect(() => {
 }, [effectiveFilters, fetchProducts]);
 
  useEffect(() => {
-  fetchSyncStatus().then((status) => {
-    const neverSynced =
-      !status?.shopifyBulkJobCompleted &&
-      !status?.isProductSyncing &&
-      !status?.isProductInitialySyning;
-    if (neverSynced) {
-      fetchWithAuth("/api/sync/products").catch(() => {});
+  const run = async () => {
+    try {
+      const status = await fetchSyncStatus();
+
+      const neverSynced =
+        !status?.shopifyBulkJobCompleted &&
+        !status?.isProductSyncing &&
+        !status?.isProductInitialySyning;
+
+      if (neverSynced) {
+        await fetchWithAuth("/api/sync/products");
+      }
+    } catch (e) {
+      console.error("AUTO SYNC FAILED", e);
     }
-  });
+  };
+
+  run();
 }, [fetchSyncStatus, fetchWithAuth]);
 
   useEffect(() => {
