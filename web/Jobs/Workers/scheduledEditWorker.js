@@ -31,19 +31,41 @@ async function claimScheduledUndo(historyId, shop) {
     where: {
       id: historyId,
       shop,
+      status: "completed", // important
     },
-    select: { undo: true },
+    select: {
+      undo: true,
+    },
   });
 
-  const undo = normalizeUndoState(history?.undo);
-  if (!undo.allowed || ["processing", "completed"].includes(undo.status)) {
+  if (!history) return false;
+
+  const undo = normalizeUndoState(
+    history.undo,
+    buildPlannedUndoState({ allowed: false }),
+  );
+
+  if (!undo.allowed) return false;
+
+  if (
+    [
+      BULK_UNDO_STATES.QUEUED,
+      BULK_UNDO_STATES.DISPATCHING,
+      BULK_UNDO_STATES.AWAITING_SHOPIFY,
+      BULK_UNDO_STATES.FINALIZING,
+      BULK_UNDO_STATES.COMPLETED,
+    ].includes(undo.state)
+  ) {
     return false;
   }
 
-  await prisma.editHistory.updateMany({
+  const executionIdentity = undo.executionIdentity || crypto.randomUUID();
+
+  const updated = await prisma.editHistory.updateMany({
     where: {
       id: historyId,
       shop,
+      status: "completed",
     },
     data: {
       undo: {
@@ -51,8 +73,27 @@ async function claimScheduledUndo(historyId, shop) {
         status: "pending",
         state: BULK_UNDO_STATES.QUEUED,
         queuedAt: new Date(),
+        startedAt: null,
+        completedAt: null,
+        processedCount: 0,
+        durationMs: 0,
+        bulkOperationId: null,
+        executionIdentity,
+        error: null,
       },
     },
+  });
+
+  if (!updated.count) return false;
+
+  await clearKeyCaches(`${shop}:fetchHistories`);
+  await clearKeyCaches(`${shop}:historyDetails:${historyId}`);
+
+  await addbulkUndoJob({
+    historyId,
+    shop,
+    source: "scheduled_undo",
+    executionId: executionIdentity,
   });
 
   return true;
@@ -81,7 +122,11 @@ const scheduledEditWorker = new Worker(
         };
       }
 
-      return updateProducts(historyId, isUndo, shop);
+      if (isUndo) {
+  return { success: true, type: "scheduled_undo_enqueued" };
+}
+
+return updateProducts(historyId, false, shop);
     } catch (error) {
       await logWorkerError({
         shop,

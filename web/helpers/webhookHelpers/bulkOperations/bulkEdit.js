@@ -323,106 +323,183 @@ async function applyBulkMirrorUpdates(history, bulkOperation) {
     where: { shopUrl: history.shop },
     select: { activeMirrorBatchId: true },
   });
-  const activeMirrorBatchId = store?.activeMirrorBatchId || null;
+
+  const batchId = store?.activeMirrorBatchId || "legacy";
 
   const records = await fetchBulkOperationData(bulkOperation.url, history.shop);
   if (!records.length) {
     return;
   }
 
-await prisma.$transaction(
-  async (tx) => {
-    for (const { product, variants } of records) {
-      const existing = await tx.product.findFirst({
-        where: {
-          shop: product.shop,
-          id: product.id,
-          ...(activeMirrorBatchId ? { mirrorBatchId: activeMirrorBatchId } : {}),
-        },
-        select: {
-          shop: true, id: true, title: true, handle: true, status: true,
-          productType: true, vendor: true, tags: true, templateSuffix: true,
-          descriptionHtml: true, descriptionText: true, createdAt: true,
-          updatedAt: true, publishedAt: true, seoTitle: true, seoDescription: true,
-          totalInventory: true, categoryId: true, categoryName: true,
-          featuredImageUrl: true, featuredImageAltText: true, optionsJson: true,
-          collectionsJson: true, option1Name: true, option2Name: true,
-          option3Name: true, variantCount: true, visibleOnlineStore: true,
-        },
-      });
-
-      const mergedProduct = mergeProductForBulkMirror(existing, product);
-      const batchId = activeMirrorBatchId || "legacy";
-
-      await tx.variant.deleteMany({
-        where: {
-          shop: product.shop,
-          productId: product.id,
-          ...(activeMirrorBatchId ? { mirrorBatchId: activeMirrorBatchId } : {}),
-        },
-      });
-
-      await tx.product.deleteMany({
-        where: {
-          shop: product.shop,
-          id: product.id,
-          ...(activeMirrorBatchId ? { mirrorBatchId: activeMirrorBatchId } : {}),
-        },
-      });
-
-      // Create product WITHOUT nested variants
-      await tx.product.create({
-        data: {
-          shop: String(mergedProduct.shop),
-          id: String(mergedProduct.id),
-          mirrorBatchId: batchId,
-          title: mergedProduct.title ?? "",
-          handle: mergedProduct.handle ?? null,
-          status: mergedProduct.status ?? "ACTIVE",
-          productType: mergedProduct.productType ?? null,
-          vendor: mergedProduct.vendor ?? null,
-          tags: asArray(mergedProduct.tags),
-          templateSuffix: mergedProduct.templateSuffix ?? null,
-          descriptionHtml: mergedProduct.descriptionHtml ?? null,
-          descriptionText: mergedProduct.descriptionText ?? null,
-          createdAt: mergedProduct.createdAt ?? null,
-          updatedAt: mergedProduct.updatedAt ?? null,
-          publishedAt: mergedProduct.publishedAt ?? null,
-          seoTitle: mergedProduct.seoTitle ?? null,
-          seoDescription: mergedProduct.seoDescription ?? null,
-          totalInventory: toNullableInt(mergedProduct.totalInventory),
-          categoryId: mergedProduct.categoryId ?? null,
-          categoryName: mergedProduct.categoryName ?? null,
-          featuredImageUrl: mergedProduct.featuredImageUrl ?? null,
-          featuredImageAltText: mergedProduct.featuredImageAltText ?? null,
-          optionsJson: mergedProduct.optionsJson ?? null,
-          collectionsJson: mergedProduct.collectionsJson ?? null,
-          option1Name: mergedProduct.option1Name ?? null,
-          option2Name: mergedProduct.option2Name ?? null,
-          option3Name: mergedProduct.option3Name ?? null,
-          variantCount: toNullableInt(mergedProduct.variantCount),
-          visibleOnlineStore: toNullableBoolean(mergedProduct.visibleOnlineStore),
-        },
-      });
-
-      // Create variants separately with all required fields
-      if (variants.length > 0) {
-        await tx.variant.createMany({
-          data: variants.map((v) => ({
-            ...toVariantNestedCreateInput(v),
+  await prisma.$transaction(
+    async (tx) => {
+      for (const { product, variants = [] } of records) {
+        const existing = await tx.product.findFirst({
+          where: {
             shop: product.shop,
-            productId: product.id,
+            id: product.id,
             mirrorBatchId: batchId,
-          })),
-          skipDuplicates: true,
+          },
+          select: {
+            shop: true,
+            id: true,
+            title: true,
+            handle: true,
+            status: true,
+            productType: true,
+            vendor: true,
+            tags: true,
+            templateSuffix: true,
+            descriptionHtml: true,
+            descriptionText: true,
+            createdAt: true,
+            updatedAt: true,
+            publishedAt: true,
+            seoTitle: true,
+            seoDescription: true,
+            totalInventory: true,
+            categoryId: true,
+            categoryName: true,
+            featuredImageUrl: true,
+            featuredImageAltText: true,
+            optionsJson: true,
+            collectionsJson: true,
+            option1Name: true,
+            option2Name: true,
+            option3Name: true,
+            variantCount: true,
+            visibleOnlineStore: true,
+          },
         });
-      }
-    }
-  },
-  { maxWait: 10_000, timeout: 60_000 },
-);
 
-  await clearKeyCaches(`${history.shop}:ProductFetch`);
+        const mergedProduct = mergeProductForBulkMirror(existing, product);
+
+        await tx.product.upsert({
+          where: {
+            shop_id_mirrorBatchId: {
+              shop: product.shop,
+              id: product.id,
+              mirrorBatchId: batchId,
+            },
+          },
+          create: {
+            shop: String(mergedProduct.shop),
+            id: String(mergedProduct.id),
+            mirrorBatchId: batchId,
+            title: mergedProduct.title ?? "",
+            handle: mergedProduct.handle ?? null,
+            status: mergedProduct.status ?? "ACTIVE",
+            productType: mergedProduct.productType ?? null,
+            vendor: mergedProduct.vendor ?? null,
+            tags: asArray(mergedProduct.tags),
+            templateSuffix: mergedProduct.templateSuffix ?? null,
+            descriptionHtml: mergedProduct.descriptionHtml ?? null,
+            descriptionText: mergedProduct.descriptionText ?? null,
+            createdAt: mergedProduct.createdAt ?? null,
+            updatedAt: mergedProduct.updatedAt ?? null,
+            publishedAt: mergedProduct.publishedAt ?? null,
+            seoTitle: mergedProduct.seoTitle ?? null,
+            seoDescription: mergedProduct.seoDescription ?? null,
+            totalInventory: toNullableInt(mergedProduct.totalInventory),
+            categoryId: mergedProduct.categoryId ?? null,
+            categoryName: mergedProduct.categoryName ?? null,
+            featuredImageUrl: mergedProduct.featuredImageUrl ?? null,
+            featuredImageAltText: mergedProduct.featuredImageAltText ?? null,
+            optionsJson: mergedProduct.optionsJson ?? null,
+            collectionsJson: mergedProduct.collectionsJson ?? null,
+            option1Name: mergedProduct.option1Name ?? null,
+            option2Name: mergedProduct.option2Name ?? null,
+            option3Name: mergedProduct.option3Name ?? null,
+            variantCount: toNullableInt(mergedProduct.variantCount),
+            visibleOnlineStore: toNullableBoolean(
+              mergedProduct.visibleOnlineStore,
+            ),
+          },
+          update: {
+            title: mergedProduct.title ?? undefined,
+            handle: mergedProduct.handle ?? undefined,
+            status: mergedProduct.status ?? undefined,
+            productType: mergedProduct.productType ?? undefined,
+            vendor: mergedProduct.vendor ?? undefined,
+            tags: asArray(mergedProduct.tags),
+            templateSuffix: mergedProduct.templateSuffix ?? undefined,
+            descriptionHtml: mergedProduct.descriptionHtml ?? undefined,
+            descriptionText: mergedProduct.descriptionText ?? undefined,
+            updatedAt: mergedProduct.updatedAt ?? undefined,
+            publishedAt: mergedProduct.publishedAt ?? undefined,
+            seoTitle: mergedProduct.seoTitle ?? undefined,
+            seoDescription: mergedProduct.seoDescription ?? undefined,
+            totalInventory: toNullableInt(mergedProduct.totalInventory),
+            categoryId: mergedProduct.categoryId ?? undefined,
+            categoryName: mergedProduct.categoryName ?? undefined,
+            featuredImageUrl: mergedProduct.featuredImageUrl ?? undefined,
+            featuredImageAltText:
+              mergedProduct.featuredImageAltText ?? undefined,
+            optionsJson: mergedProduct.optionsJson ?? undefined,
+            collectionsJson: mergedProduct.collectionsJson ?? undefined,
+            option1Name: mergedProduct.option1Name ?? undefined,
+            option2Name: mergedProduct.option2Name ?? undefined,
+            option3Name: mergedProduct.option3Name ?? undefined,
+            variantCount: toNullableInt(mergedProduct.variantCount),
+            visibleOnlineStore:
+              mergedProduct.visibleOnlineStore === undefined
+                ? undefined
+                : toNullableBoolean(mergedProduct.visibleOnlineStore),
+          },
+        });
+
+        if (variants.length > 0) {
+          for (const variant of variants) {
+            const variantData = toVariantNestedCreateInput(variant);
+
+            await tx.variant.upsert({
+              where: {
+                shop_id_mirrorBatchId: {
+                  shop: product.shop,
+                  id: variantData.id,
+                  mirrorBatchId: batchId,
+                },
+              },
+              create: {
+                ...variantData,
+                shop: product.shop,
+                productId: product.id,
+                mirrorBatchId: batchId,
+              },
+              update: {
+                title: variantData.title ?? undefined,
+                sku: variantData.sku ?? undefined,
+                barcode: variantData.barcode ?? undefined,
+                price: variantData.price ?? undefined,
+                compareAtPrice: variantData.compareAtPrice ?? undefined,
+                inventoryQuantity: variantData.inventoryQuantity ?? undefined,
+                inventoryPolicy: variantData.inventoryPolicy ?? undefined,
+                taxable: variantData.taxable ?? undefined,
+                taxCode: variantData.taxCode ?? undefined,
+                position: variantData.position ?? undefined,
+                selectedOptionsJson: variantData.selectedOptionsJson ?? undefined,
+                cost: variantData.cost ?? undefined,
+                countryOfOrigin: variantData.countryOfOrigin ?? undefined,
+                hsTariffCode: variantData.hsTariffCode ?? undefined,
+                weight: variantData.weight ?? undefined,
+                weightUnit: variantData.weightUnit ?? undefined,
+                option1Value: variantData.option1Value ?? undefined,
+                option2Value: variantData.option2Value ?? undefined,
+                option3Value: variantData.option3Value ?? undefined,
+                physicalProduct: variantData.physicalProduct ?? undefined,
+                profitMargin: variantData.profitMargin ?? undefined,
+                tracked: variantData.tracked ?? undefined,
+              },
+            });
+          }
+        }
+      }
+    },
+    { maxWait: 10_000, timeout: 60_000 },
+  );
+
+  await clearKeyCaches(`${history.shop}:ProductFetch:`);
+  await clearKeyCaches(`${history.shop}:ProductFilterValues:`);
   await clearKeyCaches(`${history.shop}:productTypes:`);
 }
 

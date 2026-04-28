@@ -22,6 +22,10 @@ export async function runProductBulkFetch({ session }) {
       }
     }
   `;
+  
+  
+
+
 
   const response = await adminGraphqlWithRetry({
     session,

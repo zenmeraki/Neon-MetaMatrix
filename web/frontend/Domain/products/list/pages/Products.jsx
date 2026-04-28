@@ -14,7 +14,6 @@ import {
 import { useMemo, useEffect, useState, useCallback,useRef  } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
-import { t } from "i18next";
 import { useTranslation } from "react-i18next";
 import { getTranslatedOperatorLabel } from "../utils/filterUtils";
 import ProductsFilters from "../components/ProductsFilters";
@@ -33,6 +32,8 @@ import {
   setSearch,
   clearFilters,
 } from "../../../../store/slices/productSlice";
+const PRODUCT_SEARCH_DEBOUNCE_MS = 350;
+const MIN_PRODUCT_SEARCH_LENGTH = 2;
 
 export default function ProductsPage() {
   const dispatch = useDispatch();
@@ -45,6 +46,16 @@ export default function ProductsPage() {
   const page = useSelector(selectPage);
   const search = useSelector(selectSearch);
 const { t } = useTranslation();
+
+const [debouncedSearch, setDebouncedSearch] = useState(search || "");
+
+useEffect(() => {
+  const timer = window.setTimeout(() => {
+    setDebouncedSearch(search || "");
+  }, PRODUCT_SEARCH_DEBOUNCE_MS);
+
+  return () => window.clearTimeout(timer);
+}, [search]);
 
   const { loading, error, hasFetched, fetchProducts } = useProducts();
 
@@ -74,8 +85,12 @@ const { t } = useTranslation();
 
 const effectiveFilters = useMemo(() => {
   const baseFilters = filterState.filter((f) => f.field !== "search");
+  const normalizedSearch = String(debouncedSearch || "").trim();
 
-  if (!search?.trim()) {
+  if (
+    !normalizedSearch ||
+    normalizedSearch.length < MIN_PRODUCT_SEARCH_LENGTH
+  ) {
     return baseFilters;
   }
 
@@ -84,10 +99,10 @@ const effectiveFilters = useMemo(() => {
     {
       field: "search",
       operator: "contains",
-      value: search.trim(),
+      value: normalizedSearch,
     },
   ];
-}, [filterState, search]);
+}, [filterState, debouncedSearch]);
 
 useEffect(() => {
   fetchProducts(1, effectiveFilters);
@@ -145,6 +160,8 @@ useEffect(() => {
   syncStatus?.activeMirrorBatchId,
   fetchProducts,
   filterState,
+    effectiveFilters,
+
 ]);
 
   const onFilterChange = useCallback((field, nextFilter) => {

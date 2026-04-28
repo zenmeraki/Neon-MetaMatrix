@@ -196,21 +196,23 @@ const historySlice = createSlice({
   extraReducers: (builder) => {
     builder
       // Fetch Histories
-      .addCase(fetchHistories.pending, (state) => {
-        state.status = "loading";
-        state.error = null;
-      })
+     .addCase(fetchHistories.pending, (state, action) => {
+  if (!action.meta.arg.silent) {   // ← only show loading for non-silent fetches
+    state.status = "loading";
+  }
+  state.error = null;
+})
       .addCase(fetchHistories.fulfilled, (state, action) => {
-        state.status = "succeeded";
-        state.histories = action.payload.data;
-        state.pagination = {
-          ...state.pagination,
-          hasNextPage: action.payload.meta?.pageInfo?.hasNextPage || false,
-          endCursor: action.payload.meta?.pageInfo?.endCursor || null,
-          totalItems: action.payload.meta?.total || 0,
-        };
-        state.error = null;
-      })
+  state.status = "succeeded";   // ← always reset status
+  state.histories = action.payload.data;
+  state.pagination = {
+    ...state.pagination,
+    hasNextPage: action.payload.meta?.pageInfo?.hasNextPage || false,
+    endCursor: action.payload.meta?.pageInfo?.endCursor || null,
+    totalItems: action.payload.meta?.total || 0,
+  };
+  state.error = null;
+})
       .addCase(fetchHistories.rejected, (state, action) => {
         state.status = "failed";
         state.error = action.payload || "Failed to fetch histories";
