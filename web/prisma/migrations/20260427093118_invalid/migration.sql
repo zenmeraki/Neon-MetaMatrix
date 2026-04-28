@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "SyncProgressStage" ADD VALUE 'SHOPIFY_BULK_STARTING';
