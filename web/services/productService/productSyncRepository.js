@@ -72,7 +72,7 @@ export async function stageProductMirrorBatch({
       where: { shopUrl: shop },
       data: {
         syncProgressStage: "MIRROR_STAGING",
-        staleReason: "FULL_SYNC_RUNNING",
+        staleReason: MIRROR_STALE_REASONS.FULL_SYNC_RUNNING,
       },
     });
 
@@ -106,20 +106,212 @@ export async function insertProductMirrorBatch({
   variantRows,
   syncBatchId,
 }) {
-  await prisma.$transaction(async (tx) => {
-    if (productRows.length > 0) {
-      await tx.product.createMany({
-        data: productRows.map((row) => ({ ...row, mirrorBatchId: syncBatchId })),
-        skipDuplicates: true,
-      });
+  if (productRows.length === 0 && variantRows.length === 0) {
+    return;
+  }
+
+  // This is the sync hot path. Raw chunked inserts avoid Prisma createMany's
+  // model marshalling overhead while preserving ON CONFLICT DO NOTHING.
+  await insertProductRows(productRows, syncBatchId);
+  await insertVariantRows(variantRows, syncBatchId);
+}
+
+const configuredMaxInsertParams = Number(
+  process.env.PRODUCT_SYNC_SQL_PARAM_LIMIT || 45_000,
+);
+const configuredInsertConcurrency = Number(
+  process.env.PRODUCT_SYNC_INSERT_CONCURRENCY || 2,
+);
+
+const MAX_INSERT_PARAMS = Number.isFinite(configuredMaxInsertParams)
+  ? Math.max(1_000, Math.min(configuredMaxInsertParams, 60_000))
+  : 45_000;
+const INSERT_CONCURRENCY = Number.isFinite(configuredInsertConcurrency)
+  ? Math.max(1, Math.min(Math.trunc(configuredInsertConcurrency), 4))
+  : 2;
+
+const PRODUCT_INSERT_COLUMNS = [
+  "shop",
+  "id",
+  "mirrorBatchId",
+  "title",
+  "handle",
+  "status",
+  "productType",
+  "vendor",
+  "tags",
+  "templateSuffix",
+  "descriptionHtml",
+  "descriptionText",
+  "createdAt",
+  "updatedAt",
+  "publishedAt",
+  "seoTitle",
+  "seoDescription",
+  "totalInventory",
+  "categoryId",
+  "categoryName",
+  "googleShoppingEnabled",
+  "googleShoppingAgeGroup",
+  "googleShoppingCategory",
+  "googleShoppingColor",
+  "googleShoppingCondition",
+  "googleShoppingCustomLabel0",
+  "googleShoppingCustomLabel1",
+  "googleShoppingCustomLabel2",
+  "googleShoppingCustomLabel3",
+  "googleShoppingCustomLabel4",
+  "googleShoppingCustomProduct",
+  "googleShoppingGender",
+  "googleShoppingMpn",
+  "googleShoppingMaterial",
+  "googleShoppingSize",
+  "googleShoppingSizeSystem",
+  "googleShoppingSizeType",
+  "categoryAgeGroup",
+  "categoryColor",
+  "categoryFabric",
+  "categoryFit",
+  "categorySize",
+  "categoryTargetGender",
+  "categoryWaistRise",
+  "featuredImageUrl",
+  "featuredImageAltText",
+  "optionsJson",
+  "collectionsJson",
+  "option1Name",
+  "option2Name",
+  "option3Name",
+  "variantCount",
+  "visibleOnlineStore",
+];
+
+const VARIANT_INSERT_COLUMNS = [
+  "shop",
+  "id",
+  "productId",
+  "mirrorBatchId",
+  "title",
+  "sku",
+  "barcode",
+  "price",
+  "compareAtPrice",
+  "inventoryQuantity",
+  "inventoryPolicy",
+  "taxable",
+  "taxCode",
+  "position",
+  "selectedOptionsJson",
+  "cost",
+  "countryOfOrigin",
+  "hsTariffCode",
+  "weight",
+  "weightUnit",
+  "option1Value",
+  "option2Value",
+  "option3Value",
+  "physicalProduct",
+  "profitMargin",
+  "tracked",
+];
+
+const COLUMN_CASTS = {
+  tags: "text[]",
+  optionsJson: "jsonb",
+  collectionsJson: "jsonb",
+  selectedOptionsJson: "jsonb",
+};
+
+function quoteIdentifier(identifier) {
+  return `"${identifier.replace(/"/g, '""')}"`;
+}
+
+function normalizeInsertValue(column, row, syncBatchId) {
+  if (column === "mirrorBatchId") {
+    return syncBatchId;
+  }
+
+  const value = row[column];
+
+  if (COLUMN_CASTS[column] === "jsonb") {
+    return value === undefined || value === null ? null : JSON.stringify(value);
+  }
+
+  if (column === "tags") {
+    return Array.isArray(value) ? value : [];
+  }
+
+  return value === undefined ? null : value;
+}
+
+async function insertRows({ tableName, columns, rows, syncBatchId }) {
+  if (rows.length === 0) {
+    return;
+  }
+
+  const chunkSize = Math.max(1, Math.floor(MAX_INSERT_PARAMS / columns.length));
+  const columnSql = columns.map(quoteIdentifier).join(", ");
+  const chunks = [];
+
+  for (let offset = 0; offset < rows.length; offset += chunkSize) {
+    chunks.push(rows.slice(offset, offset + chunkSize));
+  }
+
+  let nextChunkIndex = 0;
+
+  async function insertNextChunk() {
+    const chunkIndex = nextChunkIndex;
+    nextChunkIndex += 1;
+
+    if (chunkIndex >= chunks.length) {
+      return;
     }
 
-    if (variantRows.length > 0) {
-      await tx.variant.createMany({
-        data: variantRows.map((row) => ({ ...row, mirrorBatchId: syncBatchId })),
-        skipDuplicates: true,
+    const chunk = chunks[chunkIndex];
+    const values = [];
+    const rowPlaceholders = chunk.map((row) => {
+      const placeholders = columns.map((column) => {
+        values.push(normalizeInsertValue(column, row, syncBatchId));
+        const cast = COLUMN_CASTS[column] ? `::${COLUMN_CASTS[column]}` : "";
+        return `$${values.length}${cast}`;
       });
-    }
+
+      return `(${placeholders.join(", ")})`;
+    });
+
+    await prisma.$executeRawUnsafe(
+      `INSERT INTO ${quoteIdentifier(tableName)} (${columnSql}) VALUES ${rowPlaceholders.join(
+        ", ",
+      )} ON CONFLICT DO NOTHING`,
+      ...values,
+    );
+
+    await insertNextChunk();
+  }
+
+  const workers = Array.from(
+    { length: Math.min(INSERT_CONCURRENCY, chunks.length) },
+    () => insertNextChunk(),
+  );
+
+  await Promise.all(workers);
+}
+
+async function insertProductRows(rows, syncBatchId) {
+  await insertRows({
+    tableName: "Product",
+    columns: PRODUCT_INSERT_COLUMNS,
+    rows,
+    syncBatchId,
+  });
+}
+
+async function insertVariantRows(rows, syncBatchId) {
+  await insertRows({
+    tableName: "Variant",
+    columns: VARIANT_INSERT_COLUMNS,
+    rows,
+    syncBatchId,
   });
 }
 
@@ -173,6 +365,7 @@ export async function activateProductMirrorBatch({
       where: { shopUrl: shop },
       select: { activeMirrorBatchId: true },
     });
+
     previousBatchId = store?.activeMirrorBatchId || null;
 
     await tx.store.update({
@@ -209,13 +402,17 @@ export async function activateProductMirrorBatch({
   });
 
   if (previousBatchId && previousBatchId !== syncBatchId) {
-    await prisma.variant.deleteMany({
-      where: { shop, mirrorBatchId: previousBatchId },
-    });
-    await prisma.product.deleteMany({
-      where: { shop, mirrorBatchId: previousBatchId },
+    console.log("[sync:old_batch_gc_required]", {
+      shop,
+      previousBatchId,
+      activeBatchId: syncBatchId,
     });
   }
+
+  return {
+    previousBatchId,
+    activeBatchId: syncBatchId,
+  };
 }
 
 export async function updateInitialSyncProgress({

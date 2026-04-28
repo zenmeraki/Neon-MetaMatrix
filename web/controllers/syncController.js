@@ -7,8 +7,25 @@ import { setCache, getCache, clearKeyCaches } from "../utils/cacheUtils.js";
 import { logApiError } from "../utils/errorLogUtils.js";
 import { prisma } from "../config/database.js";
 import shopify from "../shopify.js";
+import { handleSyncOperation } from "../helpers/webhookHelpers/bulkOperations/productTypeSync.js";
 
 const SYNC_STARTING_STAGE = "SHOPIFY_BULK_STARTING";
+
+function finalizeCompletedProductBulkOperation({ shop, bulkOperationId }) {
+  if (!shop || !bulkOperationId) return;
+
+  setImmediate(async () => {
+    try {
+      await handleSyncOperation({ bulkOperationId, shop });
+    } catch (error) {
+      console.error("[sync:poll_finalize_failed]", {
+        shop,
+        bulkOperationId,
+        error: error.message,
+      });
+    }
+  });
+}
 
 function parseForceFlag(req) {
   return String(req.body?.force || "")
@@ -194,6 +211,7 @@ export const syncProductData = async (req, res) => {
     if (!result?.bulkOperationId || !result?.syncHistoryId || !result?.syncBatchId) {
       throw new Error("Product sync started without required tracking identifiers");
     }
+    
 
     await clearKeyCaches(`${session.shop}:sync_`);
 
@@ -293,6 +311,40 @@ export const getSyncStatus = async (req, res) => {
       });
     }
 
+    let syncProgressStage = store.syncProgressStage;
+
+    if (
+      store.shopifyBulkJobCompleted === false &&
+      latestSync?.bulkOperationId &&
+      latestSync?.status === "processing" &&
+      ["SHOPIFY_BULK_RUNNING", SYNC_STARTING_STAGE].includes(
+        String(store.syncProgressStage || ""),
+      )
+    ) {
+      const bulkStatusCacheKey = `${shop}:sync_bulk_status:${latestSync.bulkOperationId}`;
+      let bulkStatus = await getCache(bulkStatusCacheKey);
+
+      if (!bulkStatus) {
+        const activeSession = await resolveActiveSessionForShop(session, shop);
+        bulkStatus = await getBulkEditStatus(latestSync.bulkOperationId, activeSession);
+        await setCache(bulkStatusCacheKey, bulkStatus, 3);
+      }
+
+      if (bulkStatus?.status === "COMPLETED") {
+        syncProgressStage = "MIRROR_DOWNLOAD_STARTED";
+        finalizeCompletedProductBulkOperation({
+          shop,
+          bulkOperationId: latestSync.bulkOperationId,
+        });
+      } else if (["FAILED", "CANCELED", "CANCELING"].includes(bulkStatus?.status)) {
+        syncProgressStage = "FAILED";
+        finalizeCompletedProductBulkOperation({
+          shop,
+          bulkOperationId: latestSync.bulkOperationId,
+        });
+      }
+    }
+
     const syncDetails = {
       isCurrentlyRunning:
         store.isProductSyncing === true || store.isProductInitialySyning === true,
@@ -309,7 +361,7 @@ export const getSyncStatus = async (req, res) => {
       lastInventoryReconcileAt: store.lastInventoryReconcileAt,
       lastCollectionReconcileAt: store.lastCollectionReconcileAt,
       lastSyncErrorSummary: store.lastSyncErrorSummary,
-      syncProgressStage: store.syncProgressStage,
+      syncProgressStage,
       isProductTypeSyncing: store.isProductTypeSyncing,
       lastProductTypeSyncAt: store.lastProductTypeSyncAt,
       isProductInitialySyning: store.isProductInitialySyning,
@@ -459,6 +511,48 @@ export const trackProductSync = async (req, res) => {
         const activeSession = await resolveActiveSessionForShop(session, shop);
         result = await getBulkEditStatus(latestSync.bulkOperationId, activeSession);
         await setCache(bulkStatusCacheKey, result, 3);
+      }
+
+      if (result?.status === "COMPLETED") {
+        finalizeCompletedProductBulkOperation({
+          shop,
+          bulkOperationId: latestSync.bulkOperationId,
+        });
+
+        return res.status(200).json({
+          success: true,
+          message: "Shopify bulk sync completed. Finalizing product mirror...",
+          status: "syncing",
+          stage: "MIRROR_DOWNLOAD_STARTED",
+          totalProducts,
+          processedProducts: storeDetails.productInitialSyncProgress || 0,
+          progress:
+            totalProducts > 0
+              ? Math.min(
+                  Number(
+                    (((storeDetails.productInitialSyncProgress || 0) / totalProducts) * 100).toFixed(2),
+                  ),
+                  100,
+                )
+              : 0,
+        });
+      }
+
+      if (["FAILED", "CANCELED", "CANCELING"].includes(result?.status)) {
+        finalizeCompletedProductBulkOperation({
+          shop,
+          bulkOperationId: latestSync.bulkOperationId,
+        });
+
+        return res.status(200).json({
+          success: false,
+          message: `Shopify bulk operation ${String(result?.status || "failed").toLowerCase()}`,
+          status: "failed",
+          stage: "FAILED",
+          totalProducts,
+          processedProducts: storeDetails.productInitialSyncProgress || 0,
+          progress: 0,
+        });
       }
 
       const shopifyBulkProgress = Number(result?.rootObjectCount || 0);

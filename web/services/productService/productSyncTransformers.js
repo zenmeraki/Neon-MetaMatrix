@@ -23,44 +23,53 @@ function stripHtml(html) {
   const decodeEntity = (entity) => {
     if (entity.startsWith("&#x") || entity.startsWith("&#X")) {
       const codePoint = Number.parseInt(entity.slice(3, -1), 16);
-      return Number.isFinite(codePoint) ? String.fromCodePoint(codePoint) : entity;
+      return Number.isFinite(codePoint)
+        ? String.fromCodePoint(codePoint)
+        : entity;
     }
 
     if (entity.startsWith("&#")) {
       const codePoint = Number.parseInt(entity.slice(2, -1), 10);
-      return Number.isFinite(codePoint) ? String.fromCodePoint(codePoint) : entity;
+      return Number.isFinite(codePoint)
+        ? String.fromCodePoint(codePoint)
+        : entity;
     }
 
     return namedEntities[entity.slice(1, -1).toLowerCase()] ?? entity;
   };
 
-  return html
-    .replace(/<!--[\s\S]*?-->/g, " ")
-    .replace(/<!\[CDATA\[[\s\S]*?\]\]>/g, " ")
-    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ")
-    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&(?:#\d+|#x[\da-fA-F]+|[a-zA-Z]+);/g, decodeEntity)
-    .replace(/\s{2,}/g, " ")
-    .trim() || null;
+  return (
+    html
+      .replace(/<!--[\s\S]*?-->/g, " ")
+      .replace(/<!\[CDATA\[[\s\S]*?\]\]>/g, " ")
+      .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ")
+      .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&(?:#\d+|#x[\da-fA-F]+|[a-zA-Z]+);/g, decodeEntity)
+      .replace(/\s{2,}/g, " ")
+      .trim() || null
+  );
 }
 
 export function normalizeNullableString(value) {
   if (value === undefined || value === null) return null;
-  const s = String(value).trim();
-  return s === "" ? null : s;
+
+  const normalized = String(value).trim();
+  return normalized === "" ? null : normalized;
 }
 
 export function normalizeNullableFloat(value) {
   if (value === undefined || value === null || value === "") return null;
-  const n = Number(value);
-  return Number.isFinite(n) ? n : null;
+
+  const normalized = Number(value);
+  return Number.isFinite(normalized) ? normalized : null;
 }
 
 export function normalizeNullableInt(value) {
   if (value === undefined || value === null || value === "") return null;
-  const n = Number(value);
-  return Number.isNaN(n) ? null : Math.trunc(n);
+
+  const normalized = Number(value);
+  return Number.isNaN(normalized) ? null : Math.trunc(normalized);
 }
 
 export function normalizeBoolean(value) {
@@ -75,18 +84,25 @@ function isMetaobjectReferenceString(value) {
 }
 
 export function getOptionNameByPosition(options = [], position) {
-  const found = options.find((o) => Number(o?.position) === position);
+  const found = options.find((option) => Number(option?.position) === position);
   return normalizeNullableString(found?.name);
 }
 
 export function getOptionValueByIndex(selectedOptions = [], index) {
-  if (!Array.isArray(selectedOptions) || !selectedOptions[index]) return null;
+  if (!Array.isArray(selectedOptions) || !selectedOptions[index]) {
+    return null;
+  }
+
   return normalizeNullableString(selectedOptions[index]?.value);
 }
 
 export function extractCollections(collections) {
   if (!collections) return [];
-  if (Array.isArray(collections)) return collections;
+
+  if (Array.isArray(collections)) {
+    return collections;
+  }
+
   if (Array.isArray(collections.edges)) {
     return collections.edges
       .map((edge) => edge?.node)
@@ -96,24 +112,35 @@ export function extractCollections(collections) {
         title: node.title,
       }));
   }
+
   return [];
 }
 
 export function extractVariants(variants) {
   if (!variants) return [];
-  if (Array.isArray(variants)) return variants;
+
+  if (Array.isArray(variants)) {
+    return variants;
+  }
+
   if (Array.isArray(variants.edges)) {
     return variants.edges.map((edge) => edge?.node).filter(Boolean);
   }
+
   return [];
 }
 
 export function extractMetafields(metafields) {
   if (!metafields) return [];
-  if (Array.isArray(metafields)) return metafields.filter(Boolean);
+
+  if (Array.isArray(metafields)) {
+    return metafields.filter(Boolean);
+  }
+
   if (Array.isArray(metafields.edges)) {
     return metafields.edges.map((edge) => edge?.node).filter(Boolean);
   }
+
   return [];
 }
 
@@ -130,8 +157,7 @@ function buildMetafieldLookup(metafields = []) {
 
     if (!namespace || !key) continue;
 
-    const compositeKey = `${namespace}.${key}`;
-    lookup.set(compositeKey, metafield);
+    lookup.set(`${namespace}.${key}`, metafield);
   }
 
   return lookup;
@@ -155,6 +181,7 @@ function parseNullableBoolean(value) {
   if (typeof value !== "string") return null;
 
   const normalized = value.trim().toLowerCase();
+
   if (["true", "1", "yes"].includes(normalized)) return true;
   if (["false", "0", "no"].includes(normalized)) return false;
 
@@ -165,12 +192,14 @@ export function resolveMetaobjectRefs(rawValue, metaobjectLookup) {
   if (!rawValue || !metaobjectLookup) return null;
 
   const normalized = normalizeNullableString(rawValue);
+
   if (normalized && normalized.startsWith("gid://shopify/Metaobject/")) {
     return metaobjectLookup.get(normalized) || null;
   }
 
   try {
     const parsed = JSON.parse(rawValue);
+
     if (!Array.isArray(parsed)) {
       return isMetaobjectReferenceString(normalized) ? null : normalized;
     }
@@ -186,14 +215,18 @@ export function resolveMetaobjectRefs(rawValue, metaobjectLookup) {
 }
 
 function mapExtendedProductFields(product, metaobjectLookup = new Map()) {
-  const metafieldLookup = buildMetafieldLookup(extractMetafields(product.metafields));
+  const metafieldLookup = buildMetafieldLookup(
+    extractMetafields(product.metafields),
+  );
 
   const getString = (candidates) =>
     resolveMetaobjectRefs(
       getMetafieldValue(metafieldLookup, candidates),
       metaobjectLookup,
     );
-  const getResolvedString = (candidates) => normalizeNullableString(getString(candidates));
+
+  const getResolvedString = (candidates) =>
+    normalizeNullableString(getString(candidates));
 
   return {
     googleShoppingEnabled: parseNullableBoolean(
@@ -362,7 +395,10 @@ function mapExtendedProductFields(product, metaobjectLookup = new Map()) {
 export function flattenProduct(product, shop, metaobjectLookup = new Map()) {
   const options = Array.isArray(product.options) ? product.options : [];
   const variants = Array.isArray(product.variants) ? product.variants : [];
-  const collections = Array.isArray(product.collections) ? product.collections : [];
+  const collections = Array.isArray(product.collections)
+    ? product.collections
+    : [];
+
   const tags = Array.isArray(product.tags)
     ? product.tags.map((tag) => normalizeNullableString(tag)).filter(Boolean)
     : [];
@@ -379,7 +415,14 @@ export function flattenProduct(product, shop, metaobjectLookup = new Map()) {
     vendor: normalizeNullableString(product.vendor),
     tags,
     templateSuffix: normalizeNullableString(product.templateSuffix),
-    descriptionText: normalizeNullableString(stripHtml(product.descriptionHtml)),
+
+    // Fast-sync optimization:
+    // Keep HTML now. Generate searchable plain text later in enrichment.
+    descriptionText:
+      process.env.PRODUCT_SYNC_STRIP_DESCRIPTION_HTML === "true"
+        ? normalizeNullableString(stripHtml(product.descriptionHtml))
+        : null,
+
     descriptionHtml: normalizeNullableString(product.descriptionHtml),
     createdAt: product.createdAt ? new Date(product.createdAt) : null,
     updatedAt: product.updatedAt ? new Date(product.updatedAt) : null,
@@ -402,7 +445,7 @@ export function flattenProduct(product, shop, metaobjectLookup = new Map()) {
     option2Name: getOptionNameByPosition(options, 2),
     option3Name: getOptionNameByPosition(options, 3),
     variantCount: variants.length,
-    visibleOnlineStore: !!product.onlineStoreUrl,
+    visibleOnlineStore: Boolean(product.onlineStoreUrl),
   };
 }
 
@@ -411,6 +454,7 @@ export function flattenVariant(productId, variant, shop) {
   const cost = normalizeNullableFloat(variant.inventoryItem?.unitCost?.amount);
 
   let profitMargin = null;
+
   if (price !== null && cost !== null && price > 0) {
     profitMargin = Number((((price - cost) / price) * 100).toFixed(2));
   }

@@ -16,24 +16,27 @@ import {
   flattenProduct,
   flattenVariant,
 } from "./productSyncTransformers.js";
-import {
-  extractMetaobjectIds,
-  fetchMetaobjectLookupByIds,
-} from "./productSyncMetaobjects.js";
+import { extractMetaobjectIds } from "./productSyncMetaobjects.js";
+
+const PRODUCT_BATCH_SIZE = Number(process.env.PRODUCT_SYNC_BATCH_SIZE || 10000);
+const PROGRESS_UPDATE_INTERVAL = Number(
+  process.env.PRODUCT_SYNC_PROGRESS_INTERVAL || 25000,
+);
+const MAX_MALFORMED_LINES = 10;
+const STREAM_IDLE_TIMEOUT_MS = 60_000;
 
 export async function startBulkOperationToFetchProducts({
   session,
   isInitialSync = false,
 }) {
-  console.log(`[sync:start] shop=${session.shop} isInitialSync=${isInitialSync}`);
-
-  const { bulkOperationId } = await runProductBulkFetch({ session });
   console.log(
-    `[sync:bulk_created] shop=${session.shop} bulkOperationId=${bulkOperationId}`,
+    `[sync:start] shop=${session.shop} isInitialSync=${isInitialSync}`,
   );
 
+  const { bulkOperationId } = await runProductBulkFetch({ session });
+
   console.log(
-    `[sync:queue_start] shop=${session.shop} bulkOperationId=${bulkOperationId}`,
+    `[sync:bulk_created] shop=${session.shop} bulkOperationId=${bulkOperationId}`,
   );
 
   const syncHistory = await queueProductSyncStart({
@@ -67,40 +70,47 @@ export async function formatAndSyncProductsToDB({
     throw new Error("syncBatchId is required for staged product sync");
   }
 
-  console.log(`[sync:stream_start] shop=${shop} syncBatchId=${syncBatchId} syncHistoryId=${syncHistoryId}`);
+  console.log(
+    `[sync:stream_start] shop=${shop} syncBatchId=${syncBatchId} syncHistoryId=${syncHistoryId}`,
+  );
+
+  let idleTimer = null;
 
   try {
-    const PRODUCT_BATCH_SIZE = 1000;
-    const MAX_MALFORMED_LINES = 10;
-    const STREAM_IDLE_TIMEOUT_MS = 60_000;
-
     let productBatch = [];
     let totalProductsProcessed = 0;
     let totalVariantsProcessed = 0;
+    let lastProgressUpdate = 0;
     let malformedLineCount = 0;
     let duplicateProductCount = 0;
     let orphanChildCount = 0;
-    let nullMetaobjectLookupCount = 0;
     let currentProduct = null;
 
     const pendingChildren = new Map();
     let batchReferencedMetaobjectIds = new Set();
 
-    let idleTimer = null;
+    const clearIdleTimer = () => {
+      if (idleTimer) {
+        clearTimeout(idleTimer);
+        idleTimer = null;
+      }
+    };
+
     const resetIdleTimer = () => {
-      if (idleTimer) clearTimeout(idleTimer);
+      clearIdleTimer();
       idleTimer = setTimeout(() => {
-        dataStream.destroy(new Error("Product sync stream timed out while reading JSONL"));
+        dataStream.destroy(
+          new Error("Product sync stream timed out while reading JSONL"),
+        );
       }, STREAM_IDLE_TIMEOUT_MS);
     };
+
     resetIdleTimer();
+
     dataStream.on("data", resetIdleTimer);
-    dataStream.on("error", () => {
-      if (idleTimer) clearTimeout(idleTimer);
-    });
-    dataStream.on("end", () => {
-      if (idleTimer) clearTimeout(idleTimer);
-    });
+    dataStream.on("error", clearIdleTimer);
+    dataStream.on("end", clearIdleTimer);
+    dataStream.on("close", clearIdleTimer);
 
     const addMetaobjectIdsFromMetafields = (metafields = []) => {
       for (const metafield of metafields) {
@@ -112,6 +122,7 @@ export async function formatAndSyncProductsToDB({
 
     const attachPendingChildren = (product) => {
       const pending = pendingChildren.get(product.id);
+
       if (!pending) {
         return product;
       }
@@ -119,18 +130,95 @@ export async function formatAndSyncProductsToDB({
       if (pending.variants.length) {
         product.variants.push(...pending.variants);
       }
+
       if (pending.collections.length) {
         product.collections.push(...pending.collections);
       }
+
       if (pending.metafields.length) {
         product.metafields.push(...pending.metafields);
       }
+
       if (pending.featuredMedia && !product.featuredMedia) {
         product.featuredMedia = pending.featuredMedia;
       }
 
       pendingChildren.delete(product.id);
       return product;
+    };
+
+    const maybeUpdateProgress = async ({ force = false } = {}) => {
+      if (totalProductsProcessed <= 0) return;
+
+      if (
+        force ||
+        totalProductsProcessed - lastProgressUpdate >= PROGRESS_UPDATE_INTERVAL
+      ) {
+        await updateInitialSyncProgress({
+          shop,
+          totalProductsProcessed,
+        });
+
+        lastProgressUpdate = totalProductsProcessed;
+      }
+    };
+
+    const flushProductsAndVariants = async () => {
+      if (productBatch.length === 0) return;
+
+      const currentProducts = productBatch;
+      const currentMetaobjectIds = batchReferencedMetaobjectIds;
+
+      productBatch = [];
+      batchReferencedMetaobjectIds = new Set();
+
+      const productRows = [];
+      const variantRows = [];
+
+      // Critical speed path:
+      // Do not call Shopify GraphQL while ingesting JSONL.
+      // Metaobject labels should be resolved later by an enrichment worker.
+      const metaobjectLookup = new Map();
+
+      if (currentMetaobjectIds.size > 0) {
+        console.log("[sync:metaobjects_deferred]", {
+          shop,
+          count: currentMetaobjectIds.size,
+        });
+      }
+
+      for (const rawProduct of currentProducts) {
+        productRows.push(flattenProduct(rawProduct, shop, metaobjectLookup));
+
+        const rawVariants = Array.isArray(rawProduct.variants)
+          ? rawProduct.variants
+          : [];
+
+        for (const rawVariant of rawVariants) {
+          if (!rawVariant?.id) continue;
+
+          variantRows.push(flattenVariant(rawProduct.id, rawVariant, shop));
+        }
+      }
+
+      const insertStartedAt = Date.now();
+
+      await insertProductMirrorBatch({
+        productRows,
+        variantRows,
+        syncBatchId,
+      });
+
+      const insertDurationMs = Date.now() - insertStartedAt;
+
+      totalProductsProcessed += productRows.length;
+      totalVariantsProcessed += variantRows.length;
+
+      console.log(
+        `[sync:flush] shop=${shop} products=${productRows.length} variants=${variantRows.length} insertMs=${insertDurationMs} totalProductsProcessed=${totalProductsProcessed} totalVariantsProcessed=${totalVariantsProcessed}`,
+      );
+
+      await maybeUpdateProgress();
     };
 
     const finalizeCurrentProduct = async () => {
@@ -145,69 +233,14 @@ export async function formatAndSyncProductsToDB({
       }
     };
 
-    const flushProductsAndVariants = async () => {
-      if (productBatch.length === 0) return;
-
-      const currentProducts = productBatch;
-      productBatch = [];
-      const currentMetaobjectIds = batchReferencedMetaobjectIds;
-      batchReferencedMetaobjectIds = new Set();
-
-      const productRows = [];
-      const variantRows = [];
-      let metaobjectLookup = new Map();
-
-      if (session?.accessToken && session?.shop && currentMetaobjectIds.size > 0) {
-        console.log(
-          `[sync:metaobjects_start] shop=${shop} count=${currentMetaobjectIds.size}`,
-        );
-
-        try {
-          metaobjectLookup = await fetchMetaobjectLookupByIds(
-            session,
-            Array.from(currentMetaobjectIds),
-          );
-          console.log(
-            `[sync:metaobjects_done] shop=${shop} resolved=${metaobjectLookup.size}`,
-          );
-        } catch (error) {
-          console.error(
-            `[sync:metaobjects_failed] shop=${shop} error=${error.message}`,
-          );
-        }
-      }
-
-      for (const rawProduct of currentProducts) {
-        productRows.push(flattenProduct(rawProduct, shop, metaobjectLookup));
-
-        const rawVariants = Array.isArray(rawProduct.variants)
-          ? rawProduct.variants
-          : [];
-
-        for (const rawVariant of rawVariants) {
-          if (!rawVariant?.id) continue;
-          variantRows.push(flattenVariant(rawProduct.id, rawVariant, shop));
-        }
-      }
-
-      await insertProductMirrorBatch({
-        productRows,
-        variantRows,
-        syncBatchId,
-      });
-
-      totalProductsProcessed += productRows.length;
-      totalVariantsProcessed += variantRows.length;
-
-      console.log(`[sync:flush] shop=${shop} totalProductsProcessed=${totalProductsProcessed} totalVariantsProcessed=${totalVariantsProcessed}`);
-
-      if (totalProductsProcessed > 0) {
-        await updateInitialSyncProgress({ shop, totalProductsProcessed });
-      }
-    };
-
     console.log(`[sync:staging_start] shop=${shop} syncBatchId=${syncBatchId}`);
-    await stageProductMirrorBatch({ shop, syncBatchId, syncHistoryId });
+
+    await stageProductMirrorBatch({
+      shop,
+      syncBatchId,
+      syncHistoryId,
+    });
+
     console.log(`[sync:staging_done] shop=${shop}`);
 
     const rl = readline.createInterface({
@@ -216,28 +249,35 @@ export async function formatAndSyncProductsToDB({
     });
 
     let lineCount = 0;
+
     for await (const line of rl) {
       if (!line.trim()) continue;
-      lineCount++;
 
-      // Log every 10k lines so you can see the stream is moving
+      lineCount += 1;
+
       if (lineCount % 10000 === 0) {
         console.log(
-          `[sync:stream_reading] shop=${shop} linesRead=${lineCount} bufferedProducts=${productBatch.length} hasCurrentProduct=${Boolean(currentProduct)}`,
+          `[sync:stream_reading] shop=${shop} linesRead=${lineCount} bufferedProducts=${
+            productBatch.length
+          } hasCurrentProduct=${Boolean(currentProduct)}`,
         );
       }
 
       let json;
+
       try {
         json = JSON.parse(line);
       } catch (error) {
         malformedLineCount += 1;
+
         console.error(
           `[sync:jsonl_malformed] shop=${shop} count=${malformedLineCount} error=${error.message}`,
         );
 
         if (malformedLineCount > MAX_MALFORMED_LINES) {
-          throw new Error(`Product sync JSONL parse error threshold exceeded: ${error.message}`);
+          throw new Error(
+            `Product sync JSONL parse error threshold exceeded: ${error.message}`,
+          );
         }
 
         continue;
@@ -246,6 +286,7 @@ export async function formatAndSyncProductsToDB({
       if (!json.__parentId && json.__typename === "Product") {
         if (currentProduct?.id === json.id) {
           duplicateProductCount += 1;
+
           console.warn(
             `[sync:duplicate_product] shop=${shop} productId=${json.id} duplicates=${duplicateProductCount}`,
           );
@@ -254,6 +295,7 @@ export async function formatAndSyncProductsToDB({
         }
 
         const productMetafields = extractMetafields(json.metafields);
+
         currentProduct = attachPendingChildren({
           ...json,
           variants: extractVariants(json.variants),
@@ -262,24 +304,21 @@ export async function formatAndSyncProductsToDB({
           options: Array.isArray(json.options) ? json.options : [],
           featuredMedia: json.featuredMedia || null,
         });
+
         continue;
       }
 
       const parentId = json.__parentId;
       if (!parentId) continue;
 
-      const parent =
-        currentProduct?.id === parentId
-          ? currentProduct
-          : null;
+      const parent = currentProduct?.id === parentId ? currentProduct : null;
 
-      const pending =
-        pendingChildren.get(parentId) || {
-          variants: [],
-          collections: [],
-          metafields: [],
-          featuredMedia: null,
-        };
+      const pending = pendingChildren.get(parentId) || {
+        variants: [],
+        collections: [],
+        metafields: [],
+        featuredMedia: null,
+      };
 
       switch (json.__typename) {
         case "ProductVariant":
@@ -338,22 +377,24 @@ export async function formatAndSyncProductsToDB({
     }
 
     await finalizeCurrentProduct();
-
     await flushProductsAndVariants();
+    await maybeUpdateProgress({ force: true });
 
     if (pendingChildren.size > 0) {
       orphanChildCount += pendingChildren.size;
+
       console.warn(
         `[sync:orphan_children] shop=${shop} count=${pendingChildren.size}`,
       );
     }
 
     console.log(
-      `[sync:stream_done] shop=${shop} totalLinesRead=${lineCount} malformedLines=${malformedLineCount} duplicateProducts=${duplicateProductCount} orphanChildren=${orphanChildCount} unresolvedMetaobjectNodes=${nullMetaobjectLookupCount}`,
+      `[sync:stream_done] shop=${shop} totalLinesRead=${lineCount} malformedLines=${malformedLineCount} duplicateProducts=${duplicateProductCount} orphanChildren=${orphanChildCount}`,
     );
 
-    console.log(`[sync:activating] shop=${shop} syncBatchId=${syncBatchId} totalProductsProcessed=${totalProductsProcessed}`);
-
+    console.log(
+      `[sync:activating] shop=${shop} syncBatchId=${syncBatchId} totalProductsProcessed=${totalProductsProcessed}`,
+    );
 
     await activateProductMirrorBatch({
       shop,
@@ -362,8 +403,9 @@ export async function formatAndSyncProductsToDB({
       syncHistoryId,
     });
 
-    console.log(`[sync:complete] shop=${shop} syncBatchId=${syncBatchId} totalProductsProcessed=${totalProductsProcessed} totalVariantsProcessed=${totalVariantsProcessed}`);
-
+    console.log(
+      `[sync:complete] shop=${shop} syncBatchId=${syncBatchId} totalProductsProcessed=${totalProductsProcessed} totalVariantsProcessed=${totalVariantsProcessed}`,
+    );
 
     return {
       totalProductsProcessed,
@@ -374,14 +416,21 @@ export async function formatAndSyncProductsToDB({
       orphanChildCount,
     };
   } catch (error) {
-     console.error(`[sync:failed] shop=${shop} syncBatchId=${syncBatchId} syncHistoryId=${syncHistoryId} error=${error.message}`);
+    console.error(
+      `[sync:failed] shop=${shop} syncBatchId=${syncBatchId} syncHistoryId=${syncHistoryId} error=${error.message}`,
+    );
     console.error(error.stack);
-    
+
     await markSyncHistoryFailed({
       shop,
       syncHistoryId,
       errorMessage: error.message,
     });
+
     throw error;
+  } finally {
+    if (idleTimer) {
+      clearTimeout(idleTimer);
+    }
   }
 }
