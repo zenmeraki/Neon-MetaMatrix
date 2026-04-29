@@ -6,10 +6,11 @@ import { getCurrentBulkOperationStatus } from "../utils/bulkOperationHelper.js";
 import { getUpdatedProducts } from "../helpers/productBulkOperationHelpers/productUpdateHandler.js";
 import { FIELD_CONFIGS } from "../helpers/productBulkOperationHelpers/constants.js";
 import { createMultiLanguageForFileEdit } from "../utils/googleTranslator.js";
-import { scheduledEditQueue } from "../Jobs/Queues/scheduledEditQueue.js";
+import { addScheduledEditJob } from "../Jobs/Queues/scheduledEditQueue.js";
 import { clearAllCachesForShop } from "../utils/cacheUtils.js";
 import { logApiError } from "../utils/errorLogUtils.js";
 import { prisma } from "../config/database.js";
+import { scheduledEditRunRepository } from "../repositories/scheduledEditRunRepository.js";
 import crypto from "crypto";
 import {
   BULK_EDIT_EXECUTION_STATES,
@@ -19,6 +20,7 @@ import {
   getFrozenTargetSnapshotSummary,
   resolveCanonicalProductTarget,
 } from "../services/productService/productTargetingService.js";
+import { validateBulkEditPayload } from "../validations/bulkEditPayloadValidator.js";
 const BULK_EDIT_CLIENT_ERROR_PATTERNS = [
   /required/i,
   /invalid/i,
@@ -31,6 +33,35 @@ const BULK_EDIT_CLIENT_ERROR_PATTERNS = [
   /reduce the number of products/i,
   /session expired/i,
 ];
+const OPERATION_CONFLICT_CODES = new Set([
+  "WRITE_OPERATION_RUNNING",
+  "PRODUCT_SYNC_RUNNING",
+  "CATALOG_NOT_READY",
+  "INITIAL_SYNC_REQUIRED",
+  "MIRROR_SCHEMA_VERSION_MISMATCH",
+  "RATE_LIMIT_EXCEEDED",
+  "LOCK_HELD",
+  "SCHEDULE_ALREADY_CLAIMED",
+]);
+
+function operationConflictResponse(code, message) {
+  return {
+    error: code,
+    message:
+      message ||
+      {
+        WRITE_OPERATION_RUNNING: "Another write operation is already running for this store.",
+        PRODUCT_SYNC_RUNNING: "Product sync is running for this store.",
+        CATALOG_NOT_READY: "Catalog is not ready for write operations.",
+        INITIAL_SYNC_REQUIRED: "Initial catalog sync is required before write operations.",
+        MIRROR_SCHEMA_VERSION_MISMATCH: "Catalog mirror schema changed. Run a full resync before write operations.",
+        RATE_LIMIT_EXCEEDED: "Too many operations were started for this store in the last minute.",
+        LOCK_HELD: "Another operation is already running.",
+        SCHEDULE_ALREADY_CLAIMED: "This scheduled run has already been claimed.",
+      }[code] ||
+      "Operation cannot start right now.",
+  };
+}
 
 function isBulkEditClientError(err) {
   const message = String(err?.message || "");
@@ -104,9 +135,10 @@ export const handleBulkEditProduct = async (req, res) => {
     const { status } = await getCurrentBulkOperationStatus(session);
 
     if (status === "RUNNING") {
+      const code = "WRITE_OPERATION_RUNNING";
       return res
-        .status(400)
-        .json({ message: "Another operation is running in background" });
+        .status(409)
+        .json(operationConflictResponse(code));
     }
 
     const lang = req.query.lang || "en";
@@ -142,6 +174,10 @@ export const handleBulkEditProduct = async (req, res) => {
       req,
       source: "POST /api/bulk-edit",
     });
+
+    if (OPERATION_CONFLICT_CODES.has(err?.code)) {
+      return res.status(409).json(operationConflictResponse(err.code, err.message));
+    }
 
     if (isBulkEditClientError(err)) {
       return res.status(400).json({
@@ -276,6 +312,18 @@ export const createScheduledEdit = async (req, res) => {
     if (!FIELD_CONFIGS[editedField]) {
       return res.status(400).json({ error: "Invalid editedField" });
     }
+
+    validateBulkEditPayload({
+      editedField,
+      editedBy,
+      filterParams,
+      targetSnapshotId: normalizedTargetSnapshotId,
+      value,
+      searchKey,
+      replaceText,
+      supportValue,
+      locationId,
+    });
 
     const scheduledAt = new Date(rawScheduledAt);
     if (isNaN(scheduledAt.getTime())) {
@@ -447,16 +495,37 @@ export const createScheduledEdit = async (req, res) => {
       });
     }
 
-    await scheduledEditQueue.add(
+    let scheduledRun;
+    try {
+      scheduledRun = await scheduledEditRunRepository.create({
+        shop: session.shop,
+        scheduledEditId: history.id,
+        scheduledFor: scheduledAt,
+        status: "CLAIMED",
+        claimedAt: new Date(),
+        targetCount: frozenCount,
+      });
+    } catch (error) {
+      if (error?.code === "P2002") {
+        return res.status(409).json({
+          error: "SCHEDULE_ALREADY_CLAIMED",
+          message: "This scheduled edit run has already been claimed.",
+        });
+      }
+
+      throw error;
+    }
+
+    await addScheduledEditJob(
       "scheduled-task",
-      { historyId: history.id, shop: session.shop },
+      { historyId: history.id, shop: session.shop, scheduledRunId: scheduledRun.id },
       { delay, jobId: `scheduled-edit:${session.shop}:${history.id}` }
     );
     scheduledEditQueued = true;
 
     if (scheduledUndoAt && scheduledUndoAt.getTime() > now && undoAllowed) {
       const undoDelay = scheduledUndoAt.getTime() - now;
-      await scheduledEditQueue.add(
+      await addScheduledEditJob(
         "undo-task",
         { historyId: history.id, shop: session.shop },
         {
@@ -488,6 +557,13 @@ export const createScheduledEdit = async (req, res) => {
           where: { id: createdHistoryId },
         })
         .catch(() => {});
+    }
+
+    if (isBulkEditClientError(err)) {
+      return res.status(400).json({
+        message: err.message || "Invalid scheduled edit request",
+        error: "Invalid scheduled edit request",
+      });
     }
 
     return res.status(500).json({

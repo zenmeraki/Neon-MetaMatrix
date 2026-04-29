@@ -5,6 +5,7 @@ import {
   MIRROR_STALE_REASONS,
   markFullSyncStarted,
 } from "../mirrorHealthService.js";
+import { CURRENT_MIRROR_SCHEMA_VERSION } from "../catalogMirrorSchema.js";
 
 export async function markProductSyncStarted({ shop }) {
   await markFullSyncStarted(shop);
@@ -179,6 +180,7 @@ export async function activateProductMirrorBatch({
       where: { shopUrl: shop },
       data: {
         activeMirrorBatchId: syncBatchId,
+        mirrorSchemaVersion: CURRENT_MIRROR_SCHEMA_VERSION,
         mirrorHealthState: "HEALTHY",
         staleReason: null,
         repairRequired: false,
@@ -206,6 +208,28 @@ export async function activateProductMirrorBatch({
         },
       });
     }
+
+    await tx.storeOperationalState.upsert({
+      where: { shop },
+      update: {
+        activeCatalogBatchId: syncBatchId,
+        activeProductBatchId: syncBatchId,
+        activeVariantBatchId: syncBatchId,
+        mirrorSchemaVersion: CURRENT_MIRROR_SCHEMA_VERSION,
+        catalogConsistencyStatus: "READY",
+        lastSyncAt: completedAt,
+        activeSyncOperationId: null,
+      },
+      create: {
+        shop,
+        activeCatalogBatchId: syncBatchId,
+        activeProductBatchId: syncBatchId,
+        activeVariantBatchId: syncBatchId,
+        mirrorSchemaVersion: CURRENT_MIRROR_SCHEMA_VERSION,
+        catalogConsistencyStatus: "READY",
+        lastSyncAt: completedAt,
+      },
+    });
   });
 
   if (previousBatchId && previousBatchId !== syncBatchId) {

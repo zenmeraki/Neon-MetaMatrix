@@ -1,4 +1,5 @@
 import axios from "axios";
+import { createInterface } from "node:readline";
 import {
   getSession,
   getShopOwnerEmailAddress,
@@ -11,6 +12,11 @@ import { clearKeyCaches } from "../../../utils/cacheUtils.js";
 import { prisma } from "../../../config/database.js";
 import { finalizeRecurringRunFromHistory } from "../../../services/recurringEditExecutionService.js";
 import { finalizeAutomaticProductRuleRunFromHistory } from "../../../services/automaticProductRuleExecutionService.js";
+import { storeOperationRepository } from "../../../repositories/storeOperationRepository.js";
+import { storeOperationalStateRepository } from "../../../repositories/storeOperationalStateRepository.js";
+import { operationFailureRepository } from "../../../repositories/operationFailureRepository.js";
+import { operationEventRepository } from "../../../repositories/operationEventRepository.js";
+import { assertOperationCircuitClosed } from "../../../services/execution/operationCircuitBreakerService.js";
 import { adminGraphqlWithRetry } from "../../../utils/shopifyAdminApi.js";
 import {
   BULK_EDIT_EXECUTION_STATES,
@@ -21,6 +27,8 @@ import {
   isTerminalUndoState,
   normalizeUndoState,
 } from "../../../services/bulkEditExecutionStateService.js";
+
+const FINALIZER_LEASE_TTL_MS = 30_000;
 
 async function acquireBulkOperationFinalizeLock(lockKey) {
   const rows = await prisma.$queryRaw`
@@ -36,6 +44,18 @@ async function releaseBulkOperationFinalizeLock(lockKey) {
   `;
 }
 
+async function acquireOperationFinalizerLease(operationId, owner) {
+  if (!operationId) return false;
+
+  const lease = await storeOperationRepository.acquireLease(
+    operationId,
+    owner,
+    new Date(Date.now() + FINALIZER_LEASE_TTL_MS),
+  );
+
+  return lease.count === 1;
+}
+
 function asObject(value, fallback = {}) {
   return value && typeof value === "object" && !Array.isArray(value)
     ? value
@@ -44,6 +64,10 @@ function asObject(value, fallback = {}) {
 
 function asArray(value) {
   return Array.isArray(value) ? value : [];
+}
+
+function getHistoryOperationId(history) {
+  return asObject(history?.batch).operationId || null;
 }
 
 function hasValue(value) {
@@ -304,6 +328,56 @@ async function markHistoryFailure(history, bulkOperation, reason, stage, kind = 
       error: buildBulkFailureError(history, bulkOperation, stage, reason, false),
     },
   });
+
+  const operationId = getHistoryOperationId(history);
+  if (operationId) {
+    const leaseOwner = `bulkEditFinalizer:${operationId}`;
+    const leaseAcquired = await acquireOperationFinalizerLease(operationId, leaseOwner);
+    if (!leaseAcquired) {
+      throw new Error("Operation lease is held by another worker");
+    }
+
+    const failureCount = Number(
+      bulkOperation?.objectCount || bulkOperation?.rootObjectCount || 0,
+    );
+    const processedCount = Number(history.processedCount || 0) + failureCount;
+
+    if (bulkOperation?.partialDataUrl) {
+      await storeOperationRepository.failPartialForLease(operationId, leaseOwner, {
+        errorCode: bulkOperation?.errorCode || "BULK_EDIT_FAILED_PARTIAL",
+        errorMessage: reason,
+        processedCount,
+        successCount: Number(history.processedCount || 0),
+        failureCount,
+      });
+    } else {
+      await storeOperationRepository.failForLease(operationId, leaseOwner, {
+        errorCode: bulkOperation?.errorCode || "BULK_EDIT_FAILED",
+        errorMessage: reason,
+      });
+    }
+
+    await operationFailureRepository.create({
+      shop: history.shop,
+      operationId,
+      entityId: history.id,
+      errorCode: bulkOperation?.errorCode || "BULK_EDIT_FAILED",
+      errorMessage: reason,
+    }).catch(() => {});
+
+    await operationEventRepository.emit({
+      shop: history.shop,
+      operationId,
+      type: "OPERATION_FAILED",
+      payload: {
+        stage,
+        reason,
+        bulkOperationId: bulkOperation?.id || history.bulkOperationId || null,
+      },
+    }).catch(() => {});
+
+    await storeOperationalStateRepository.clearActiveWrite(history.shop, operationId);
+  }
 }
 
 async function markProcessingBatchStatus(batchId, status) {
@@ -325,14 +399,17 @@ async function applyBulkMirrorUpdates(history, bulkOperation) {
   });
   const activeMirrorBatchId = store?.activeMirrorBatchId || null;
 
-  const records = await fetchBulkOperationData(bulkOperation.url, history.shop);
-  if (!records.length) {
-    return;
-  }
+  let processedRecords = 0;
+  for await (const records of streamBulkOperationDataChunks(
+    bulkOperation.url,
+    history.shop,
+  )) {
+    if (!records.length) continue;
+    processedRecords += records.length;
 
-await prisma.$transaction(
-  async (tx) => {
-    for (const { product, variants } of records) {
+    await prisma.$transaction(
+      async (tx) => {
+        for (const { product, variants } of records) {
       const existing = await tx.product.findFirst({
         where: {
           shop: product.shop,
@@ -418,9 +495,14 @@ await prisma.$transaction(
         });
       }
     }
-  },
-  { maxWait: 10_000, timeout: 60_000 },
-);
+      },
+      { maxWait: 10_000, timeout: 60_000 },
+    );
+  }
+
+  if (!processedRecords) {
+    return;
+  }
 
   await clearKeyCaches(`${history.shop}:ProductFetch`);
   await clearKeyCaches(`${history.shop}:productTypes:`);
@@ -465,6 +547,7 @@ async function finalizeEditSuccess(history) {
       shop: history.shop,
       source: "bulk_edit_continuation",
       executionId: history.executionIdentity || history.id,
+      operationId: getHistoryOperationId(history),
     });
 
     return { continued: true };
@@ -502,6 +585,35 @@ async function finalizeEditSuccess(history) {
       },
     },
   });
+
+  const operationId = getHistoryOperationId(history);
+  if (operationId) {
+    const leaseOwner = `bulkEditFinalizer:${operationId}`;
+    const leaseAcquired = await acquireOperationFinalizerLease(operationId, leaseOwner);
+    if (!leaseAcquired) {
+      throw new Error("Operation lease is held by another worker");
+    }
+
+    await storeOperationRepository.completeForLease(operationId, leaseOwner);
+    await storeOperationRepository.updateById(operationId, {
+      processedCount: nextProcessedCount,
+      successCount: nextProcessedCount,
+      failureCount: 0,
+    });
+    assertOperationCircuitClosed({
+      processedCount: nextProcessedCount,
+      failureCount: 0,
+    });
+    await operationEventRepository.emit({
+      shop: history.shop,
+      operationId,
+      type: "OPERATION_COMPLETED",
+      payload: {
+        processedCount: nextProcessedCount,
+      },
+    });
+    await storeOperationalStateRepository.clearActiveWrite(history.shop, operationId);
+  }
 
   await finalizeRecurringRunFromHistory({
     historyId: history.id,
@@ -678,99 +790,115 @@ export async function handleProductEditOperation({ bulkOperationId, shop = null 
   }
 }
 
-export async function fetchBulkOperationData(url, shop) {
+function parseBulkOperationLine(line, shop) {
+  const parsed = JSON.parse(line);
+  const product = parsed?.data?.productSet?.product;
+  if (!product?.id) return null;
+
+  const variants = asArray(product?.variants?.edges)
+    .map((edge) => edge?.node)
+    .filter((node) => node?.id)
+    .map((node) => ({
+      id: node.id,
+      title: node.title ?? null,
+      sku: node.sku ?? null,
+      barcode: node.barcode ?? null,
+      price: node.price != null ? Number(node.price) : null,
+      compareAtPrice: node.compareAtPrice != null ? Number(node.compareAtPrice) : null,
+      inventoryQuantity: node.inventoryQuantity != null ? Number(node.inventoryQuantity) : null,
+      inventoryPolicy: node.inventoryPolicy ?? null,
+      taxable: node.taxable ?? null,
+      taxCode: node.taxCode ?? null,
+      position: node.position != null ? Number(node.position) : null,
+      selectedOptionsJson: node.selectedOptions ?? null,
+      cost: node.inventoryItem?.unitCost?.amount != null
+        ? Number(node.inventoryItem.unitCost.amount) : null,
+      countryOfOrigin: node.inventoryItem?.countryCodeOfOrigin ?? null,
+      hsTariffCode: node.inventoryItem?.harmonizedSystemCode ?? null,
+      weight: node.inventoryItem?.measurement?.weight?.value != null
+        ? Number(node.inventoryItem.measurement.weight.value) : null,
+      weightUnit: node.inventoryItem?.measurement?.weight?.unit ?? null,
+      option1Value: node.selectedOptions?.[0]?.value ?? null,
+      option2Value: node.selectedOptions?.[1]?.value ?? null,
+      option3Value: node.selectedOptions?.[2]?.value ?? null,
+      physicalProduct: node.inventoryItem?.requiresShipping ?? null,
+      tracked: node.inventoryItem?.tracked ?? null,
+      profitMargin: null,
+    }));
+
+  return {
+    product: {
+      shop,
+      id: product.id,
+      title: product.title ?? null,
+      handle: product.handle ?? null,
+      status: product.status ?? "ACTIVE",
+      productType: product.productType ?? null,
+      vendor: product.vendor ?? null,
+      templateSuffix: product.templateSuffix ?? null,
+      descriptionHtml: product.descriptionHtml ?? null,
+      descriptionText: product.descriptionHtml
+        ? product.descriptionHtml.replace(/<[^>]*>/g, " ").replace(/\s{2,}/g, " ").trim() || null
+        : null,
+      createdAt: product.createdAt ? new Date(product.createdAt) : null,
+      updatedAt: product.updatedAt ? new Date(product.updatedAt) : null,
+      publishedAt: product.publishedAt ? new Date(product.publishedAt) : null,
+      tags: Array.isArray(product.tags) ? product.tags : [],
+      categoryId: product.category?.id ?? null,
+      categoryName: product.category?.name ?? null,
+      seoTitle: product.seo?.title ?? null,
+      seoDescription: product.seo?.description ?? null,
+      totalInventory: product.totalInventory != null ? Number(product.totalInventory) : null,
+      featuredImageUrl: product.featuredImage?.url ?? null,
+      featuredImageAltText: product.featuredImage?.altText ?? null,
+      optionsJson: product.options ?? null,
+      collectionsJson: asArray(product?.collections?.edges).map(({ node }) => ({
+        id: node?.id ?? null,
+        title: node?.title ?? null,
+      })),
+      option1Name: product.options?.[0]?.name ?? null,
+      option2Name: product.options?.[1]?.name ?? null,
+      option3Name: product.options?.[2]?.name ?? null,
+      variantCount: variants.length,
+      visibleOnlineStore: null,
+    },
+    variants,
+  };
+}
+
+export async function* streamBulkOperationDataChunks(url, shop, chunkSize = 100) {
   const response = await axios.get(url, {
-    responseType: "text",
+    responseType: "stream",
     timeout: 120000,
     maxContentLength: Infinity,
     maxBodyLength: Infinity,
   });
+  const reader = createInterface({
+    input: response.data,
+    crlfDelay: Infinity,
+  });
+  let chunk = [];
 
-  const operations = [];
-  const lines = response.data.split("\n").filter(Boolean);
+  for await (const line of reader) {
+    if (!line) continue;
 
-  for (const line of lines) {
     try {
-      const parsed = JSON.parse(line);
-      const product = parsed?.data?.productSet?.product;
-      if (!product?.id) continue;
+      const record = parseBulkOperationLine(line, shop);
+      if (!record) continue;
 
-      // Extract nested variants from edges
-      const variants = asArray(product?.variants?.edges)
-        .map((edge) => edge?.node)
-        .filter((node) => node?.id)
-        .map((node) => ({
-          id: node.id,
-          title: node.title ?? null,
-          sku: node.sku ?? null,
-          barcode: node.barcode ?? null,
-          price: node.price != null ? Number(node.price) : null,
-          compareAtPrice: node.compareAtPrice != null ? Number(node.compareAtPrice) : null,
-          inventoryQuantity: node.inventoryQuantity != null ? Number(node.inventoryQuantity) : null,
-          inventoryPolicy: node.inventoryPolicy ?? null,
-          taxable: node.taxable ?? null,
-          taxCode: node.taxCode ?? null,
-          position: node.position != null ? Number(node.position) : null,
-          selectedOptionsJson: node.selectedOptions ?? null,
-          cost: node.inventoryItem?.unitCost?.amount != null
-            ? Number(node.inventoryItem.unitCost.amount) : null,
-          countryOfOrigin: node.inventoryItem?.countryCodeOfOrigin ?? null,
-          hsTariffCode: node.inventoryItem?.harmonizedSystemCode ?? null,
-          weight: node.inventoryItem?.measurement?.weight?.value != null
-            ? Number(node.inventoryItem.measurement.weight.value) : null,
-          weightUnit: node.inventoryItem?.measurement?.weight?.unit ?? null,
-          option1Value: node.selectedOptions?.[0]?.value ?? null,
-          option2Value: node.selectedOptions?.[1]?.value ?? null,
-          option3Value: node.selectedOptions?.[2]?.value ?? null,
-          physicalProduct: node.inventoryItem?.requiresShipping ?? null,
-          tracked: node.inventoryItem?.tracked ?? null,
-          profitMargin: null,
-        }));
-
-      operations.push({
-        product: {
-          shop,
-          id: product.id,
-          title: product.title ?? null,
-          handle: product.handle ?? null,
-          status: product.status ?? "ACTIVE",
-          productType: product.productType ?? null,
-          vendor: product.vendor ?? null,
-          templateSuffix: product.templateSuffix ?? null,
-          descriptionHtml: product.descriptionHtml ?? null,
-          descriptionText: product.descriptionHtml
-            ? product.descriptionHtml.replace(/<[^>]*>/g, " ").replace(/\s{2,}/g, " ").trim() || null
-            : null,
-          createdAt: product.createdAt ? new Date(product.createdAt) : null,
-          updatedAt: product.updatedAt ? new Date(product.updatedAt) : null,
-          publishedAt: product.publishedAt ? new Date(product.publishedAt) : null,
-          tags: Array.isArray(product.tags) ? product.tags : [],
-          categoryId: product.category?.id ?? null,
-          categoryName: product.category?.name ?? null,
-          seoTitle: product.seo?.title ?? null,
-          seoDescription: product.seo?.description ?? null,
-          totalInventory: product.totalInventory != null ? Number(product.totalInventory) : null,
-          featuredImageUrl: product.featuredImage?.url ?? null,
-          featuredImageAltText: product.featuredImage?.altText ?? null,
-          optionsJson: product.options ?? null,
-          collectionsJson: asArray(product?.collections?.edges).map(({ node }) => ({
-            id: node?.id ?? null,
-            title: node?.title ?? null,
-          })),
-          option1Name: product.options?.[0]?.name ?? null,
-          option2Name: product.options?.[1]?.name ?? null,
-          option3Name: product.options?.[2]?.name ?? null,
-          variantCount: variants.length,
-          visibleOnlineStore: null,
-        },
-        variants,
-      });
+      chunk.push(record);
+      if (chunk.length >= chunkSize) {
+        yield chunk;
+        chunk = [];
+      }
     } catch (_error) {
       // skip malformed lines
     }
   }
 
-  return operations;
+  if (chunk.length) {
+    yield chunk;
+  }
 }
 
 async function processNextEdit(shop) {
@@ -786,6 +914,7 @@ async function processNextEdit(shop) {
       status: true,
       executionIdentity: true,
       undo: true,
+      batch: true,
     },
   });
 
@@ -807,6 +936,7 @@ async function processNextEdit(shop) {
     shop: nextEdit.shop,
     source: "bulk_edit_followup",
     executionId: nextEdit.executionIdentity || nextEdit.id,
+    operationId: asObject(nextEdit.batch).operationId || null,
   });
 }
 

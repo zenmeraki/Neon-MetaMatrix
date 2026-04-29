@@ -9,6 +9,9 @@ import {
   BULK_UNDO_STATES,
   normalizeUndoState,
 } from "../../services/bulkEditExecutionStateService.js";
+import { scheduledEditRunRepository } from "../../repositories/scheduledEditRunRepository.js";
+import { addDeadLetterJob } from "../Queues/deadLetterQueue.js";
+import { OPERATION_QUEUE_NAMES } from "../Queues/operationQueueRegistry.js";
 
 async function claimScheduledEdit(historyId, shop) {
   const result = await prisma.editHistory.updateMany({
@@ -59,10 +62,11 @@ async function claimScheduledUndo(historyId, shop) {
 }
 
 const scheduledEditWorker = new Worker(
-  "scheduled-edit-queue",
+  process.env.SCHEDULED_EDIT_QUEUE || OPERATION_QUEUE_NAMES.SCHEDULED_DISPATCH,
   async (job) => {
     const historyId = job.data?.historyId;
     const shop = job.data?.shop;
+    const scheduledRunId = job.data?.scheduledRunId || null;
     const isUndo = job.name === "undo-task";
 
     if (!historyId || !shop) {
@@ -81,8 +85,15 @@ const scheduledEditWorker = new Worker(
         };
       }
 
-      return updateProducts(historyId, isUndo, shop);
+      return updateProducts(historyId, isUndo, shop, scheduledRunId);
     } catch (error) {
+      if (scheduledRunId) {
+        await scheduledEditRunRepository.markFailed(scheduledRunId, {
+          errorCode: error.code || "SCHEDULED_EDIT_FAILED",
+          errorMessage: error.message,
+        }).catch(() => {});
+      }
+
       await logWorkerError({
         shop,
         err: error,
@@ -94,7 +105,7 @@ const scheduledEditWorker = new Worker(
   { connection, concurrency: 1 },
 );
 
-scheduledEditWorker.on("failed", (job, error) => {
+scheduledEditWorker.on("failed", async (job, error) => {
   logger.error("Scheduled edit worker failed", {
     worker: "scheduledEditWorker",
     jobId: job?.id,
@@ -102,6 +113,12 @@ scheduledEditWorker.on("failed", (job, error) => {
     historyId: job?.data?.historyId,
     message: error.message,
   });
+
+  await addDeadLetterJob("scheduled_failed", {
+    job,
+    error,
+    reason: "scheduled_edit_failed",
+  }).catch(() => {});
 });
 
 export default scheduledEditWorker;

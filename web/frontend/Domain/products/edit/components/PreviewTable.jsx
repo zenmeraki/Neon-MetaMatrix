@@ -1,4 +1,4 @@
-import React, { useEffect} from "react";
+import React from "react";
 import {
   Card,
   DataTable,
@@ -11,29 +11,26 @@ import {
   Box,
   SkeletonBodyText,
   EmptyState,
-  Banner,
 } from "@shopify/polaris";
 import { useTranslation } from "react-i18next";
 
-/**
- * ✅ Safely format values for rendering
- */
+const FALLBACK_IMAGE = "https://www.otithee.com/img/fallback/fallback-2.png";
+
 const formatValue = (value) => {
-  if (value === null || value === undefined) return "-**";
+  if (value === null || value === undefined || value === "") return "-";
 
   if (typeof value === "object") {
     return value.text ?? value.label ?? value.value ?? JSON.stringify(value);
   }
+
   return String(value);
 };
 
-/**
- * ✅ Fixed column widths
- */
 const COLUMN_WIDTHS = {
   product: "280px",
   variant: "220px",
-  change: "320px", // slightly wider for full values
+  field: "180px",
+  value: "240px",
 };
 
 const PreviewTable = ({
@@ -45,27 +42,12 @@ const PreviewTable = ({
   field,
 }) => {
   const { t } = useTranslation();
-
-  const { page, totalPages, total, limit } = pagination;
+  const { page = 1, totalPages = 1, total, limit = 10 } = pagination || {};
   const itemsPerPage = limit;
-// useEffect(() => {
-//   console.log("🟣 PreviewTable field:", field);
-//   console.log("🟣 Products:", products);
+  const fieldLabel = t(`fieldLabels.${field}`, {
+    defaultValue: formatValue(field),
+  });
 
-//   if (products?.length > 0) {
-//     console.log("🟣 Sample product:", products[0]);
-
-//     if (products[0].variants?.length > 0) {
-//       console.log(
-//         "🟣 Sample variant:",
-//         products[0].variants[0]
-//       );
-//     }
-//   }
-// }, [products, field]);
-  // ===============================
-  // Loading state
-  // ===============================
   if (loading) {
     return (
       <Card>
@@ -76,9 +58,6 @@ const PreviewTable = ({
     );
   }
 
-  // ===============================
-  // Empty state
-  // ===============================
   if (!products || products.length === 0) {
     return (
       <Card>
@@ -94,113 +73,131 @@ const PreviewTable = ({
     );
   }
 
-  // ===============================
-  // Table configuration
-  // ===============================
   const headings = isVariant
-    ? [t("table.product"), t("table.variant"), t("table.change")]
-    : [t("table.product"), t("table.change")];
+    ? [
+        t("table.product"),
+        t("table.variant"),
+        t("table.field"),
+        t("table.current", { defaultValue: "Current" }),
+        t("table.new"),
+      ]
+    : [
+        t("table.product"),
+        t("table.field"),
+        t("table.current", { defaultValue: "Current" }),
+        t("table.new"),
+      ];
 
   const columnContentTypes = isVariant
-    ? ["text", "text", "text"]
-    : ["text", "text"];
+    ? ["text", "text", "text", "text", "text"]
+    : ["text", "text", "text", "text"];
 
-  // ===============================
-  // Build rows
-  // ===============================
-  const rows = products.map((product) => {
-    const productCell = (
-      <Box width={COLUMN_WIDTHS.product} maxWidth={COLUMN_WIDTHS.product}>
-        <InlineStack gap="300" wrap={false} blockAlign="center">
-          <Thumbnail
-            source={
-              product.img ||
-              "https://www.otithee.com/img/fallback/fallback-2.png"
-            }
-            alt={product.title}
-            size="small"
-          />
-          <Text truncate variant="bodyMd" fontWeight="medium">
-            {formatValue(product.title)}
-          </Text>
-        </InlineStack>
-      </Box>
-    );
+  const buildProductCell = (product) => (
+    <Box width={COLUMN_WIDTHS.product} maxWidth={COLUMN_WIDTHS.product}>
+      <InlineStack gap="300" wrap={false} blockAlign="center">
+        <Thumbnail
+          source={product.img || FALLBACK_IMAGE}
+          alt={formatValue(product.title)}
+          size="small"
+        />
+        <Text truncate variant="bodyMd" fontWeight="medium">
+          {formatValue(product.title)}
+        </Text>
+      </InlineStack>
+    </Box>
+  );
 
-    const variantCell = (
+  const buildFieldCell = () => (
+    <Box width={COLUMN_WIDTHS.field} maxWidth={COLUMN_WIDTHS.field}>
+      <Text truncate variant="bodyMd" fontWeight="semibold">
+        {fieldLabel}
+      </Text>
+    </Box>
+  );
+
+  const buildCurrentCell = (value) => (
+    <Box width={COLUMN_WIDTHS.value} maxWidth={COLUMN_WIDTHS.value}>
+      <Text
+        as="span"
+        tone="subdued"
+        textDecorationLine="line-through"
+        style={{ wordBreak: "break-word", whiteSpace: "normal" }}
+      >
+        {formatValue(value)}
+      </Text>
+    </Box>
+  );
+
+  const buildNewCell = (value) => (
+    <Box width={COLUMN_WIDTHS.value} maxWidth={COLUMN_WIDTHS.value}>
+      <Text
+        as="span"
+        variant="bodyMd"
+        fontWeight="semibold"
+        tone="success"
+        style={{ wordBreak: "break-word", whiteSpace: "normal" }}
+      >
+        {formatValue(value)}
+      </Text>
+    </Box>
+  );
+
+  const rows = products.flatMap((product) => {
+    const productCell = buildProductCell(product);
+
+    if (!isVariant) {
+      return [
+        [
+          productCell,
+          buildFieldCell(),
+          buildCurrentCell(product.oldValue),
+          buildNewCell(product.newValue),
+        ],
+      ];
+    }
+
+    const variants = Array.isArray(product.variants) ? product.variants : [];
+
+    if (variants.length === 0) {
+      return [
+        [
+          productCell,
+          <Box width={COLUMN_WIDTHS.variant} maxWidth={COLUMN_WIDTHS.variant}>
+            <Text tone="subdued">-</Text>
+          </Box>,
+          buildFieldCell(),
+          buildCurrentCell(product.oldValue),
+          buildNewCell(product.newValue),
+        ],
+      ];
+    }
+
+    return variants.map((variant) => [
+      buildProductCell(product),
       <Box width={COLUMN_WIDTHS.variant} maxWidth={COLUMN_WIDTHS.variant}>
-        <InlineStack gap="200" wrap={true}>
-          {product.variants?.map((variant) => (
-            <Badge key={variant.id} tone="info">
-              <Text truncate>{formatValue(variant.title)}</Text>
-            </Badge>
-          ))}
-        </InlineStack>
-      </Box>
-    );
-
-    const changeCell = isVariant ? (
-      <Box width={COLUMN_WIDTHS.change} maxWidth={COLUMN_WIDTHS.change}>
-        <BlockStack gap="200">
-          {product.variants?.map((variant) => (
-            <InlineStack key={variant.id} gap="200" align="start">
-              <Text
-                as="span"
-                tone="subdued"
-                textDecorationLine="line-through"
-                style={{ wordBreak: "break-word", whiteSpace: "normal" }}
-              >
-                {formatValue(variant.oldValue)}
-              </Text>
-              <Text
-                as="span"
-                variant="bodyMd"
-                fontWeight="semibold"
-                tone="success"
-                style={{ wordBreak: "break-word", whiteSpace: "normal" }}
-              >
-                {formatValue(variant.newValue)}
-              </Text>
-            </InlineStack>
-          ))}
-        </BlockStack>
-      </Box>
-    ) : (
-      <Box width={COLUMN_WIDTHS.change} maxWidth={COLUMN_WIDTHS.change}>
-        <InlineStack gap="200" align="start">
-          <Text
-            as="span"
-            tone="subdued"
-            textDecorationLine="line-through"
-            style={{ wordBreak: "break-word", whiteSpace: "normal" }}
-          >
-            {formatValue(product.oldValue)}
-          </Text>
-          <Text
-            as="span"
-            variant="bodyMd"
-            fontWeight="semibold"
-            tone="success"
-            style={{ wordBreak: "break-word", whiteSpace: "normal" }}
-          >
-            {formatValue(product.newValue)}
-          </Text>
-        </InlineStack>
-      </Box>
-    );
-
-    return isVariant
-      ? [productCell, variantCell, changeCell]
-      : [productCell, changeCell];
+        <Badge tone="info">
+          <Text truncate>{formatValue(variant.title)}</Text>
+        </Badge>
+      </Box>,
+      buildFieldCell(),
+      buildCurrentCell(variant.oldValue),
+      buildNewCell(variant.newValue),
+    ]);
   });
 
-  // ===============================
-  // Render table (horizontal scroll)
-  // ===============================
+  const totalItems = total ?? products.length;
+  const showingFrom = totalItems > 0 ? (page - 1) * itemsPerPage + 1 : 0;
+  const showingTo = Math.min(page * itemsPerPage, totalItems);
+
   return (
     <BlockStack gap="400">
       <Card padding="0">
-        <Box overflowX="auto" width="100%" paddingInlineStart="800" paddingBlockStart="400">
+        <Box
+          overflowX="auto"
+          width="100%"
+          paddingInlineStart="800"
+          paddingBlockStart="400"
+        >
           <DataTable
             columnContentTypes={columnContentTypes}
             headings={headings}
@@ -208,7 +205,6 @@ const PreviewTable = ({
             hoverable
           />
         </Box>
-
 
         <Box
           background="bg-surface-secondary"
@@ -220,15 +216,15 @@ const PreviewTable = ({
             <Text as="p" variant="bodySm" tone="subdued">
               {t("Showing")}{" "}
               <Text as="span" fontWeight="medium">
-                {(page - 1) * itemsPerPage + 1}
+                {showingFrom}
               </Text>{" "}
               {t("to")}{" "}
               <Text as="span" fontWeight="medium">
-                {Math.min(page * itemsPerPage, total ?? products.length)}
+                {showingTo}
               </Text>{" "}
               {t("of")}{" "}
               <Text as="span" fontWeight="medium">
-                {total ?? products.length}
+                {totalItems}
               </Text>{" "}
               {t("products")}
             </Text>

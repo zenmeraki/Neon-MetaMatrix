@@ -4,6 +4,12 @@ import { resolveCanonicalProductTarget } from "../services/productService/produc
 import { errorResponse } from "../utils/responseUtils.js";
 import { logApiError } from "../utils/errorLogUtils.js";
 import { prisma } from "../config/database.js";
+import {
+  buildHotQueryCacheKey,
+  getHotQueryCache,
+  setHotQueryCache,
+} from "../services/filterPlanner/hotQueryCache.js";
+import { choosePlanner } from "../services/filterPlanner/queryCostPlannerService.js";
 
 const TARGET_OWNER_TYPE = "AD_HOC_PRODUCT_TARGET";
 const MAX_EXCLUDED_IDS = 10_000;
@@ -207,7 +213,7 @@ export const countProductTarget = async (req, res) => {
 
     const store = await prisma.store.findUnique({
       where: { shopUrl: session.shop },
-      select: { activeMirrorBatchId: true },
+      select: { activeMirrorBatchId: true, storeTotalProducts: true },
     });
 
     if (!store?.activeMirrorBatchId) {
@@ -224,6 +230,25 @@ export const countProductTarget = async (req, res) => {
       filters,
       session.shop
     );
+    const countCacheKey = buildHotQueryCacheKey({
+      shop: session.shop,
+      catalogBatchId: store.activeMirrorBatchId,
+      namespace: "target_count",
+      ast: filters,
+      page: 1,
+      limit: 1,
+      sort: normalizeSort(req.body?.sort),
+      extra: {
+        search:
+          typeof req.body?.search === "string" ? req.body.search.trim() : "",
+      },
+    });
+    const cachedCount = await getHotQueryCache(countCacheKey);
+
+    if (cachedCount) {
+      return res.status(200).json(cachedCount);
+    }
+
     const where = {
       AND: [baseWhere, { mirrorBatchId: store.activeMirrorBatchId }],
     };
@@ -251,12 +276,20 @@ export const countProductTarget = async (req, res) => {
       }),
     ]);
 
-    return res.status(200).json({
+    const result = {
       total,
       vendorsCount: vendorRows.length,
       typesCount: typeRows.length,
       inStockCount,
-    });
+      queryPlan: choosePlanner({
+        estimatedRows: store.storeTotalProducts || total,
+        hasClickHouse: Boolean(process.env.CLICKHOUSE_URL),
+      }),
+    };
+
+    await setHotQueryCache(countCacheKey, result);
+
+    return res.status(200).json(result);
   } catch (err) {
     await logApiError({
       shop: session?.shop,

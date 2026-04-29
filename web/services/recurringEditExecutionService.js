@@ -12,6 +12,7 @@ import ProductBulkService from "./productService/productBulkEditService.js";
 import { addbulkEditJob } from "../Jobs/Queues/bulkEditJob.js";
 import { createMultiLanguage } from "../utils/googleTranslator.js";
 import { getCurrentBulkOperationStatus } from "../utils/bulkOperationHelper.js";
+import { applyQueueBackpressure } from "../Jobs/Queues/queueBackpressure.js";
 import {
   acquireExclusiveShopWork,
   releaseExclusiveShopWork,
@@ -20,9 +21,11 @@ import {
 export const RECURRING_EDIT_EXECUTION_QUEUE =
   process.env.RECURRING_EDIT_EXECUTION_QUEUE || "recurring-edit-execution";
 
-const recurringEditExecutionQueue = new Queue(RECURRING_EDIT_EXECUTION_QUEUE, {
-  connection,
-});
+const recurringEditExecutionQueue = applyQueueBackpressure(
+  new Queue(RECURRING_EDIT_EXECUTION_QUEUE, {
+    connection,
+  }),
+);
 
 // ✅ Keep advisory lock only for transactional use inside prisma.$transaction
 async function tryAdvisoryLock(client, lockKey, transactional = true) {

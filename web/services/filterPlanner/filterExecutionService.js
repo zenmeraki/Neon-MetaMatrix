@@ -7,6 +7,11 @@ import { Prisma } from "../../generated/prisma/index.js";
 import { buildPrismaProductOrderBy, buildQueryPlan } from "./queryPlanner.js";
 import { buildClickHouseProductIdQuery } from "./clickhouseCompiler.js";
 import { bitmapCacheService } from "./bitmapCacheService.js";
+import {
+  buildHotQueryCacheKey,
+  getHotQueryCache,
+  setHotQueryCache,
+} from "./hotQueryCache.js";
 
 const BITMAP_CACHE_OPERATIONS = new Set([
   "preview",
@@ -271,7 +276,27 @@ export async function executeProductIdQuery({
     throw new Error("ClickHouse is not configured");
   }
 
-  return executeWithBitmapCache({
+  const hotCacheKey = buildHotQueryCacheKey({
+    shop,
+    catalogBatchId: mirrorBatchId,
+    namespace: "product_ids_page",
+    ast: plan.ast,
+    page: plan.pagination.page,
+    limit: plan.pagination.limit,
+    sort: plan.sort,
+    extra: { operation },
+  });
+  const cachedHotResult = await getHotQueryCache(hotCacheKey);
+
+  if (cachedHotResult) {
+    return {
+      ...cachedHotResult,
+      engine: `${cachedHotResult.engine || plan.engine}+hot_cache`,
+      reason: "hot_query_cache_hit",
+    };
+  }
+
+  const result = await executeWithBitmapCache({
     plan,
     shop,
     mirrorBatchId,
@@ -284,6 +309,10 @@ export async function executeProductIdQuery({
       return executePostgresPlan(plan);
     },
   });
+
+  await setHotQueryCache(hotCacheKey, result);
+
+  return result;
 }
 
 export async function executeFilter({

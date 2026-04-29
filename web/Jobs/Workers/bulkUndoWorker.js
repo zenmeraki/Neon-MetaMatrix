@@ -24,8 +24,9 @@ import {
   buildExecutionError,
   normalizeUndoState,
 } from "../../services/bulkEditExecutionStateService.js";
+import { OPERATION_QUEUE_NAMES } from "../Queues/operationQueueRegistry.js";
 
-const QUEUE_NAME = process.env.UNDO_QUEUE || "bulk-undo";
+const QUEUE_NAME = process.env.UNDO_QUEUE || OPERATION_QUEUE_NAMES.UNDO_EXECUTE;
 const WORKER_NAME = "bulkUndoWorker";
 
 class RetryableBulkUndoError extends Error {

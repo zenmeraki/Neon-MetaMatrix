@@ -104,6 +104,40 @@ function getProgressValue(item, primaryStatus) {
   return 0;
 }
 
+function getDateGroupLabel(value, t) {
+  if (!value) {
+    return t("historyGroupUnknown", { defaultValue: "Unknown date" });
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return t("historyGroupUnknown", { defaultValue: "Unknown date" });
+  }
+
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+
+  const normalize = (input) =>
+    new Date(input.getFullYear(), input.getMonth(), input.getDate()).getTime();
+
+  const normalizedDate = normalize(date);
+
+  if (normalizedDate === normalize(today)) {
+    return t("historyGroupToday", { defaultValue: "Today" });
+  }
+
+  if (normalizedDate === normalize(yesterday)) {
+    return t("historyGroupYesterday", { defaultValue: "Yesterday" });
+  }
+
+  return date.toLocaleDateString(undefined, {
+    month: "long",
+    day: "numeric",
+    year: date.getFullYear() === today.getFullYear() ? undefined : "numeric",
+  });
+}
+
 const ExportTable = ({
   selectedType = "Manual export",
   onExportSuccess,
@@ -244,9 +278,11 @@ const ExportTable = ({
     );
   };
 
-  const historyRowMarkup = useMemo(
-    () =>
-      filteredHistories.map((item, index) => {
+  const groupedHistoryRows = useMemo(
+    () => {
+      const groups = new Map();
+
+      filteredHistories.forEach((item, index) => {
         const id = item.id || item._id;
         const primaryStatus = getPrimaryStatus(item, t);
         const filename = item.filename || "Untitled export";
@@ -258,8 +294,11 @@ const ExportTable = ({
           item?.progressSummary?.label || primaryStatus.label;
         const supportDetail =
           item?.supportStatus?.failureStage || primaryStatus.detail || null;
+        const timeValue = item.completedAt || item.createdAt;
+        const groupLabel = getDateGroupLabel(timeValue, t);
+        const groupRows = groups.get(groupLabel) || [];
 
-        return (
+        groupRows.push(
           <IndexTable.Row id={id} key={id} position={index}>
             <IndexTable.Cell>
               <BlockStack gap="100">
@@ -325,7 +364,14 @@ const ExportTable = ({
             </IndexTable.Cell>
           </IndexTable.Row>
         );
-      }),
+        groups.set(groupLabel, groupRows);
+      });
+
+      return Array.from(groups.entries()).map(([label, rows]) => ({
+        label,
+        rows,
+      }));
+    },
     [downloadingItems, filteredHistories, t],
   );
 
@@ -383,23 +429,32 @@ const ExportTable = ({
             </EmptyState>
           </Box>
         ) : (
-          <Box paddingInlineStart="600">
-            <IndexTable
-              resourceName={{ singular: "export", plural: "exports" }}
-              itemCount={filteredHistories.length}
-              selectable={false}
-              headings={[
-                { title: t("exportColumnTitle") },
-                { title: t("exportColumnProgress") },
-                { title: t("exportColumnType") },
-                { title: t("exportColumnStatus") },
-                { title: t("exportColumnTime") },
-                { title: t("exportColumnActions") },
-              ]}
-            >
-              {historyRowMarkup}
-            </IndexTable>
-          </Box>
+          <BlockStack gap="400">
+            {groupedHistoryRows.map((group) => (
+              <Box key={group.label} paddingInlineStart="600">
+                <Box paddingBlockStart="400" paddingBlockEnd="200">
+                  <Text as="h4" variant="headingSm">
+                    {group.label}
+                  </Text>
+                </Box>
+                <IndexTable
+                  resourceName={{ singular: "export", plural: "exports" }}
+                  itemCount={group.rows.length}
+                  selectable={false}
+                  headings={[
+                    { title: t("exportColumnTitle") },
+                    { title: t("exportColumnProgress") },
+                    { title: t("exportColumnType") },
+                    { title: t("exportColumnStatus") },
+                    { title: t("exportColumnTime") },
+                    { title: t("exportColumnActions") },
+                  ]}
+                >
+                  {group.rows}
+                </IndexTable>
+              </Box>
+            ))}
+          </BlockStack>
         )}
       </BlockStack>
     </Card>

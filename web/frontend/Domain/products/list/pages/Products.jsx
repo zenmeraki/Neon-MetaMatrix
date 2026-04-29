@@ -1,6 +1,7 @@
 import {
   Page,
   Text,
+  TextField,
   Banner,
   Card,
   Button,
@@ -10,16 +11,23 @@ import {
   Modal,
   Box,
   BlockStack,
-  SkeletonBodyText,
-  Badge,
 } from "@shopify/polaris";
+import { MenuHorizontalIcon } from "@shopify/polaris-icons";
 import { useMemo, useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { useTranslation } from "react-i18next";
 import { getTranslatedOperatorLabel } from "../utils/filterUtils";
-import ProductsFilters from "../components/ProductsFilters";
-import ProductsTable from "../components/ProductsTable";
+import ProductsFiltersBar from "../components/ProductsFiltersBar";
+import ProductsIndexTable from "../components/ProductsIndexTable";
+import ProductsPaginationFooter from "../components/ProductsPaginationFooter";
+import ProductPreviewDrawer from "../components/ProductPreviewDrawer";
+import ProductsSavedViews from "../components/ProductsSavedViews";
+import ProductsSearchBar from "../components/ProductsSearchBar";
+import ProductsSummaryStrip from "../components/ProductsSummaryStrip";
+import ProductsUndoBar from "../components/ProductsUndoBar";
+import SelectionCommandBar from "../components/SelectionCommandBar";
+import StickyBulkActionBar from "../components/StickyBulkActionBar";
 import useProducts from "../hooks/useProducts";
 import { useBulkTargetSelection } from "../hooks/useBulkTargetSelection";
 import { getFilterByKey } from "../constants";
@@ -44,6 +52,111 @@ const PRODUCT_LIST_SORT = {
   sortKey: PRODUCT_SORT_KEY,
   sortOrder: PRODUCT_SORT_ORDER,
 };
+const SAVED_SEGMENTS_STORAGE_KEY = "metamatrix:saved-product-segments";
+
+const INLINE_EDIT_TYPES = {
+  status: "Set status",
+  vendor: "Set text to value",
+  inventory: "Set to fixed value",
+};
+const QUERY_COST_THRESHOLDS = {
+  mediumRows: 250000,
+  highRows: 1000000,
+};
+const STATUS_FACET_VALUES = ["ACTIVE", "DRAFT", "ARCHIVED"];
+
+function getInlineInventoryLocationId(product) {
+  return (
+    product?.locationId ||
+    product?.inventoryLocationId ||
+    product?.defaultLocationId ||
+    product?.primaryLocationId ||
+    product?.variants?.[0]?.locationId ||
+    product?.variants?.[0]?.inventoryLocationId ||
+    null
+  );
+}
+
+function buildSegmentName({ filters = [], search = "", t }) {
+  const hasOutOfStock = filters.some(
+    (filter) =>
+      filter.field === "inventory_q" &&
+      ["=", "equalTo", "equals"].includes(String(filter.operator)) &&
+      String(filter.value) === "0"
+  );
+  const hasActive = filters.some(
+    (filter) =>
+      filter.field === "status" &&
+      String(filter.value).toUpperCase() === "ACTIVE"
+  );
+
+  if (hasOutOfStock && hasActive) {
+    return t("defaultOutOfStockActiveSegmentName", {
+      defaultValue: "Out-of-stock active products",
+    });
+  }
+
+  if (search?.trim()) {
+    return t("defaultSearchSegmentName", {
+      search: search.trim(),
+      defaultValue: `${search.trim()} products`,
+    });
+  }
+
+  return t("defaultFilteredSegmentName", {
+    defaultValue: "Filtered products",
+  });
+}
+
+function formatCompactNumber(value, language) {
+  const number = Number(value || 0);
+
+  if (number >= 1000000) {
+    return `${(number / 1000000).toLocaleString(language, {
+      maximumFractionDigits: 1,
+    })}M`;
+  }
+
+  if (number >= 1000) {
+    return `${(number / 1000).toLocaleString(language, {
+      maximumFractionDigits: 1,
+    })}K`;
+  }
+
+  return number.toLocaleString(language);
+}
+
+function hasOutOfStockFilter(filters = []) {
+  return filters.some(
+    (filter) =>
+      filter.field === "inventory_q" &&
+      ["=", "equalTo", "equals"].includes(String(filter.operator)) &&
+      String(filter.value) === "0"
+  );
+}
+
+function estimateStatusFacets({ products = [], total = 0, language }) {
+  const counts = STATUS_FACET_VALUES.reduce(
+    (acc, status) => ({ ...acc, [status]: 0 }),
+    {}
+  );
+
+  products.forEach((product) => {
+    const status = String(product?.status || "").toUpperCase();
+    if (counts[status] !== undefined) {
+      counts[status] += 1;
+    }
+  });
+
+  const pageTotal = products.length || 0;
+  const scale = pageTotal > 0 ? Number(total || 0) / pageTotal : 0;
+
+  return STATUS_FACET_VALUES.map((status) => ({
+    status,
+    count: Math.round((counts[status] || 0) * scale),
+    label: Math.round((counts[status] || 0) * scale).toLocaleString(language),
+  }));
+}
 
 function getSyncState({ syncStatus, loading }) {
   if (loading) {
@@ -90,7 +203,23 @@ function getSyncState({ syncStatus, loading }) {
   return "unknown";
 }
 
-function getSyncBannerView({ state, t }) {
+function getCatalogDriftCount(syncStatus) {
+  const possibleCounts = [
+    syncStatus?.changedSinceLastSyncCount,
+    syncStatus?.changedProductsSinceLastSync,
+    syncStatus?.driftCount,
+    syncStatus?.pendingProductChanges,
+    syncStatus?.unreconciledProductCount,
+  ];
+
+  return possibleCounts
+    .map((value) => Number(value))
+    .find((value) => Number.isFinite(value) && value > 0);
+}
+
+function getSyncBannerView({ state, syncStatus, t }) {
+  const driftCount = getCatalogDriftCount(syncStatus);
+
   switch (state) {
     case "checking":
       return {
@@ -110,10 +239,15 @@ function getSyncBannerView({ state, t }) {
     case "stale":
       return {
         tone: "warning",
-        message: t("syncStaleMessage", {
-          defaultValue:
-            "Catalog data may be stale. Sync before large edits or exports.",
-        }),
+        message: driftCount
+          ? t("syncStaleWithCountMessage", {
+              count: driftCount.toLocaleString(),
+              defaultValue: `${driftCount.toLocaleString()} products changed since last sync.`,
+            })
+          : t("syncStaleMessage", {
+              defaultValue:
+                "Products changed since last sync. Refresh catalog before large edits or exports.",
+            }),
       };
     case "failed":
       return {
@@ -139,19 +273,6 @@ function getSyncBannerView({ state, t }) {
         }),
       };
   }
-}
-
-function Metric({ label, value }) {
-  return (
-    <BlockStack gap="050">
-      <Text as="span" tone="subdued" variant="bodySm">
-        {label}
-      </Text>
-      <Text as="span" variant="headingMd">
-        {value}
-      </Text>
-    </BlockStack>
-  );
 }
 
 function getUndoState(action) {
@@ -193,7 +314,15 @@ export default function ProductsPage() {
   const search = useSelector(selectSearch);
   const { i18n, t } = useTranslation();
 
-  const { loading, error, hasFetched, fetchProducts } = useProducts();
+  const {
+    loading,
+    error,
+    hasFetched,
+    lastFetchedAt,
+    streamingState,
+    fetchProducts,
+  } =
+    useProducts();
 
   const [syncStatus, setSyncStatus] = useState(null);
   const [syncStatusLoading, setSyncStatusLoading] = useState(true);
@@ -205,6 +334,14 @@ export default function ProductsPage() {
   const [targetPreviewLoading, setTargetPreviewLoading] = useState(false);
   const [lastAction, setLastAction] = useState(null);
   const [undoingLastAction, setUndoingLastAction] = useState(false);
+  const [selectedView, setSelectedView] = useState(0);
+  const [selectionCommandNotice, setSelectionCommandNotice] = useState("");
+  const [savingInlineCell, setSavingInlineCell] = useState("");
+  const [previewProduct, setPreviewProduct] = useState(null);
+  const [savedSegments, setSavedSegments] = useState([]);
+  const [segmentName, setSegmentName] = useState("");
+  const [segmentNotice, setSegmentNotice] = useState("");
+  const [statusFacetBaseline, setStatusFacetBaseline] = useState(null);
 
   const [syncCompleted, setSyncCompleted] = useState(false);
   const wasSyncingRef = useRef(false);
@@ -265,6 +402,46 @@ export default function ProductsPage() {
       },
     ];
   }, [filterState, search]);
+
+  const hasActiveSegmentCriteria = effectiveFilters.length > 0;
+  const hasOutOfStockActiveFilter = hasOutOfStockFilter(effectiveFilters);
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(SAVED_SEGMENTS_STORAGE_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      setSavedSegments(Array.isArray(parsed) ? parsed : []);
+    } catch {
+      setSavedSegments([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!hasActiveSegmentCriteria) {
+      setSegmentName("");
+      return;
+    }
+
+    setSegmentName(
+      buildSegmentName({
+        filters: effectiveFilters,
+        search,
+        t,
+      })
+    );
+  }, [effectiveFilters, hasActiveSegmentCriteria, search, t]);
+
+  useEffect(() => {
+    if (hasActiveSegmentCriteria || !products.length || totalCount <= 0) return;
+
+    setStatusFacetBaseline(
+      estimateStatusFacets({
+        products,
+        total: totalCount,
+        language: i18n.language,
+      })
+    );
+  }, [hasActiveSegmentCriteria, i18n.language, products, totalCount]);
 
   const querySignature = useMemo(
     () =>
@@ -402,6 +579,7 @@ export default function ProductsPage() {
       })();
 
       dispatch(setFilters(updated));
+      setSelectedView(0);
     },
     [filterState, dispatch]
   );
@@ -409,17 +587,92 @@ export default function ProductsPage() {
   const onClearAll = useCallback(() => {
     dispatch(clearFilters());
     fetchProducts(1, [], PRODUCT_LIST_SORT);
+    setSelectedView(0);
   }, [dispatch, fetchProducts]);
+
+  const persistSavedSegments = useCallback((segments) => {
+    setSavedSegments(segments);
+    window.localStorage.setItem(
+      SAVED_SEGMENTS_STORAGE_KEY,
+      JSON.stringify(segments)
+    );
+  }, []);
+
+  const handleSaveCurrentSegment = useCallback(() => {
+    const name = segmentName.trim();
+
+    if (!name || !hasActiveSegmentCriteria) return;
+
+    const nextSegment = {
+      id: `segment-${Date.now()}`,
+      name,
+      filters: filterState.filter((filter) => filter.field !== "search"),
+      search: search?.trim() || "",
+      createdAt: new Date().toISOString(),
+      destinations: ["bulk_edit", "export", "scheduled_rule", "automatic_rule"],
+    };
+    const nextSegments = [
+      nextSegment,
+      ...savedSegments.filter(
+        (segment) => segment.name.toLowerCase() !== name.toLowerCase()
+      ),
+    ].slice(0, 10);
+
+    persistSavedSegments(nextSegments);
+    setSelectedView(1);
+    setSegmentNotice(
+      t("segmentSavedNotice", {
+        name,
+        defaultValue: `"${name}" saved for bulk edit, export, scheduled rules, and automatic rules.`,
+      })
+    );
+  }, [
+    filterState,
+    hasActiveSegmentCriteria,
+    persistSavedSegments,
+    savedSegments,
+    search,
+    segmentName,
+    t,
+  ]);
+
+  const handleSavedViewSelect = useCallback(
+    (index) => {
+      setSelectedView(index);
+
+      if (index === 0) {
+        dispatch(clearFilters());
+        dispatch(setSearch(""));
+        return;
+      }
+
+      const segment = savedSegments[index - 1];
+      if (!segment) return;
+
+      dispatch(setFilters(segment.filters || []));
+      dispatch(setSearch(segment.search || ""));
+      setSegmentName(segment.name || "");
+      setSegmentNotice(
+        t("segmentAppliedNotice", {
+          name: segment.name,
+          defaultValue: `"${segment.name}" applied.`,
+        })
+      );
+    },
+    [dispatch, savedSegments, t]
+  );
 
   const handleSearchChange = useCallback(
     (value) => {
       dispatch(setSearch(value));
+      setSelectedView(0);
     },
     [dispatch]
   );
 
   const handleSearchClear = useCallback(() => {
     dispatch(setSearch(""));
+    setSelectedView(0);
   }, [dispatch]);
 
   const appliedFilters = useMemo(
@@ -483,10 +736,6 @@ export default function ProductsPage() {
     fetchProducts(page - 1, effectiveFilters, PRODUCT_LIST_SORT);
   }, [effectiveFilters, fetchProducts, page]);
 
-  const goRefresh = useCallback(() => {
-    navigate("/refresh");
-  }, [navigate]);
-
   const isSyncInProgress =
     Boolean(syncStatus?.isProductSyncing) ||
     Boolean(syncStatus?.isProductInitialySyning);
@@ -494,7 +743,72 @@ export default function ProductsPage() {
     syncStatus,
     loading: syncStatusLoading,
   });
-  const syncBannerView = getSyncBannerView({ state: syncState, t });
+  const syncBannerView = getSyncBannerView({
+    state: syncState,
+    syncStatus,
+    t,
+  });
+  const estimatedScanRows = Number(
+    syncStatus?.storeTotalProducts ||
+      targetPreview?.estimatedScanRows ||
+      targetPreview?.total ||
+      totalCount ||
+      0
+  );
+  const queryCost = useMemo(() => {
+    const hasBroadTextFilter = effectiveFilters.some((filter) =>
+      ["contains", "does not contain"].includes(String(filter.operator))
+    );
+    const level =
+      estimatedScanRows >= QUERY_COST_THRESHOLDS.highRows || hasBroadTextFilter
+        ? "HIGH"
+        : estimatedScanRows >= QUERY_COST_THRESHOLDS.mediumRows ||
+          effectiveFilters.length >= 3
+        ? "MEDIUM"
+        : "LOW";
+
+    return {
+      level,
+      tone:
+        level === "HIGH" ? "critical" : level === "MEDIUM" ? "warning" : "success",
+      estimatedScanLabel: formatCompactNumber(estimatedScanRows, i18n.language),
+    };
+  }, [effectiveFilters, estimatedScanRows, i18n.language]);
+  const facetStats = useMemo(() => {
+    const currentFacets = estimateStatusFacets({
+      products,
+      total: targetPreview?.total ?? totalCount,
+      language: i18n.language,
+    });
+    const baseline =
+      statusFacetBaseline ||
+      estimateStatusFacets({
+        products,
+        total: totalCount,
+        language: i18n.language,
+      });
+
+    return currentFacets.map((facet) => {
+      const before =
+        baseline.find((item) => item.status === facet.status)?.label || "0";
+      return {
+        key: facet.status,
+        label: t(`statusChoices.${facet.status.toLowerCase()}`, {
+          defaultValue:
+            facet.status.charAt(0) + facet.status.slice(1).toLowerCase(),
+        }),
+        beforeLabel: before,
+        afterLabel: facet.label,
+      };
+    });
+  }, [
+    i18n.language,
+    products,
+    statusFacetBaseline,
+    t,
+    targetPreview?.total,
+    totalCount,
+  ]);
 
   const runSync = useCallback(async () => {
     if (syncActionLoading) return;
@@ -514,44 +828,48 @@ export default function ProductsPage() {
     !hasFetched ||
     (!products.length && (syncStatusLoading || isSyncInProgress));
 
-  const freezeTarget = useCallback(async () => {
-    const selectionPayload = selection.buildTargetPayload();
-    const payload =
-      selectionPayload.mode === "ids" && selectionPayload.ids.length === 0
-        ? {
-            mode: "query",
-            querySignature,
-            filters: effectiveFilters,
-            search: search?.trim() || "",
-            sort: null,
-            excludedIds: [],
-          }
-        : selectionPayload;
+  const freezeTarget = useCallback(
+    async (overridePayload) => {
+      const selectionPayload =
+        overridePayload ?? selection.buildTargetPayload();
+      const payload =
+        selectionPayload.mode === "ids" && selectionPayload.ids.length === 0
+          ? {
+              mode: "query",
+              querySignature,
+              filters: effectiveFilters,
+              search: search?.trim() || "",
+              sort: null,
+              excludedIds: [],
+            }
+          : selectionPayload;
 
-    const response = await fetchWithAuth("/api/products/targets/freeze", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-    const result = await response.json();
+      const response = await fetchWithAuth("/api/products/targets/freeze", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+      const result = await response.json();
 
-    if (!response.ok || !result?.targetSnapshotId) {
-      throw new Error(
-        result?.message || result?.error || "TARGET_FREEZE_FAILED"
-      );
-    }
+      if (!response.ok || !result?.targetSnapshotId) {
+        throw new Error(
+          result?.message || result?.error || "TARGET_FREEZE_FAILED"
+        );
+      }
 
-    return {
-      ...result,
-      payload,
-    };
-  }, [effectiveFilters, fetchWithAuth, querySignature, search, selection]);
+      return {
+        ...result,
+        payload,
+      };
+    },
+    [effectiveFilters, fetchWithAuth, querySignature, search, selection]
+  );
 
   const navigateWithFrozenTarget = useCallback(
-    (destination, frozenTarget, actionKey) => {
+    (destination, frozenTarget, actionKey, extraState = {}) => {
       dispatch(
         setFrozenTarget({
           targetSnapshotId: frozenTarget.targetSnapshotId,
@@ -570,12 +888,39 @@ export default function ProductsPage() {
             targetSnapshotId: frozenTarget.targetSnapshotId,
             targetCount: frozenTarget.count,
             targetPayload: frozenTarget.payload,
+            ...extraState,
           },
         }
       );
     },
     [dispatch, navigate]
   );
+
+  const handleSuggestedDraftOutOfStock = useCallback(async () => {
+    if (targetAction || shouldShowLoadingState || totalCount <= 0) return;
+
+    setTargetAction("edit");
+    setTargetActionError("");
+
+    try {
+      const frozenTarget = await freezeTarget();
+      navigateWithFrozenTarget("/edit", frozenTarget, "edit", {
+        recipeKey: "draftOutOfStock",
+      });
+    } catch (error) {
+      setTargetActionError(
+        error.message || "Could not prepare the selected product target."
+      );
+    } finally {
+      setTargetAction("");
+    }
+  }, [
+    freezeTarget,
+    navigateWithFrozenTarget,
+    shouldShowLoadingState,
+    targetAction,
+    totalCount,
+  ]);
 
   const handleBulkEdit = useCallback(async () => {
     if (targetAction || shouldShowLoadingState || totalCount <= 0) return;
@@ -640,6 +985,12 @@ export default function ProductsPage() {
     }
   }, [fetchWithAuth, lastAction]);
 
+  const handleViewLastActionChanges = useCallback(() => {
+    if (!lastAction?.id) return;
+
+    navigate(`/editDetails/${lastAction.id}`);
+  }, [lastAction?.id, navigate]);
+
   const openBulkEditConfirm = useCallback(() => {
     if (targetAction || shouldShowLoadingState || totalCount <= 0) return;
 
@@ -682,55 +1033,294 @@ export default function ProductsPage() {
     totalCount,
   ]);
 
-  const shouldShowEmptyState =
-    !shouldShowLoadingState &&
-    !error &&
-    hasFetched &&
-    !isSyncInProgress &&
-    totalCount === 0;
+  const freezeSelectionCommand = useCallback(
+    async (actionKey) => {
+      if (targetAction || shouldShowLoadingState || totalCount <= 0) return;
 
-  const resultSummary = useMemo(() => {
-    if (shouldShowLoadingState) {
-      return <SkeletonBodyText lines={1} />;
-    }
+      setTargetAction(actionKey);
+      setTargetActionError("");
+      setSelectionCommandNotice("");
 
-    if (totalCount > 0) {
-      return (
-        <InlineStack gap="200" blockAlign="center">
-          <Badge tone="info">{totalCount}</Badge>
-          <Text variant="bodySm" tone="subdued">
-            {t("productsMatch")}
-          </Text>
-        </InlineStack>
-      );
-    }
+      try {
+        const frozenTarget = await freezeTarget();
+        dispatch(
+          setFrozenTarget({
+            targetSnapshotId: frozenTarget.targetSnapshotId,
+            count: frozenTarget.count,
+            payload: frozenTarget.payload,
+            action: actionKey,
+          })
+        );
 
-    if (shouldShowEmptyState) {
-      return (
-        <Text variant="bodySm" tone="subdued">
-          {t("noProductsMatch")}
-        </Text>
-      );
-    }
+        setSelectionCommandNotice(
+          t("selectionTargetFrozen", {
+            count: frozenTarget.count,
+            defaultValue: `Selection target prepared for ${Number(
+              frozenTarget.count || 0
+            ).toLocaleString(i18n.language)} products.`,
+          })
+        );
+      } catch (error) {
+        setTargetActionError(
+          error.message || "Could not prepare the selected product target."
+        );
+      } finally {
+        setTargetAction("");
+      }
+    },
+    [
+      dispatch,
+      freezeTarget,
+      i18n.language,
+      shouldShowLoadingState,
+      t,
+      targetAction,
+      totalCount,
+    ]
+  );
 
-    if (isSyncInProgress) {
-      return (
-        <Text variant="bodySm" tone="subdued">
-          {t("productsSyncingInBackground", {
-            defaultValue: "Products are syncing in the background.",
-          })}
-        </Text>
-      );
-    }
+  const handleViewSelection = useCallback(() => {
+    freezeSelectionCommand("view_selection");
+  }, [freezeSelectionCommand]);
 
-    return null;
-  }, [
-    isSyncInProgress,
-    shouldShowEmptyState,
-    shouldShowLoadingState,
-    t,
-    totalCount,
-  ]);
+  const handleSaveSelectionSegment = useCallback(() => {
+    freezeSelectionCommand("save_segment");
+  }, [freezeSelectionCommand]);
+
+  const handleNarrowSelection = useCallback(() => {
+    selection.setScope("filtered_subset");
+    freezeSelectionCommand("narrow_selection");
+  }, [freezeSelectionCommand, selection]);
+
+  const handleAddTags = useCallback(() => {
+    freezeSelectionCommand("add_tags");
+  }, [freezeSelectionCommand]);
+
+  const handleRemoveTags = useCallback(() => {
+    freezeSelectionCommand("remove_tags");
+  }, [freezeSelectionCommand]);
+
+  const handleSetStatus = useCallback(() => {
+    freezeSelectionCommand("set_status");
+  }, [freezeSelectionCommand]);
+
+  const handleBulkDuplicate = useCallback(() => {
+    freezeSelectionCommand("bulk_duplicate");
+  }, [freezeSelectionCommand]);
+
+  const handleDeleteSelected = useCallback(() => {
+    freezeSelectionCommand("delete");
+  }, [freezeSelectionCommand]);
+
+  const handleEditProduct = useCallback(
+    async (product) => {
+      if (targetAction || shouldShowLoadingState || !product?.id) return;
+
+      setTargetAction("edit");
+      setTargetActionError("");
+
+      try {
+        const frozenTarget = await freezeTarget({
+          mode: "ids",
+          ids: [String(product.id)],
+        });
+        navigateWithFrozenTarget("/edit", frozenTarget, "edit");
+      } catch (error) {
+        setTargetActionError(
+          error.message || "Could not prepare the selected product target."
+        );
+      } finally {
+        setTargetAction("");
+      }
+    },
+    [
+      freezeTarget,
+      navigateWithFrozenTarget,
+      shouldShowLoadingState,
+      targetAction,
+    ]
+  );
+
+  const handleInlineSave = useCallback(
+    async (product, field, value) => {
+      if (!product?.id || savingInlineCell) return false;
+
+      const locationId =
+        field === "inventory" ? getInlineInventoryLocationId(product) : null;
+
+      if (field === "inventory" && !locationId) {
+        setTargetActionError(
+          t("inventoryInlineEditRequiresLocation", {
+            defaultValue:
+              "Inventory edits require a location. Use Edit fields to choose the inventory location before applying changes.",
+          })
+        );
+        return false;
+      }
+
+      const editedType = INLINE_EDIT_TYPES[field];
+
+      if (!editedType) {
+        setTargetActionError(
+          t("inlineEditUnsupportedField", {
+            defaultValue: "This field cannot be edited inline yet.",
+          })
+        );
+        return false;
+      }
+
+      const productId = String(product.id);
+      setSavingInlineCell(`${productId}:${field}`);
+      setTargetActionError("");
+      setSelectionCommandNotice("");
+
+      try {
+        const frozenTarget = await freezeTarget({
+          mode: "ids",
+          ids: [productId],
+        });
+
+        const response = await fetchWithAuth(
+          `/api/products/update?lang=${encodeURIComponent(
+            i18n.language || "en"
+          )}`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+            body: JSON.stringify({
+              editedField: field,
+              editedType,
+              value,
+              filterParams: [],
+              targetSnapshotId: frozenTarget.targetSnapshotId,
+              ...(locationId ? { locationId } : {}),
+            }),
+          }
+        );
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            result?.message || result?.error || "INLINE_EDIT_FAILED"
+          );
+        }
+
+        setSelectionCommandNotice(
+          t("inlineEditQueued", {
+            defaultValue:
+              "Inline edit queued. The product row will update after processing.",
+          })
+        );
+
+        fetchProducts(page, effectiveFilters, PRODUCT_LIST_SORT);
+        fetchLastAction();
+        return true;
+      } catch (error) {
+        setTargetActionError(
+          error.message ||
+            t("inlineEditFailed", {
+              defaultValue: "Could not save inline edit.",
+            })
+        );
+        return false;
+      } finally {
+        setSavingInlineCell("");
+      }
+    },
+    [
+      effectiveFilters,
+      fetchLastAction,
+      fetchProducts,
+      fetchWithAuth,
+      freezeTarget,
+      i18n.language,
+      page,
+      savingInlineCell,
+      t,
+    ]
+  );
+
+  const freezeProductCommand = useCallback(
+    async (product, actionKey) => {
+      if (targetAction || shouldShowLoadingState || !product?.id) return;
+
+      setTargetAction(actionKey);
+      setTargetActionError("");
+      setSelectionCommandNotice("");
+
+      try {
+        const frozenTarget = await freezeTarget({
+          mode: "ids",
+          ids: [String(product.id)],
+        });
+
+        dispatch(
+          setFrozenTarget({
+            targetSnapshotId: frozenTarget.targetSnapshotId,
+            count: frozenTarget.count,
+            payload: frozenTarget.payload,
+            action: actionKey,
+          })
+        );
+
+        setSelectionCommandNotice(
+          t("productActionTargetPrepared", {
+            defaultValue: "Product action target prepared.",
+          })
+        );
+      } catch (error) {
+        setTargetActionError(
+          error.message || "Could not prepare the selected product target."
+        );
+      } finally {
+        setTargetAction("");
+      }
+    },
+    [dispatch, freezeTarget, shouldShowLoadingState, t, targetAction]
+  );
+
+  const handleViewProduct = useCallback((product) => {
+    setPreviewProduct(product || null);
+  }, []);
+
+  const closeProductPreview = useCallback(() => {
+    setPreviewProduct(null);
+  }, []);
+
+  const getInlineSavingField = useCallback(
+    (product) => {
+      if (!product?.id || !savingInlineCell.startsWith(`${product.id}:`)) {
+        return "";
+      }
+
+      return savingInlineCell.split(":")[1] || "";
+    },
+    [savingInlineCell]
+  );
+
+  const handleDuplicateProduct = useCallback(
+    (product) => {
+      freezeProductCommand(product, "duplicate_product");
+    },
+    [freezeProductCommand]
+  );
+
+  const handleArchiveProduct = useCallback(
+    (product) => {
+      handleInlineSave(product, "status", "ARCHIVED");
+    },
+    [handleInlineSave]
+  );
+
+  const handleDeleteProduct = useCallback(
+    (product) => {
+      freezeProductCommand(product, "delete_product");
+    },
+    [freezeProductCommand]
+  );
 
   const formatMetric = useCallback(
     (value) => Number(value || 0).toLocaleString(i18n.language),
@@ -747,7 +1337,7 @@ export default function ProductsPage() {
   const pagePrimaryAction = hasSelection
     ? undefined
     : {
-        content: t("edit", { defaultValue: "Edit" }),
+        content: t("editProducts", { defaultValue: "Edit products" }),
         accessibilityLabel: t("editMatchingProductsAccessibilityLabel", {
           defaultValue: "Edit matching products",
         }),
@@ -766,6 +1356,14 @@ export default function ProductsPage() {
           onAction: handleBulkExport,
           loading: targetAction === "export",
           disabled: targetActionDisabled,
+        },
+        {
+          content: t("moreActions", { defaultValue: "More actions" }),
+          icon: MenuHorizontalIcon,
+          accessibilityLabel: t("moreProductActionsAccessibilityLabel", {
+            defaultValue: "More product actions",
+          }),
+          disabled: true,
         },
       ];
 
@@ -798,7 +1396,7 @@ export default function ProductsPage() {
                       defaultValue: "Sync catalog now",
                     })}
                   >
-                    {t("syncNow", { defaultValue: "Sync now" })}
+                    {t("refreshCatalog", { defaultValue: "Refresh catalog" })}
                   </Button>
                 ) : null}
 
@@ -835,132 +1433,75 @@ export default function ProductsPage() {
 
         {lastAction ? (
           <Layout.Section>
-            <Card>
-              <Box padding="500">
-                <InlineStack
-                  align="space-between"
-                  blockAlign="center"
-                  gap="300"
-                  wrap
-                >
-                  <BlockStack gap="100">
-                    <Text as="h2" variant="headingMd">
-                      {t("lastAction", { defaultValue: "Last action" })}
-                    </Text>
-                    <Text as="p" variant="bodyMd">
-                      {t("lastActionEditedProducts", {
-                        count:
-                          lastAction.targetSnapshotCount ||
-                          lastAction.totalItems ||
-                          lastAction.processedCount ||
-                          0,
-                        defaultValue: `Edited ${formatMetric(
-                          lastAction.targetSnapshotCount ||
-                            lastAction.totalItems ||
-                            lastAction.processedCount ||
-                            0
-                        )} products`,
-                      })}
-                    </Text>
-                  </BlockStack>
-
-                  <Button
-                    tone="critical"
-                    onClick={handleUndoLastAction}
-                    loading={undoingLastAction}
-                    accessibilityLabel={t("undoLastActionAccessibilityLabel", {
-                      defaultValue: "Undo last action",
-                    })}
-                    disabled={
-                      undoingLastAction || !canUndoLastAction(lastAction)
-                    }
-                  >
-                    {t("undo", { defaultValue: "Undo" })}
-                  </Button>
-                </InlineStack>
-              </Box>
-            </Card>
+            <ProductsUndoBar
+              count={
+                lastAction.targetSnapshotCount ||
+                lastAction.totalItems ||
+                lastAction.processedCount ||
+                0
+              }
+              canUndo={canUndoLastAction(lastAction)}
+              undoing={undoingLastAction}
+              onUndo={handleUndoLastAction}
+              onViewChanges={handleViewLastActionChanges}
+            />
           </Layout.Section>
         ) : null}
 
         <Layout.Section>
-          <Card>
-            <Box padding="500">
-              <BlockStack gap="300">
-                <InlineStack align="space-between" blockAlign="center">
-                  <Text as="h2" variant="headingMd">
-                    {t("targetPreview", { defaultValue: "Target preview" })}
-                  </Text>
-                  <Badge tone="info">
-                    {targetPreviewLoading
-                      ? t("checking", { defaultValue: "Checking" })
-                      : formatMetric(targetPreview?.total ?? totalCount)}
-                  </Badge>
-                </InlineStack>
-
-                <InlineStack gap="600" wrap>
-                  <Metric
-                    label={t("products", { defaultValue: "Products" })}
-                    value={formatMetric(targetPreview?.total ?? totalCount)}
-                  />
-                  <Metric
-                    label={t("vendors", { defaultValue: "Vendors" })}
-                    value={formatMetric(targetPreview?.vendorsCount)}
-                  />
-                  <Metric
-                    label={t("types", { defaultValue: "Types" })}
-                    value={formatMetric(targetPreview?.typesCount)}
-                  />
-                  <Metric
-                    label={t("inStock", { defaultValue: "In stock" })}
-                    value={formatMetric(targetPreview?.inStockCount)}
-                  />
-                </InlineStack>
-
-                <Text as="p" tone="subdued" variant="bodySm">
-                  {t("targetPreviewDescription", {
-                    defaultValue:
-                      "Based on current filters - updates instantly",
-                  })}
-                </Text>
-              </BlockStack>
-            </Box>
-          </Card>
+          <ProductsSummaryStrip
+            selectedCount={selection.selectedCount}
+            totalCount={targetPreview?.total ?? totalCount}
+            loading={targetPreviewLoading || shouldShowLoadingState}
+            queryCost={queryCost}
+            streamingState={streamingState}
+          />
         </Layout.Section>
 
-        <Layout.Section>
-          <Card>
-            <Box padding="500">
-              <InlineStack
-                align="space-between"
-                blockAlign="center"
-                gap="300"
-                wrap
-              >
+        {hasOutOfStockActiveFilter ? (
+          <Layout.Section>
+            <Banner
+              tone="info"
+              title={t("smartDefaultsInventoryTitle", {
+                defaultValue: "Smart defaults for out-of-stock products",
+              })}
+            >
+              <InlineStack align="space-between" blockAlign="center" gap="300" wrap>
                 <BlockStack gap="100">
-                  <Text as="h2" variant="headingMd">
-                    {t("productTargeting")}
+                  <Text as="p">
+                    {t("smartDefaultsInventoryText", {
+                      defaultValue:
+                        "inventory = 0 often means these products should stop selling.",
+                    })}
                   </Text>
-                  <Text as="p" variant="bodySm" tone="subdued">
-                    {t("productTargetingDescription")}
+                  <Text as="p" tone="subdued" variant="bodySm">
+                    {t("smartDefaultsInventorySuggestions", {
+                      defaultValue:
+                        "Suggested: set status to Draft, then review online store visibility.",
+                    })}
                   </Text>
                 </BlockStack>
-                <InlineStack gap="200" blockAlign="center">
-                  {resultSummary}
+                <InlineStack gap="200">
                   <Button
-                    variant="plain"
-                    onClick={goRefresh}
-                    accessibilityLabel={t("viewSyncStatusAccessibilityLabel", {
-                      defaultValue: "View product sync status",
-                    })}
+                    onClick={handleSuggestedDraftOutOfStock}
+                    loading={targetAction === "edit"}
+                    disabled={targetActionDisabled}
                   >
-                    {t("Syncyourproducts")}
+                    {t("smartDefaultSetDraft", {
+                      defaultValue: "Set status to Draft",
+                    })}
+                  </Button>
+                  <Button disabled>
+                    {t("smartDefaultHideOnlineStore", {
+                      defaultValue: "Hide from online store",
+                    })}
                   </Button>
                 </InlineStack>
               </InlineStack>
-            </Box>
-          </Card>
-        </Layout.Section>
+            </Banner>
+          </Layout.Section>
+        ) : null}
+
         {syncCompleted && (
           <Layout.Section>
             <Banner
@@ -980,148 +1521,160 @@ export default function ProductsPage() {
         {hasSelection && (
           <Layout.Section>
             <Box position="sticky" insetBlockStart="0" zIndex="1">
-              <Banner tone={selection.mode === "query" ? "success" : "info"}>
-                <InlineStack
-                  align="space-between"
-                  blockAlign="center"
-                  gap="300"
-                  wrap
-                >
-                  <Box minWidth="0">
-                    <Text as="p">
-                      {selection.mode === "query"
-                        ? t("allMatchingProductsSelected", {
-                            count: selection.selectedCount,
-                            excluded: selection.excludedCount,
-                            defaultValue: `${selection.selectedCount.toLocaleString(
-                              i18n.language
-                            )} selected${
-                              selection.excludedCount > 0
-                                ? ` (${selection.excludedCount.toLocaleString(
-                                    i18n.language
-                                  )} excluded)`
-                                : ""
-                            }`,
-                          })
-                        : t("pageProductsSelected", {
-                            count: selection.selectedCount,
-                            defaultValue: `${selection.selectedCount.toLocaleString(
-                              i18n.language
-                            )} selected`,
-                          })}
-                    </Text>
-                  </Box>
+              <SelectionCommandBar
+                selection={selection}
+                totalCount={totalCount}
+                targetAction={targetAction}
+                onEdit={openBulkEditConfirm}
+                onExport={handleBulkExport}
+                onViewSelection={handleViewSelection}
+                onNarrowSelection={handleNarrowSelection}
+                onSaveSegment={handleSaveSelectionSegment}
+              />
+            </Box>
+          </Layout.Section>
+        )}
 
-                  <InlineStack gap="200" wrap>
-                    {selection.mode !== "query" &&
-                    selection.pageCount > 0 &&
-                    totalCount > selection.pageCount ? (
-                      <Button
-                        type="button"
-                        onClick={selection.selectAllMatching}
-                        disabled={Boolean(targetAction)}
-                        accessibilityLabel={t(
-                          "selectAllMatchingProductsAccessibilityLabel",
-                          {
-                            count: totalCount,
-                            defaultValue: `Select all ${Number(
-                              totalCount
-                            ).toLocaleString(i18n.language)} matching products`,
-                          }
-                        )}
-                      >
-                        {t("selectAllMatchingProducts", {
-                          count: totalCount,
-                          defaultValue: `Select all ${Number(
-                            totalCount
-                          ).toLocaleString(i18n.language)}`,
-                        })}
-                      </Button>
-                    ) : null}
+        {selectionCommandNotice ? (
+          <Layout.Section>
+            <Banner
+              tone="success"
+              onDismiss={() => setSelectionCommandNotice("")}
+            >
+              <Text as="p">{selectionCommandNotice}</Text>
+            </Banner>
+          </Layout.Section>
+        ) : null}
 
-                    <Button
-                      type="button"
-                      onClick={openBulkEditConfirm}
-                      loading={targetAction === "edit"}
-                      disabled={Boolean(targetAction)}
-                      accessibilityLabel={t("editSelectedAccessibilityLabel", {
-                        defaultValue: "Edit selected products",
+        <Layout.Section>
+          <Card padding="0" roundedAbove="sm">
+            <ProductsSavedViews
+              selected={selectedView}
+              savedSegments={savedSegments}
+              onSelect={handleSavedViewSelect}
+            />
+
+            <Box
+              paddingBlock="300"
+              paddingInline="400"
+              borderBlockStartWidth="025"
+              borderColor="border"
+            >
+              <ProductsSearchBar
+                value={search}
+                onSubmit={handleSearchChange}
+                onClear={handleSearchClear}
+              />
+            </Box>
+
+            <Box
+              paddingBlock="300"
+              paddingInline="400"
+              borderBlockEndWidth="025"
+              borderColor="border"
+            >
+              <ProductsFiltersBar
+                appliedFilters={appliedFilters}
+                facetStats={facetStats}
+                onFilterChange={onFilterChange}
+                onClearAll={onClearAll}
+              />
+            </Box>
+
+            {hasActiveSegmentCriteria ? (
+              <Box
+                paddingBlock="300"
+                paddingInline="400"
+                borderBlockEndWidth="025"
+                borderColor="border"
+              >
+                <InlineStack align="space-between" blockAlign="end" gap="300">
+                  <Box minWidth="320px">
+                    <TextField
+                      label={t("saveSegmentAsLabel", {
+                        defaultValue: "Save this as",
                       })}
-                    >
-                      {t("edit", { defaultValue: "Edit" })}
-                    </Button>
-
+                      value={segmentName}
+                      onChange={setSegmentName}
+                      autoComplete="off"
+                    />
+                  </Box>
+                  <InlineStack gap="300" blockAlign="center">
+                    <Text as="span" variant="bodySm" tone="subdued">
+                      {t("savedSegmentReuseHint", {
+                        defaultValue:
+                          "Reuse in bulk edit, export, scheduled rule, and automatic rule.",
+                      })}
+                    </Text>
                     <Button
-                      type="button"
-                      onClick={handleBulkExport}
-                      loading={targetAction === "export"}
-                      disabled={Boolean(targetAction)}
-                      accessibilityLabel={t(
-                        "exportSelectedAccessibilityLabel",
-                        {
-                          defaultValue: "Export selected products",
-                        }
-                      )}
+                      onClick={handleSaveCurrentSegment}
+                      disabled={!segmentName.trim()}
                     >
-                      {t("export", { defaultValue: "Export" })}
-                    </Button>
-
-                    <Button
-                      type="button"
-                      variant="plain"
-                      onClick={selection.clearSelection}
-                      disabled={Boolean(targetAction)}
-                      accessibilityLabel={t(
-                        "clearSelectionAccessibilityLabel",
-                        {
-                          defaultValue: "Clear product selection",
-                        }
-                      )}
-                    >
-                      {t("clearSelection", {
-                        defaultValue: "Clear selection",
+                      {t("saveSegmentButton", {
+                        defaultValue: "Save segment",
                       })}
                     </Button>
                   </InlineStack>
                 </InlineStack>
-              </Banner>
-            </Box>
-          </Layout.Section>
-        )}
-        <Layout.Section>
-          <Card>
-            <Box padding="400">
-              <ProductsFilters
-                queryValue={search}
-                appliedFilters={appliedFilters}
-                onFilterChange={onFilterChange}
-                onQueryChange={handleSearchChange}
-                onQueryClear={handleSearchClear}
+              </Box>
+            ) : null}
+
+            {segmentNotice ? (
+              <Box paddingBlock="300" paddingInline="400">
+                <Banner tone="success" onDismiss={() => setSegmentNotice("")}>
+                  <Text as="p">{segmentNotice}</Text>
+                </Banner>
+              </Box>
+            ) : null}
+
+            <Box borderBlockStartWidth="025" borderColor="border">
+              <ProductsIndexTable
+                products={products}
+                loading={shouldShowLoadingState}
+                error={error}
+                onRetry={handleRetryProducts}
                 onClearAll={onClearAll}
+                selectedSet={selection.selectedSet}
+                selectedCount={selection.selectedCount}
+                allMatchingSelected={selection.mode === "query"}
+                onToggleRow={selection.toggleRow}
+                onTogglePage={selection.togglePage}
+                onViewProduct={handleViewProduct}
+                onEditProduct={handleEditProduct}
+                onDuplicateProduct={handleDuplicateProduct}
+                onArchiveProduct={handleArchiveProduct}
+                onDeleteProduct={handleDeleteProduct}
+                onPreviewProduct={handleViewProduct}
+                onInlineSave={handleInlineSave}
+                savingInlineCell={savingInlineCell}
               />
             </Box>
-          </Card>
-        </Layout.Section>
 
-        <Layout.Section>
-          <Card padding="0">
-            <ProductsTable
+            <ProductsPaginationFooter
               products={products}
-              loading={shouldShowLoadingState}
               pagination={pagination}
-              error={error}
-              onRetry={handleRetryProducts}
-              onClearAll={onClearAll}
+              lastUpdatedAt={lastFetchedAt}
               onNext={handleNextPage}
               onPrev={handlePreviousPage}
-              selectedSet={selection.selectedSet}
-              selectedCount={selection.selectedCount}
-              allMatchingSelected={selection.mode === "query"}
-              onToggleRow={selection.toggleRow}
-              onTogglePage={selection.togglePage}
             />
           </Card>
         </Layout.Section>
+
+        {hasSelection ? (
+          <Layout.Section>
+            <StickyBulkActionBar
+              selectedCount={selection.selectedCount}
+              targetAction={targetAction}
+              canUndo={canUndoLastAction(lastAction)}
+              undoing={undoingLastAction}
+              onEditFields={openBulkEditConfirm}
+              onAddTags={handleAddTags}
+              onExport={handleBulkExport}
+              onClearSelection={selection.clearSelection}
+              onUndo={handleUndoLastAction}
+            />
+          </Layout.Section>
+        ) : null}
       </Layout>
 
       <Modal
@@ -1179,6 +1732,15 @@ export default function ProductsPage() {
           </BlockStack>
         </Modal.Section>
       </Modal>
+
+      <ProductPreviewDrawer
+        open={Boolean(previewProduct)}
+        product={previewProduct}
+        savingField={getInlineSavingField(previewProduct)}
+        onClose={closeProductPreview}
+        onInlineSave={handleInlineSave}
+        onEditProduct={handleEditProduct}
+      />
     </Page>
   );
 }

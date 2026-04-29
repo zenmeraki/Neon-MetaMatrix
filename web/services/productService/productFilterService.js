@@ -7,6 +7,7 @@ import {
   buildPrismaSortQuery,
   buildPrismaStringFilter,
   getProductPrismaWhere,
+  getProductPrismaWhereFromAst,
 } from "./productFilterCompiler.js";
 import {
   getDistinctProductFilterValues,
@@ -56,6 +57,10 @@ export const productFilterService = {
 
   getProductPrismaWhere(filterParams = [], shop) {
     return getProductPrismaWhere(filterParams, shop);
+  },
+
+  getProductPrismaWhereFromAst(conditionAst = [], shop) {
+    return getProductPrismaWhereFromAst(conditionAst, shop);
   },
 
   buildPrismaSortQuery(sortKey, sortOrder) {

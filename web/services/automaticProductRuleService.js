@@ -1,5 +1,10 @@
 import { automaticProductRuleRepository } from "../repositories/automaticProductRuleRepository.js";
 import { automaticProductRuleRunRepository } from "../repositories/automaticProductRuleRunRepository.js";
+import { prisma } from "../config/database.js";
+import {
+  countProductsByAst,
+  searchProductsByAst,
+} from "../repositories/ruleAstProductRepository.js";
 import {
   assertAutomaticProductRuleAccess,
   assertAutomaticProductRuleActiveLimit,
@@ -12,6 +17,22 @@ import {
 import { createManualAutomaticProductRuleRun } from "./automaticProductRuleExecutionService.js";
 import { getUpdatedProducts } from "../helpers/productBulkOperationHelpers/productUpdateHandler.js";
 import { FIELD_CONFIGS } from "../helpers/productBulkOperationHelpers/constants.js";
+import {
+  buildScopeWhere,
+  compileRuleConditionAst,
+  RULE_CONFLICT_STRATEGIES,
+  RULE_EXECUTION_MODES,
+  RULE_SCOPE_TYPES,
+  normalizeRuleAstRoot,
+  hashNormalizedRuleAst,
+  normalizeRuleAstForStorage,
+  normalizeRuleConditionAst,
+  normalizeRuleConflictStrategy,
+  normalizeRuleExecutionMode,
+  normalizeRuleScope,
+  toBulkEditActions,
+} from "./automaticProductRuleGraphService.js";
+import { RULE_FIELD_REGISTRY } from "./productService/productFilterCompiler.js";
 
 function normalizeStatus(rawStatus, fallback = "ACTIVE") {
   if (!rawStatus) return fallback;
@@ -28,6 +49,22 @@ function normalizeTriggerType(rawValue, fallback = "EVENT") {
     throw new Error("Unsupported triggerType");
   }
   return value;
+}
+
+function triggerTypeFromExecutionMode(executionMode, rawTriggerType) {
+  if (rawTriggerType) return normalizeTriggerType(rawTriggerType);
+
+  switch (executionMode) {
+    case "SCHEDULED":
+      return "SCHEDULED";
+    case "REALTIME":
+      return "EVENT";
+    case "MANUAL":
+    case "DRY_RUN":
+      return "EVENT";
+    default:
+      return "EVENT";
+  }
 }
 
 function normalizeScopeType(rawValue, actions = []) {
@@ -80,14 +117,24 @@ function normalizePriority(value) {
   if (value === undefined || value === null || value === "") return 100;
 
   const parsed = Number.parseInt(value, 10);
-  if (!Number.isInteger(parsed)) {
-    throw new Error("priority must be an integer");
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 100) {
+    throw new Error("priority must be an integer between 1 and 100");
   }
 
   return parsed;
 }
 
 function buildActionsFromBody(body = {}) {
+  if (body.ruleAst || body.filterDsl) {
+    const root = normalizeRuleAstRoot(body.ruleAst || {
+      version: body.version || 1,
+      filter: body.filterDsl,
+      actions: body.actionDsl || body.actions,
+      meta: body.meta,
+    });
+    return toBulkEditActions(root.actions);
+  }
+
   if (Array.isArray(body.actions) && body.actions.length > 0) {
     return body.actions.map((action) => ({
       field: action.field,
@@ -117,6 +164,15 @@ function buildActionsFromBody(body = {}) {
   ];
 }
 
+function buildRuleAstRootFromBody(body = {}) {
+  return normalizeRuleAstRoot(body.ruleAst || {
+    version: body.version || 1,
+    filter: body.filterDsl || body.conditionAst || body.conditions || body.filterParams,
+    actions: body.actionDsl || body.actions,
+    meta: body.meta,
+  });
+}
+
 function getActionMutationMode(action) {
   const field = action?.field;
   const config = FIELD_CONFIGS?.[field];
@@ -135,10 +191,13 @@ function validateActions(actions = []) {
   }
 
   const mutationModes = new Set();
+  const fields = new Map();
   const validated = actions.map((action) => {
     if (!action?.field) throw new Error("action.field is required");
     if (!action?.editOption) throw new Error("action.editOption is required");
     mutationModes.add(getActionMutationMode(action));
+    const current = fields.get(action.field) || 0;
+    fields.set(action.field, current + 1);
     return action;
   });
 
@@ -150,6 +209,12 @@ function validateActions(actions = []) {
     throw new Error(
       "Automatic rules cannot mix product-level and variant-level actions in a single rule with the current bulk edit pipeline",
     );
+  }
+
+  for (const [field, count] of fields.entries()) {
+    if (count > 1 && field !== "tag") {
+      throw new Error(`Multiple actions cannot modify ${field} in the same rule`);
+    }
   }
 
   return validated;
@@ -232,11 +297,15 @@ function serializeRule(rule, countsById = {}, latestRunsById = {}) {
     cronExpression: rule.cronExpression,
     intervalMinutes: rule.intervalMinutes,
     scopeType: rule.scopeType,
+    scope: rule.scope,
     conditions: rule.conditions,
     actions: rule.actions,
     applyMode: rule.applyMode,
+    executionMode: rule.executionMode,
+    conflictStrategy: rule.conflictStrategy,
     priority: rule.priority,
     cooldownMinutes: rule.cooldownMinutes,
+    maxExecutionsPerHour: rule.maxExecutionsPerHour,
     maxAffectedPerRun: rule.maxAffectedPerRun,
     runCount: rule.runCount,
     totalRuns: counts.total,
@@ -307,15 +376,29 @@ function assertSchedulableIfNeeded(triggerType, status, scheduleInput) {
 export async function createAutomaticProductRule({ shop, body, subscription, createdBy = null }) {
   await assertAutomaticProductRuleAccess(subscription);
 
-  const triggerType = normalizeTriggerType(body.triggerType);
+  const executionMode = normalizeRuleExecutionMode(body.executionMode);
+  const triggerType = triggerTypeFromExecutionMode(executionMode, body.triggerType);
   const actions = validateActions(buildActionsFromBody(body));
   const scopeType = normalizeScopeType(body.scopeType, actions);
+  const scope = normalizeRuleScope(body.scope);
   const status = normalizeStatus(body.status, "ACTIVE");
-  const conditions = Array.isArray(body.conditions)
-    ? body.conditions
+  const ruleAstRoot = body.ruleAst || body.filterDsl
+    ? normalizeRuleAstRoot(body.ruleAst || {
+        version: body.version || 1,
+        filter: body.filterDsl,
+        actions: body.actionDsl || body.actions,
+        meta: body.meta,
+      })
+    : null;
+  const conditions = ruleAstRoot
+    ? ruleAstRoot.filter
+    : body.conditionAst || body.conditions
+    ? normalizeRuleConditionAst(body.conditionAst || body.conditions)
     : Array.isArray(body.filterParams)
-      ? body.filterParams
-      : [];
+      ? normalizeRuleConditionAst(body.filterParams)
+      : normalizeRuleConditionAst([]);
+  compileRuleConditionAst(conditions, shop);
+  buildScopeWhere(scope, shop);
 
   if (status === "ACTIVE") {
     await assertAutomaticProductRuleActiveLimit({
@@ -355,11 +438,15 @@ export async function createAutomaticProductRule({ shop, body, subscription, cre
     startAt: scheduleInput.startAt,
     endAt: scheduleInput.endAt,
     scopeType,
+    scope,
     conditions,
     actions,
     applyMode: normalizeApplyMode(body.applyMode),
+    executionMode,
+    conflictStrategy: normalizeRuleConflictStrategy(body.conflictStrategy),
     priority: normalizePriority(body.priority),
     cooldownMinutes: normalizeOptionalInteger(body.cooldownMinutes, "cooldownMinutes"),
+    maxExecutionsPerHour: normalizeOptionalInteger(body.maxExecutionsPerHour, "maxExecutionsPerHour"),
     maxAffectedPerRun: normalizeOptionalInteger(body.maxAffectedPerRun, "maxAffectedPerRun"),
     nextRunAt,
     createdBy,
@@ -396,17 +483,34 @@ export async function updateAutomaticProductRule({
   const existing = await automaticProductRuleRepository.findByIdForShop(automaticProductRuleId, shop);
   if (!existing) throw new Error("Automatic product rule not found");
 
-  const triggerType = normalizeTriggerType(body.triggerType ?? existing.triggerType);
+  const executionMode = normalizeRuleExecutionMode(body.executionMode ?? existing.executionMode);
+  const triggerType = triggerTypeFromExecutionMode(
+    executionMode,
+    body.triggerType ?? existing.triggerType,
+  );
   const actions = body.actions || body.editedField
     ? validateActions(buildActionsFromBody(body))
     : existing.actions;
   const scopeType = normalizeScopeType(body.scopeType ?? existing.scopeType, actions);
+  const scope = body.scope !== undefined ? normalizeRuleScope(body.scope) : existing.scope;
   const status = normalizeStatus(body.status, existing.status);
-  const conditions = Array.isArray(body.conditions)
-    ? body.conditions
+  const ruleAstRoot = body.ruleAst || body.filterDsl
+    ? normalizeRuleAstRoot(body.ruleAst || {
+        version: body.version || 1,
+        filter: body.filterDsl,
+        actions: body.actionDsl || body.actions,
+        meta: body.meta,
+      })
+    : null;
+  const conditions = ruleAstRoot
+    ? ruleAstRoot.filter
+    : body.conditionAst || body.conditions
+    ? normalizeRuleConditionAst(body.conditionAst || body.conditions)
     : Array.isArray(body.filterParams)
-      ? body.filterParams
+      ? normalizeRuleConditionAst(body.filterParams)
       : existing.conditions;
+  compileRuleConditionAst(conditions, shop);
+  buildScopeWhere(scope, shop);
 
   if (status === "ACTIVE") {
     await assertAutomaticProductRuleAccess(subscription);
@@ -444,13 +548,21 @@ export async function updateAutomaticProductRule({
     startAt: scheduleInput.startAt,
     endAt: scheduleInput.endAt,
     scopeType,
+    scope,
     conditions,
     actions,
     applyMode: body.applyMode !== undefined ? normalizeApplyMode(body.applyMode) : existing.applyMode,
+    executionMode,
+    conflictStrategy: body.conflictStrategy !== undefined
+      ? normalizeRuleConflictStrategy(body.conflictStrategy)
+      : existing.conflictStrategy,
     priority: body.priority !== undefined ? normalizePriority(body.priority) : existing.priority,
     cooldownMinutes: body.cooldownMinutes !== undefined
       ? normalizeOptionalInteger(body.cooldownMinutes, "cooldownMinutes")
       : existing.cooldownMinutes,
+    maxExecutionsPerHour: body.maxExecutionsPerHour !== undefined
+      ? normalizeOptionalInteger(body.maxExecutionsPerHour, "maxExecutionsPerHour")
+      : existing.maxExecutionsPerHour,
     maxAffectedPerRun: body.maxAffectedPerRun !== undefined
       ? normalizeOptionalInteger(body.maxAffectedPerRun, "maxAffectedPerRun")
       : existing.maxAffectedPerRun,
@@ -510,6 +622,7 @@ export async function runAutomaticProductRuleNow({
   shop,
   automaticProductRuleId,
   subscription,
+  dryRun = false,
 }) {
   const rule = await automaticProductRuleRepository.findByIdForShop(automaticProductRuleId, shop);
   if (!rule) throw new Error("Automatic product rule not found");
@@ -519,7 +632,63 @@ export async function runAutomaticProductRuleNow({
     throw new Error("Automatic product rule must be active to run now");
   }
 
-  return createManualAutomaticProductRuleRun({ rule });
+  return createManualAutomaticProductRuleRun({
+    rule,
+    executionMode: dryRun ? "DRY_RUN" : "MANUAL",
+  });
+}
+
+export async function validateAutomaticProductRuleAst({ shop, body }) {
+  const normalized = normalizeRuleAstForStorage(buildRuleAstRootFromBody(body));
+  const actions = validateActions(toBulkEditActions(normalized.actions));
+  const conditions = normalizeRuleConditionAst(normalized.filter);
+  compileRuleConditionAst(conditions, shop);
+  buildScopeWhere(normalizeRuleScope(body.scope), shop);
+
+  return {
+    valid: true,
+    hash: hashNormalizedRuleAst(normalized),
+    normalized,
+    actions,
+  };
+}
+
+export async function previewAutomaticProductRuleAst({ shop, body }) {
+  const validation = await validateAutomaticProductRuleAst({ shop, body });
+  const operationalState = await prisma.storeOperationalState.findUnique({
+    where: { shop },
+    select: { activeCatalogBatchId: true },
+  });
+
+  if (!operationalState?.activeCatalogBatchId) {
+    throw new Error("INITIAL_SYNC_REQUIRED");
+  }
+
+  const limit = Math.min(
+    Math.max(Number.parseInt(body.limit ?? body.take ?? 50, 10) || 50, 1),
+    250,
+  );
+  const ast = validation.normalized.filter;
+  const catalogBatchId = operationalState.activeCatalogBatchId;
+  const [count, products] = await Promise.all([
+    countProductsByAst({ ast, shop, catalogBatchId }),
+    searchProductsByAst({
+      ast,
+      shop,
+      catalogBatchId,
+      limit,
+      cursorId: body.cursorId || null,
+    }),
+  ]);
+
+  return {
+    valid: true,
+    hash: validation.hash,
+    catalogBatchId,
+    count,
+    sample: products,
+    nextCursorId: products.length === limit ? products[products.length - 1]?.id : null,
+  };
 }
 
 export async function deleteAutomaticProductRule({ shop, automaticProductRuleId }) {
@@ -541,4 +710,45 @@ export async function listAutomaticProductRuleRuns({ shop, automaticProductRuleI
   if (!rule) throw new Error("Automatic product rule not found");
 
   return automaticProductRuleRunRepository.listByRule(automaticProductRuleId, shop);
+}
+
+export function getAutomaticProductRuleBuilderOptions() {
+  return {
+    executionModes: [...RULE_EXECUTION_MODES],
+    conflictStrategies: [...RULE_CONFLICT_STRATEGIES],
+    scopeTypes: [...RULE_SCOPE_TYPES],
+    conditionAst: {
+      groupOperators: ["AND", "OR", "NOT"],
+      nodeTypes: ["group", "not", "predicate"],
+      predicateOperators: [
+        "EQ",
+        "NEQ",
+        "GT",
+        "GTE",
+        "LT",
+        "LTE",
+        "IN",
+        "NOT_IN",
+        "CONTAINS",
+        "NOT_CONTAINS",
+        "STARTS_WITH",
+        "ENDS_WITH",
+        "IS_NULL",
+        "NOT_NULL",
+        "ARRAY_CONTAINS",
+        "ARRAY_OVERLAP",
+        "BETWEEN",
+      ],
+    },
+    actionDsl: {
+      actionTypes: ["update", "conditional"],
+      updateOperations: ["SET", "INCREMENT", "MULTIPLY", "APPEND", "REMOVE"],
+    },
+    fields: RULE_FIELD_REGISTRY,
+    priority: {
+      min: 1,
+      max: 100,
+      default: 100,
+    },
+  };
 }

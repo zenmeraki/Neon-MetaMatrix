@@ -15,13 +15,21 @@ import {
   persistAppliedStateUpdates,
   persistMatchedStateUpdates,
 } from "./automaticProductRuleDedupService.js";
-import { productFilterService } from "./productService/productFilterService.js";
 import { getSession } from "../utils/sessionHandler.js";
 import { logWorkerError } from "../utils/errorLogUtils.js";
 import { getCurrentBulkOperationStatus } from "../utils/bulkOperationHelper.js";
 import logger from "../utils/loggerUtils.js";
 import ProductBulkService from "./productService/productBulkEditService.js";
 import { addbulkEditJob } from "../Jobs/Queues/bulkEditJob.js";
+import { OPERATION_TYPES } from "../constants/operationTypes.js";
+import { startBulkEditOperationForHistory } from "./execution/bulkEditOperationStartService.js";
+import { applyQueueBackpressure } from "../Jobs/Queues/queueBackpressure.js";
+import {
+  buildScopeWhere,
+  compileRuleConditionAst,
+  mergeWhereClauses,
+} from "./automaticProductRuleGraphService.js";
+import { resolveRuleConflicts } from "./automaticProductRuleConflictService.js";
 import {
   acquireExclusiveShopWork,
   releaseExclusiveShopWork,
@@ -32,8 +40,12 @@ export const AUTOMATIC_PRODUCT_RULE_EXECUTION_QUEUE =
 export const AUTOMATIC_PRODUCT_RULE_SIGNAL_QUEUE =
   process.env.AUTOMATIC_PRODUCT_RULE_SIGNAL_QUEUE || "automatic-product-rule-signal";
 
-const executionQueue = new Queue(AUTOMATIC_PRODUCT_RULE_EXECUTION_QUEUE, { connection });
-const signalQueue = new Queue(AUTOMATIC_PRODUCT_RULE_SIGNAL_QUEUE, { connection });
+const executionQueue = applyQueueBackpressure(
+  new Queue(AUTOMATIC_PRODUCT_RULE_EXECUTION_QUEUE, { connection }),
+);
+const signalQueue = applyQueueBackpressure(
+  new Queue(AUTOMATIC_PRODUCT_RULE_SIGNAL_QUEUE, { connection }),
+);
 const PENDING_RUN_RECOVERY_BATCH_SIZE = 100;
 
 class RetryableAutomaticRuleError extends Error {
@@ -68,6 +80,32 @@ function buildTriggerReference({ triggerReference, productIds = [], source }) {
     reference: triggerReference || null,
     productIds: [...new Set(productIds.filter(Boolean))].sort(),
   });
+}
+
+async function assertRuleRunAllowed(rule, now = new Date()) {
+  const cooldownMinutes = Number(rule.cooldownMinutes || 0);
+  if (cooldownMinutes > 0) {
+    const lastRunKey = `shop:${rule.shop}:rule:${rule.id}:last_run`;
+    const lastRun = await connection.get(lastRunKey);
+    if (lastRun && now.getTime() - Number(lastRun) < cooldownMinutes * 60_000) {
+      return { allowed: false, reason: "RULE_COOLDOWN_ACTIVE" };
+    }
+    await connection.set(lastRunKey, String(now.getTime()), "PX", cooldownMinutes * 60_000);
+  }
+
+  const maxExecutionsPerHour = Number(rule.maxExecutionsPerHour || 0);
+  if (maxExecutionsPerHour > 0) {
+    const hourlyKey = `shop:${rule.shop}:rule:${rule.id}:executions:${now.toISOString().slice(0, 13)}`;
+    const count = await connection.incr(hourlyKey);
+    if (count === 1) {
+      await connection.expire(hourlyKey, 3600);
+    }
+    if (count > maxExecutionsPerHour) {
+      return { allowed: false, reason: "RULE_HOURLY_LIMIT_EXCEEDED" };
+    }
+  }
+
+  return { allowed: true };
 }
 
 function isTerminalRunStatus(status) {
@@ -149,6 +187,21 @@ async function reserveScheduledRun(ruleId, now) {
     }
 
     const scheduledFor = rule.nextRunAt;
+    const rateLimit = await assertRuleRunAllowed(rule, now);
+    if (!rateLimit.allowed) {
+      await automaticProductRuleRepository.updateById(
+        rule.id,
+        {
+          nextRunAt: computeAutomaticProductRuleNextRunAt(
+            rule,
+            new Date(scheduledFor.getTime() + 1000),
+          ),
+        },
+        tx,
+      );
+      return null;
+    }
+
     const executionKey = buildScheduledExecutionKey(rule.id, scheduledFor);
     const existingRun = await automaticProductRuleRunRepository.findByExecutionKey(executionKey, tx);
 
@@ -300,12 +353,19 @@ export async function reserveAutomaticProductRuleRunFromSignal({
   triggerSource = "WEBHOOK",
 }) {
   const now = new Date();
-  const rules = await automaticProductRuleRepository.listRunnableEventRulesByShop(shop, now);
+  const rules = resolveRuleConflicts(
+    await automaticProductRuleRepository.listRunnableEventRulesByShop(shop, now),
+  );
   let createdRuns = 0;
   let reusedRuns = 0;
 
   for (const rule of rules) {
-    const executionKey = buildSignalExecutionKey(rule.id, triggerSource, triggerReference, productIds);
+      const executionKey = buildSignalExecutionKey(rule.id, triggerSource, triggerReference, productIds);
+      const rateLimit = await assertRuleRunAllowed(rule);
+      if (!rateLimit.allowed) {
+        reusedRuns += 1;
+        continue;
+      }
 
     try {
       const existingRun = await automaticProductRuleRunRepository.findByExecutionKey(executionKey);
@@ -412,14 +472,28 @@ export async function scheduleDueAutomaticProductRuleRuns({ limit = 100 } = {}) 
   }
 }
 
-export async function createManualAutomaticProductRuleRun({ rule }) {
+export async function createManualAutomaticProductRuleRun({
+  rule,
+  executionMode = "MANUAL",
+}) {
+  const normalizedExecutionMode = String(executionMode || "MANUAL").toUpperCase();
+  const rateLimit = await assertRuleRunAllowed(rule);
+  if (!rateLimit.allowed) {
+    return {
+      skipped: true,
+      reason: rateLimit.reason,
+      automaticProductRuleId: rule.id,
+      shop: rule.shop,
+    };
+  }
+
   const run = await automaticProductRuleRunRepository.create({
     automaticProductRuleId: rule.id,
     shop: rule.shop,
-    triggerSource: "MANUAL",
+    triggerSource: normalizedExecutionMode === "DRY_RUN" ? "DRY_RUN" : "MANUAL",
     triggerReference: buildTriggerReference({
-      triggerReference: "manual",
-      source: "MANUAL",
+      triggerReference: normalizedExecutionMode.toLowerCase(),
+      source: normalizedExecutionMode,
     }),
     status: "PENDING",
     executionKey: buildManualExecutionKey(rule.id),
@@ -625,9 +699,19 @@ export async function executeAutomaticProductRuleRun(runId, shopFromJob = null) 
       };
     }
 
-    const where = productFilterService.getProductPrismaWhere(
-      Array.isArray(rule.conditions) ? rule.conditions : [],
-      rule.shop,
+    const operationalState = await prisma.storeOperationalState.findUnique({
+      where: { shop: rule.shop },
+      select: { activeCatalogBatchId: true },
+    });
+
+    if (!operationalState?.activeCatalogBatchId) {
+      throw new Error("INITIAL_SYNC_REQUIRED");
+    }
+
+    const where = mergeWhereClauses(
+      buildScopeWhere(rule.scope, rule.shop),
+      compileRuleConditionAst(rule.conditions, rule.shop),
+      { shop: rule.shop, mirrorBatchId: operationalState.activeCatalogBatchId },
     );
 
     const {
@@ -642,6 +726,21 @@ export async function executeAutomaticProductRuleRun(runId, shopFromJob = null) 
     });
 
     await persistMatchedStateUpdates(rule, matchedStateUpdates);
+
+    if (rule.executionMode === "DRY_RUN" || run.triggerSource === "DRY_RUN") {
+      await markRunSkipped(run, "DRY_RUN", {
+        matchedCount,
+        affectedCount: candidateProducts.length,
+      });
+
+      return {
+        dryRun: true,
+        runId: run.id,
+        matchedCount,
+        affectedCount: candidateProducts.length,
+        sampleProductIds: candidateProducts.slice(0, 50).map((product) => product.id),
+      };
+    }
 
     if (!candidateProducts.length) {
       await markRunSkipped(run, "No eligible products remained after dedupe checks", {
@@ -674,7 +773,8 @@ export async function executeAutomaticProductRuleRun(runId, shopFromJob = null) 
     try {
       const baseHistory = await bulkService._bulkOperationEdit(
         {
-          filterParams: rule.conditions,
+          conditionAst: rule.conditions,
+          filterParams: [],
           productIds,
           queryWhere: {
             shop: rule.shop,
@@ -744,11 +844,34 @@ export async function executeAutomaticProductRuleRun(runId, shopFromJob = null) 
         affectedCount: productIds.length,
       });
 
-      await addbulkEditJob({
-        historyId: editHistoryId,
+      const historyForOperation = await prisma.editHistory.findUnique({
+        where: { id: editHistoryId },
+      });
+
+      const operation = await startBulkEditOperationForHistory({
+        history: historyForOperation,
+        operationType: OPERATION_TYPES.AUTOMATIC_RULE,
+        source: "AUTOMATIC_RULE",
+        userId: "system",
+        clientRequestId: run.id,
+        editPayload: rule.actions,
+        onStarted: async (startedOperation) => {
+          await addbulkEditJob({
+            historyId: editHistoryId,
+            shop: rule.shop,
+            source: "automatic_rule",
+            executionId: editHistoryExecutionIdentity || editHistoryId,
+            operationId: startedOperation.id,
+          });
+        },
+      });
+
+      logger.info("Automatic rule operation started", {
         shop: rule.shop,
-        source: "automatic_rule",
-        executionId: editHistoryExecutionIdentity || editHistoryId,
+        automaticProductRuleId: rule.id,
+        runId: run.id,
+        editHistoryId,
+        operationId: operation.id,
       });
     } catch (error) {
       await failHistoryAndRun({

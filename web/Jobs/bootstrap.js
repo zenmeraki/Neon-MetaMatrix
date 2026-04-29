@@ -23,6 +23,7 @@ const SIDE_EFFECT_WORKER_MODULES = [
   "../workers/automaticProductRuleExecutionWorker.js",
   "../workers/automaticProductRuleSchedulerWorker.js",
   "../workers/automaticProductRuleSignalWorker.js",
+  "./Workers/staleStoreOperationRepairWorker.js",
 ];
 
 let backgroundJobsStarted = false;

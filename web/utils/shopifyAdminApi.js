@@ -1,5 +1,11 @@
 import shopify from "../shopify.js";
 import logger from "./loggerUtils.js";
+import {
+  extractShopifyThrottleStatus,
+  recordShopifyCostBudget,
+  waitForShopifyCostBudget,
+} from "../services/shopify/shopifyCostThrottleService.js";
+import { recordShopifyError } from "./metricsUtils.js";
 
 const RETRYABLE_STATUS_CODES = new Set([429, 500, 502, 503, 504]);
 
@@ -12,10 +18,7 @@ function jitter(baseMs) {
 }
 
 function extractThrottleWaitMs(responseBody) {
-  const throttleStatus =
-    responseBody?.extensions?.cost?.throttleStatus ||
-    responseBody?.body?.extensions?.cost?.throttleStatus ||
-    null;
+  const throttleStatus = extractShopifyThrottleStatus(responseBody);
 
   if (!throttleStatus) {
     return 0;
@@ -60,6 +63,7 @@ export async function adminGraphqlWithRetry({
   shop = session?.shop,
   maxAttempts = 5,
   minDelayMs = 1_000,
+  requiredCost = 100,
 } = {}) {
   const client = new shopify.api.clients.Graphql({ session });
   let attempt = 0;
@@ -69,7 +73,12 @@ export async function adminGraphqlWithRetry({
     attempt += 1;
 
     try {
+      await waitForShopifyCostBudget(shop, requiredCost);
       const response = await client.query({ data });
+      await recordShopifyCostBudget(
+        shop,
+        extractShopifyThrottleStatus(response),
+      );
       const throttleWaitMs = extractThrottleWaitMs(response);
 
       if (throttleWaitMs > 0) {
@@ -79,6 +88,11 @@ export async function adminGraphqlWithRetry({
       return response;
     } catch (error) {
       lastError = error;
+      recordShopifyError({
+        shop,
+        source: operationName,
+        errorType: error?.code || error?.response?.statusCode || "SHOPIFY_API_ERROR",
+      });
 
       if (!isRetryableError(error) || attempt >= maxAttempts) {
         break;

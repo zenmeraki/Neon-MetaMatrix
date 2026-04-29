@@ -17,7 +17,18 @@ import { clearKeyCaches } from "../../utils/cacheUtils.js";
 import { runWorkerTask } from "../../utils/runWorkerTask.js";
 import { isVariantLevelField as isVariantLevelBulkField } from "../../helpers/productBulkOperationHelpers/constants.js";
 import { prisma } from "../../config/database.js";
+import { LOCK_NS } from "../../constants/lockNamespaces.js";
+import { OPERATION_TYPES } from "../../constants/operationTypes.js";
 import { bulkEditHistoryRepository } from "../../repositories/bulkEditHistoryRepository.js";
+import { storeOperationRepository } from "../../repositories/storeOperationRepository.js";
+import { storeOperationalStateRepository } from "../../repositories/storeOperationalStateRepository.js";
+import { targetSnapshotSetRepository } from "../../repositories/targetSnapshotSetRepository.js";
+import { operationEventRepository } from "../../repositories/operationEventRepository.js";
+import { storeExecutionPolicyService } from "../execution/storeExecutionPolicyService.js";
+import {
+  acquireShopLocks,
+  releaseShopLocks,
+} from "../execution/storeMultiLockService.js";
 import {
   cloneFrozenTargetSnapshot,
   freezeTargetSnapshot,
@@ -30,6 +41,13 @@ import {
   BULK_EDIT_EXECUTION_STATES,
   buildPlannedUndoState,
 } from "../bulkEditExecutionStateService.js";
+import {
+  buildBulkEditIdempotencyKey,
+  stableHash,
+} from "../../utils/idempotencyKey.js";
+import { assertWriteInvariant } from "../execution/writeInvariantService.js";
+import { validateBulkEditPayload } from "../../validations/bulkEditPayloadValidator.js";
+import { featureFlags } from "../featureFlagService.js";
 
 const OPTION_NAME_FIELDS = new Set([
   "option1Name",
@@ -474,17 +492,154 @@ export default class ProductBulkService {
   }
 
   async bulkEditProducts(req) {
+    let lockResult = null;
+    let operation = null;
+
     try {
+      if (featureFlags.newBulkEngine) {
+        console.log("[feature:newBulkEngine] using guarded bulk edit pipeline", {
+          shop: this.session.shop,
+        });
+      }
+
       const historyData = await this._bulkOperationEdit(
         req.body,
         req.subscription || {}
       );
 
+      const targetHash = stableHash({
+        queryFilter: historyData.queryFilter,
+        targetMirrorBatchId: historyData.targetMirrorBatchId,
+        totalItems: historyData.totalItems,
+        sourceTargetSnapshotId: historyData.batch?.sourceTargetSnapshotId || null,
+      });
+      const clientRequestId =
+        req.body?.clientRequestId ||
+        req.body?.requestId ||
+        historyData.executionIdentity;
+      const idempotencyKey = buildBulkEditIdempotencyKey({
+        shop: historyData.shop,
+        userId: req.body?.userId || req.body?.user || null,
+        targetHash,
+        editPayload: historyData.rules,
+        clientRequestId,
+      });
+      const existingOperation =
+        await storeOperationRepository.findByIdempotencyKey(idempotencyKey);
+
+      if (existingOperation?.editHistoryId) {
+        const existingHistory = await prisma.editHistory.findFirst({
+          where: {
+            id: existingOperation.editHistoryId,
+            shop: historyData.shop,
+          },
+        });
+
+        if (existingHistory) {
+          return existingHistory;
+        }
+      }
+
+      if (existingOperation) {
+        return existingOperation;
+      }
+
+      const policy = await storeExecutionPolicyService.canStartOperation({
+        shop: historyData.shop,
+        operationType: OPERATION_TYPES.BULK_EDIT,
+      });
+
+      if (!policy.allowed) {
+        const error = new Error(policy.message);
+        error.code = policy.reason;
+        throw error;
+      }
+
+      lockResult = await acquireShopLocks(historyData.shop, [
+        LOCK_NS.WRITE_CATALOG,
+        LOCK_NS.BULK_EDIT_WRITE,
+      ]);
+
+      if (!lockResult.acquired) {
+        const error = new Error("Another operation is already running.");
+        error.code = "LOCK_HELD";
+        throw error;
+      }
+
+      const now = new Date();
+      const operationalState =
+        await storeOperationalStateRepository.getOrCreate(historyData.shop);
+      operation = await storeOperationRepository.create({
+        shop: historyData.shop,
+        type: OPERATION_TYPES.BULK_EDIT,
+        status: "RUNNING",
+        requestedBy: req.body?.userId || req.body?.user || null,
+        source: "MANUAL",
+        lockKey: lockResult.locks?.map((lock) => lock.key).join(",") || null,
+        idempotencyKey,
+        targetHash,
+        catalogBatchId: operationalState.activeCatalogBatchId,
+        productBatchId: operationalState.activeProductBatchId,
+        variantBatchId: operationalState.activeVariantBatchId,
+        collectionBatchId: operationalState.activeCollectionBatchId,
+        mirrorBatchId: historyData.targetMirrorBatchId,
+        totalTargets: historyData.totalItems,
+        startedAt: now,
+        heartbeatAt: now,
+      });
+
+      await storeOperationalStateRepository.setActiveWrite(
+        historyData.shop,
+        operation.id,
+      );
+
+      assertWriteInvariant({
+        operation,
+        lockResult,
+        idempotencyKey,
+        snapshotFrozen: Boolean(historyData.batch?.frozen),
+      });
+
+      await operationEventRepository.emit({
+        shop: historyData.shop,
+        operationId: operation.id,
+        type: "OPERATION_STARTED",
+        payload: {
+          operationType: OPERATION_TYPES.BULK_EDIT,
+          source: "MANUAL",
+        },
+      });
+
       const history = await prisma.editHistory.create({
-        data: historyData,
+        data: {
+          ...historyData,
+          batch: {
+            ...historyData.batch,
+            operationId: operation.id,
+          },
+        },
+      });
+
+      await storeOperationRepository.updateById(operation.id, {
+        editHistoryId: history.id,
       });
 
       const frozenCount = await this.freezeEditHistoryTargets(history.id);
+      await targetSnapshotSetRepository.materializeFromEditHistory({
+        operationId: operation.id,
+        shop: history.shop,
+        historyId: history.id,
+      });
+
+      await operationEventRepository.emit({
+        shop: history.shop,
+        operationId: operation.id,
+        type: "TARGET_FROZEN",
+        payload: {
+          editHistoryId: history.id,
+          targetCount: frozenCount,
+        },
+      });
 
       const queued = await bulkEditHistoryRepository.movePlannedToQueued({
         id: history.id,
@@ -500,17 +655,36 @@ export default class ProductBulkService {
         shop: history.shop,
         source: "manual_bulk_edit",
         executionId: history.executionIdentity,
+        operationId: operation.id,
       });
 
       return prisma.editHistory.findUnique({
         where: { id: history.id },
       });
     } catch (error) {
-      throw new Error(error.message);
+      if (operation?.id) {
+        await storeOperationRepository.fail(operation.id, {
+          errorCode: error.code || "BULK_EDIT_START_FAILED",
+          errorMessage: error.message,
+        });
+
+        await storeOperationalStateRepository.clearActiveWrite(
+          operation.shop,
+          operation.id,
+        );
+      }
+
+      throw error;
+    } finally {
+      if (lockResult?.locks) {
+        await releaseShopLocks(lockResult.locks);
+      }
     }
   }
 
   async _bulkOperationEdit(body, subscription) {
+    validateBulkEditPayload(body);
+
     const {
       editedField,
       filterParams,
@@ -519,10 +693,6 @@ export default class ProductBulkService {
       targetSnapshotId,
       title: explicitTitle,
     } = body;
-
-    if (editedField === "inventory" && !body.locationId) {
-      throw new Error("Location ID is required for inventory edits");
-    }
 
     const rules = normalizeRules(body);
     const normalizedTargetSnapshotId =
@@ -547,6 +717,23 @@ export default class ProductBulkService {
         });
 
     const count = resolvedTarget.count;
+    const store = await prisma.store.findUnique({
+      where: { shopUrl: this.session.shop },
+      select: { storeTotalProducts: true },
+    });
+    const storeTotalProducts = Number(store?.storeTotalProducts || 0);
+    const isWholeCatalogTarget =
+      storeTotalProducts > 0 && count >= storeTotalProducts;
+
+    if (
+      isWholeCatalogTarget &&
+      String(body.allProductsConfirmation || "") !== "CONFIRM"
+    ) {
+      throw new Error(
+        'You are about to change ALL products. Type "CONFIRM" to proceed.'
+      );
+    }
+
     const limit = subscription?.limit || 100;
     const planName = subscription?.planName || "Free Plan";
     const isUnlimited = subscription?.isUnlimited || false;

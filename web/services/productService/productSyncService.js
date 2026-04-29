@@ -20,6 +20,8 @@ import {
   extractMetaobjectIds,
   fetchMetaobjectLookupByIds,
 } from "./productSyncMetaobjects.js";
+import { validateCatalogConsistency } from "../catalogConsistencyValidatorService.js";
+import { alertingService } from "../operationalAlertService.js";
 
 export async function startBulkOperationToFetchProducts({
   session,
@@ -362,6 +364,17 @@ export async function formatAndSyncProductsToDB({
       syncHistoryId,
     });
 
+    const consistency = await validateCatalogConsistency({
+      shop,
+      mirrorBatchId: syncBatchId,
+    });
+
+    if (consistency.status !== "READY") {
+      throw new Error(
+        `Catalog consistency validation failed: ${consistency.errors.join(", ")}`,
+      );
+    }
+
     console.log(`[sync:complete] shop=${shop} syncBatchId=${syncBatchId} totalProductsProcessed=${totalProductsProcessed} totalVariantsProcessed=${totalVariantsProcessed}`);
 
 
@@ -381,6 +394,11 @@ export async function formatAndSyncProductsToDB({
       shop,
       syncHistoryId,
       errorMessage: error.message,
+    });
+    alertingService.syncFailure({
+      shop,
+      syncRunId: syncBatchId,
+      error,
     });
     throw error;
   }

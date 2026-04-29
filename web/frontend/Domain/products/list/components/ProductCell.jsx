@@ -1,9 +1,37 @@
-import React, { memo } from "react";
-import { InlineStack, Box, Thumbnail, Text } from "@shopify/polaris";
+import React, { memo, useCallback, useState } from "react";
+import {
+  InlineStack,
+  Box,
+  Button,
+  Thumbnail,
+  Text,
+  Tooltip,
+} from "@shopify/polaris";
+import { useTranslation } from "react-i18next";
 
 function ProductCellComponent({ title = "", handle = "", imageUrl = "" }) {
+  const { t } = useTranslation();
+  const [copied, setCopied] = useState(false);
   const productTitle = title?.trim() || "Untitled product";
-  const productHandle = handle?.trim() ? `/${handle.trim()}` : "";
+  const cleanHandle = handle?.trim() || "";
+  const productHandle = cleanHandle ? `/${cleanHandle}` : "";
+
+  const copyHandle = useCallback(
+    async (event) => {
+      event.stopPropagation();
+
+      if (!cleanHandle) return;
+
+      try {
+        await navigator.clipboard.writeText(cleanHandle);
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 1200);
+      } catch {
+        setCopied(false);
+      }
+    },
+    [cleanHandle]
+  );
 
   return (
     <InlineStack gap="300" blockAlign="center" wrap={false}>
@@ -12,14 +40,33 @@ function ProductCellComponent({ title = "", handle = "", imageUrl = "" }) {
       </Box>
 
       <Box minWidth="0" maxWidth="320px">
-        <Text as="span" fontWeight="medium" truncate>
-          {productTitle}
-        </Text>
+        <Tooltip content={productTitle}>
+          <Text as="span" fontWeight="medium" truncate>
+            {productTitle}
+          </Text>
+        </Tooltip>
 
         {productHandle ? (
-          <Text as="span" tone="subdued" variant="bodySm" truncate>
-            {productHandle}
-          </Text>
+          <Tooltip
+            content={
+              copied
+                ? t("copiedHandle", { defaultValue: "Copied handle" })
+                : t("copyHandle", { defaultValue: "Copy handle" })
+            }
+          >
+            <Button
+              variant="plain"
+              onClick={copyHandle}
+              accessibilityLabel={t("copyProductHandleAccessibilityLabel", {
+                handle: cleanHandle,
+                defaultValue: `Copy product handle ${cleanHandle}`,
+              })}
+            >
+              <Text as="span" tone="subdued" variant="bodySm" truncate>
+                {productHandle}
+              </Text>
+            </Button>
+          </Tooltip>
         ) : null}
       </Box>
     </InlineStack>

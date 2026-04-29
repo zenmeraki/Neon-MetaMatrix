@@ -208,6 +208,7 @@ model Store {
   shopEmail                       String
   accessToken                     String?
   activeMirrorBatchId             String?
+  mirrorSchemaVersion             Int               @default(1)
   activeCollectionBatchId         String?
   isCollectionSyncing             Boolean           @default(false)
   lastCollectionSyncAt            DateTime?
@@ -483,11 +484,15 @@ model AutomaticProductRule {
   startAt            DateTime?
   endAt              DateTime?
   scopeType          AutomaticProductRuleScopeType
+  scope              Json?
   conditions         Json
   actions            Json
   applyMode          String
+  executionMode      String                             @default("REALTIME")
+  conflictStrategy   String                             @default("PRIORITY_WINS")
   priority           Int                                @default(100)
   cooldownMinutes    Int?
+  maxExecutionsPerHour Int?
   maxAffectedPerRun  Int?
   runCount           Int                                @default(0)
   lastRunAt          DateTime?
@@ -508,6 +513,7 @@ model AutomaticProductRule {
   @@index([shop, status])
   @@index([shop, nextRunAt])
   @@index([shop, triggerType])
+  @@index([shop, executionMode, status])
   @@index([shop, priority, status])
   @@index([shop, createdAt])
   @@index([shop, canonicalFilterKey])
@@ -554,6 +560,171 @@ model AutomaticProductRuleProductState {
   @@unique([automaticProductRuleId, shop, productId])
   @@index([shop, productId])
   @@index([automaticProductRuleId, suppressedUntil])
+}
+
+model Rule {
+  id               String        @id @default(cuid())
+  shopId           String
+  name             String
+  description      String?
+  status           RuleStatus
+  mode             RuleMode
+  priority         Int           @default(50)
+  scopeType        String
+  scopeRefId       String?
+  filterDsl        Json
+  actionDsl        Json
+  conflictStrategy String
+  allowDestructive Boolean       @default(false)
+  cooldownSeconds  Int           @default(0)
+  maxRunsPerHour   Int?
+  lastRunAt        DateTime?
+  lastRunHash      String?
+  version          Int           @default(1)
+  parentRuleId     String?
+  createdBy        String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  deletedAt        DateTime?
+  runs             RuleRun[]
+  versions         RuleVersion[]
+  schedules        RuleSchedule[]
+  executionStats   RuleExecutionStat[]
+  eventDedups      RuleEventDedup[]
+
+  @@index([shopId, status])
+  @@index([shopId, priority])
+  @@index([shopId, id])
+}
+
+model RuleVersion {
+  id           String   @id @default(cuid())
+  shopId       String
+  ruleId       String
+  version      Int
+  filterDsl    Json
+  actionDsl    Json
+  snapshotNote String?
+  createdAt    DateTime @default(now())
+  rule         Rule     @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@unique([ruleId, version])
+  @@index([shopId, ruleId])
+}
+
+model RuleRun {
+  id             String          @id @default(cuid())
+  shopId         String
+  ruleId         String
+  operationId    String?
+  triggerType    String
+  triggerEventId String?
+  status         RuleRunStatus
+  catalogBatchId String
+  targetCount    Int?
+  affectedCount  Int?
+  failureCount   Int?
+  startedAt      DateTime?
+  completedAt    DateTime?
+  failedAt       DateTime?
+  errorCode      String?
+  errorMessage   String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  rule           Rule            @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  executions     RuleExecution[]
+  failures       RuleFailure[]
+  targetSnapshots RuleTargetSnapshot[]
+
+  @@unique([shopId, ruleId, triggerEventId])
+  @@index([shopId, ruleId])
+  @@index([shopId, status])
+  @@index([shopId, status, createdAt])
+  @@index([shopId, catalogBatchId])
+}
+
+model RuleExecution {
+  id        String   @id @default(cuid())
+  shopId    String
+  ruleRunId String
+  entityType String
+  entityId  String
+  status    RuleExecutionStatus
+  reason    String?
+  createdAt DateTime @default(now())
+  ruleRun   RuleRun  @relation(fields: [ruleRunId], references: [id], onDelete: Cascade)
+
+  @@unique([ruleRunId, entityType, entityId])
+  @@index([shopId, ruleRunId])
+  @@index([ruleRunId, entityId])
+}
+
+model RuleFailure {
+  id           String   @id @default(cuid())
+  shopId       String
+  ruleRunId    String
+  entityType   String
+  entityId     String
+  errorCode    String
+  errorMessage String?
+  createdAt    DateTime @default(now())
+  ruleRun      RuleRun  @relation(fields: [ruleRunId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, ruleRunId])
+}
+
+model RuleExecutionStat {
+  id          String   @id @default(cuid())
+  shopId      String
+  ruleId      String
+  windowStart DateTime
+  runCount    Int
+  createdAt   DateTime @default(now())
+  rule        Rule     @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@unique([shopId, ruleId, windowStart])
+  @@index([shopId, ruleId])
+}
+
+model RuleSchedule {
+  id        String   @id @default(cuid())
+  shopId    String
+  ruleId    String
+  cron      String
+  nextRunAt DateTime
+  timezone  String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  rule      Rule     @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, nextRunAt])
+  @@index([shopId, ruleId])
+}
+
+model RuleEventDedup {
+  id        String   @id @default(cuid())
+  shopId    String
+  ruleId    String
+  eventId   String
+  createdAt DateTime @default(now())
+  rule      Rule     @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@unique([shopId, ruleId, eventId])
+  @@index([shopId, ruleId])
+}
+
+model RuleTargetSnapshot {
+  id         String  @id @default(cuid())
+  shopId     String
+  ruleRunId  String
+  entityType String
+  entityId   String
+  ruleRun    RuleRun @relation(fields: [ruleRunId], references: [id], onDelete: Cascade)
+
+  @@unique([ruleRunId, entityType, entityId])
+  @@index([shopId, ruleRunId])
+  @@index([ruleRunId, entityId])
 }
 
 model ProductCodeSnippet {
@@ -740,7 +911,14 @@ model ExportJob {
 model ChangeRecord {
   id                  String      @id @default(cuid())
   editHistoryId       String
+  operationId         String?
   productId           String
+  entityType          String?
+  entityId            String?
+  field               String?
+  oldValue            Json?
+  newValue            Json?
+  mutationKey         String?
   shop                String
   options             Json?
   productFieldChanges Json?
@@ -755,6 +933,7 @@ model ChangeRecord {
   editHistory         EditHistory @relation(fields: [editHistoryId], references: [id])
 
   @@index([editHistoryId])
+  @@index([shop, operationId])
   @@index([productId])
   @@index([shop])
   @@index([status])
@@ -970,6 +1149,141 @@ model WebhookDelivery {
   @@index([status, createdAt])
 }
 
+model StoreOperation {
+  id                String    @id @default(cuid())
+  shop              String
+  type              String
+  status            String
+  requestedBy       String?
+  source            String
+  lockKey           String?
+  leaseOwner        String?
+  leaseExpiresAt    DateTime?
+  idempotencyKey    String    @unique
+  editHistoryId     String?
+  targetHash        String?
+  catalogBatchId    String?
+  productBatchId    String?
+  variantBatchId    String?
+  collectionBatchId String?
+  mirrorBatchId     String?
+  totalTargets      Int?
+  processedCount    Int       @default(0)
+  successCount      Int       @default(0)
+  failureCount      Int       @default(0)
+  startedAt         DateTime?
+  completedAt       DateTime?
+  failedAt          DateTime?
+  heartbeatAt       DateTime?
+  errorCode         String?
+  errorMessage      String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([shop, status])
+  @@index([shop, type, status])
+  @@index([shop, heartbeatAt])
+  @@index([shop, leaseExpiresAt])
+  @@index([shop, editHistoryId])
+}
+
+model OperationFailure {
+  id           String   @id @default(cuid())
+  shop         String
+  operationId  String
+  entityId     String
+  errorCode    String?
+  errorMessage String?
+  createdAt    DateTime @default(now())
+
+  @@index([shop, operationId])
+  @@index([operationId])
+}
+
+model OperationEvent {
+  id          String   @id @default(cuid())
+  shop        String
+  operationId String
+  type        String
+  payload     Json?
+  createdAt   DateTime @default(now())
+
+  @@index([shop, operationId])
+  @@index([operationId, createdAt])
+  @@index([type])
+}
+
+model OperationMutation {
+  id          String   @id @default(cuid())
+  shop        String
+  operationId String
+  entityId    String
+  field       String
+  status      String   @default("APPLIED")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([shop, entityId, field, operationId])
+  @@index([shop, operationId])
+}
+
+model TargetSnapshotSet {
+  id          String   @id @default(cuid())
+  operationId String
+  shop        String
+  entityId    String
+  ordinal     Int?
+  createdAt   DateTime @default(now())
+
+  @@unique([operationId, entityId])
+  @@index([shop, operationId])
+  @@index([operationId, entityId])
+  @@index([operationId, ordinal])
+}
+
+model StoreOperationalState {
+  shop                     String    @id
+  mirrorSchemaVersion      Int       @default(1)
+  activeCatalogBatchId     String?
+  activeProductBatchId     String?
+  activeVariantBatchId     String?
+  activeCollectionBatchId  String?
+  catalogConsistencyStatus String    @default("NOT_READY")
+  activeWriteOperationId   String?
+  activeSyncOperationId    String?
+  activeImportOperationId  String?
+  lastSyncAt               DateTime?
+  lastWriteAt              DateTime?
+  lastHealthCheckAt        DateTime?
+  writeBlockedReason       String?
+  writesBlockedUntil       DateTime?
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+}
+
+model ScheduledEditRun {
+  id              String    @id @default(cuid())
+  shop            String
+  scheduledEditId String
+  operationId     String?
+  scheduledFor    DateTime
+  claimedAt       DateTime?
+  startedAt       DateTime?
+  completedAt     DateTime?
+  failedAt        DateTime?
+  status          String
+  targetCount     Int?
+  affectedCount   Int?
+  errorCode       String?
+  errorMessage    String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([shop, scheduledEditId, scheduledFor])
+  @@index([shop, status])
+  @@index([scheduledEditId])
+}
+
 enum SubscriptionStatus {
   FREE
   PENDING
@@ -1073,7 +1387,35 @@ enum AutomaticProductRuleRunTriggerSource {
   SCHEDULE
   WEBHOOK
   MANUAL
+  DRY_RUN
   REINDEX
+}
+
+enum RuleStatus {
+  ACTIVE
+  PAUSED
+  DELETED
+}
+
+enum RuleMode {
+  REALTIME
+  SCHEDULED
+  MANUAL
+  DRY_RUN
+}
+
+enum RuleRunStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  PARTIAL
+}
+
+enum RuleExecutionStatus {
+  SUCCESS
+  FAILED
+  SKIPPED
 }
 
 enum ProductCodeSnippetStatus {

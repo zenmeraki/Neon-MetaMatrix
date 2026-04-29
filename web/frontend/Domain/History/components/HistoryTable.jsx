@@ -124,6 +124,40 @@ function getItemViewModel(item) {
   };
 }
 
+function getDateGroupLabel(value, t) {
+  if (!value) {
+    return t("historyGroupUnknown", { defaultValue: "Unknown date" });
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return t("historyGroupUnknown", { defaultValue: "Unknown date" });
+  }
+
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+
+  const normalize = (input) =>
+    new Date(input.getFullYear(), input.getMonth(), input.getDate()).getTime();
+
+  const normalizedDate = normalize(date);
+
+  if (normalizedDate === normalize(today)) {
+    return t("historyGroupToday", { defaultValue: "Today" });
+  }
+
+  if (normalizedDate === normalize(yesterday)) {
+    return t("historyGroupYesterday", { defaultValue: "Yesterday" });
+  }
+
+  return date.toLocaleDateString(undefined, {
+    month: "long",
+    day: "numeric",
+    year: date.getFullYear() === today.getFullYear() ? undefined : "numeric",
+  });
+}
+
 const HistoryTable = memo(function HistoryTable({
   histories,
   isLoading,
@@ -334,8 +368,10 @@ const HistoryTable = memo(function HistoryTable({
     };
   }, [localHistories]);
 
-  const rows = useMemo(() => {
-    return (localHistories || []).map((item) => {
+  const groupedRows = useMemo(() => {
+    const groups = new Map();
+
+    (localHistories || []).forEach((item) => {
       const { id, title, shop } = item;
       const user = shop?.split(".")[0];
 
@@ -350,8 +386,10 @@ const HistoryTable = memo(function HistoryTable({
       const isUndoable = canUndo(item);
       const undoDisabled = !isUndoable || isProcessing || isSyncInProgress;
       const primaryDetail = getStatusDetail(primaryStatus);
+      const groupLabel = getDateGroupLabel(timeValue, t);
+      const groupRows = groups.get(groupLabel) || [];
 
-      return [
+      groupRows.push([
         <Box key={`title-${id}`} maxWidth="320px">
           <BlockStack gap="050">
          <Text variant="bodyMd" fontWeight="medium" truncate as="span">
@@ -406,8 +444,15 @@ const HistoryTable = memo(function HistoryTable({
             {t("historyUndoButton")}
           </Button>
         </InlineStack>,
-      ];
+      ]);
+
+      groups.set(groupLabel, groupRows);
     });
+
+    return Array.from(groups.entries()).map(([label, rows]) => ({
+      label,
+      rows,
+    }));
   }, [
     localHistories,
     canUndo,
@@ -514,19 +559,28 @@ const HistoryTable = memo(function HistoryTable({
 
       <Divider />
 
-      <Box overflowX="auto" paddingInlineStart="800">
-        <DataTable
-          columnContentTypes={["text", "text", "text", "text", "text"]}
-          headings={[
-            t("historyColumnTitle"),
-            t("historyColumnStatus"),
-            t("historyColumnProcessed"),
-            t("historyColumnUpdated"),
-            t("historyColumnActions"),
-          ]}
-          rows={rows}
-        />
-      </Box>
+      <BlockStack gap="400">
+        {groupedRows.map((group) => (
+          <Box key={group.label} overflowX="auto" paddingInlineStart="800">
+            <Box paddingBlockStart="400" paddingBlockEnd="200">
+              <Text as="h4" variant="headingSm">
+                {group.label}
+              </Text>
+            </Box>
+            <DataTable
+              columnContentTypes={["text", "text", "text", "text", "text"]}
+              headings={[
+                t("historyColumnTitle"),
+                t("historyColumnStatus"),
+                t("historyColumnProcessed"),
+                t("historyColumnUpdated"),
+                t("historyColumnActions"),
+              ]}
+              rows={group.rows}
+            />
+          </Box>
+        ))}
+      </BlockStack>
 
       {hasMore ? (
         <>

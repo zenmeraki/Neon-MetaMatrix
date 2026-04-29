@@ -314,7 +314,8 @@ function handleProductField(
     const currentValue = config.needsProcessing
       ? config.getProcessedValue(product)
       : rawValue;
-    const newValue = operation.apply(currentValue, value);
+    const resolvedValue = resolveProductTemplateValue(value, product);
+    const newValue = operation.apply(currentValue, resolvedValue);
 
     return {
       productId: product.id || product._id, // Support both
@@ -329,7 +330,8 @@ function handleProductField(
   const currentValue = config.needsProcessing
     ? config.getProcessedValue(product)
     : rawValue;
-  const newValue = operation.apply(currentValue, value);
+  const resolvedValue = resolveProductTemplateValue(value, product);
+  const newValue = operation.apply(currentValue, resolvedValue);
 
   const productId = product.id || product._id;
 
@@ -359,6 +361,33 @@ function handleProductField(
       ...payload,
     },
   });
+}
+
+function resolveProductTemplateValue(value, product) {
+  const replacements = {
+    "{{title}}": product?.title || "",
+    "{{vendor}}": product?.vendor || "",
+    "{{handle}}": product?.handle || "",
+    "{{productType}}": product?.productType || "",
+  };
+
+  if (typeof value === "string") {
+    return Object.entries(replacements).reduce(
+      (current, [token, replacement]) => current.split(token).join(replacement),
+      value
+    );
+  }
+
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entryValue]) => [
+        key,
+        resolveProductTemplateValue(entryValue, product),
+      ])
+    );
+  }
+
+  return value;
 }
 
 function handleVariantField(

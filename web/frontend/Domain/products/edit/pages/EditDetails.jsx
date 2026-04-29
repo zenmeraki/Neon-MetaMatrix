@@ -29,6 +29,7 @@ import Papa from "papaparse";
 import { useTranslation } from "react-i18next";
 
 const FALLBACK_IMAGE = "https://www.otithee.com/img/fallback/fallback-2.png";
+const ESTIMATED_PRODUCTS_PER_SECOND = 125;
 
 function formatDuration(ms = 0) {
   if (!ms || ms < 0) return "0s";
@@ -132,6 +133,31 @@ function normalizeErrors(value) {
   return [{ message: String(value) }];
 }
 
+function formatCount(value, language) {
+  return Number(value || 0).toLocaleString(language);
+}
+
+function getEstimatedBulkEditMs(count) {
+  const numericCount = Number(count || 0);
+  if (numericCount <= 0) return 0;
+  return Math.max(20, Math.ceil(numericCount / ESTIMATED_PRODUCTS_PER_SECOND)) * 1000;
+}
+
+function getFailureProductLabel(entry) {
+  return (
+    entry?.productTitle ||
+    entry?.title ||
+    entry?.product ||
+    entry?.productId ||
+    entry?.id ||
+    "Shopify bulk operation"
+  );
+}
+
+function getFailureMessage(entry) {
+  return entry?.message || entry?.error || entry?.code || "Unknown error";
+}
+
 export default function EditDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -150,6 +176,9 @@ const { t, i18n } = useTranslation();
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalChanges, setTotalChanges] = useState(0);
+  const [showFailureInspector, setShowFailureInspector] = useState(false);
+  const changesSectionRef = React.useRef(null);
+  const failuresSectionRef = React.useRef(null);
 
   const itemsPerPage = 10;
 
@@ -387,6 +416,147 @@ const response = await fetch(
     [flattenedRows],
   );
 
+  const timelineRows = useMemo(() => {
+    if (!historyItem) return [];
+
+    const status = getPrimaryStatus(historyItem);
+    const targetCount = Number(
+      historyItem?.supportStatus?.targetSnapshotCount ||
+        historyItem?.targetSnapshotCount ||
+        historyItem?.totalItems ||
+        0,
+    );
+    const processedCount = Number(
+      historyItem?.progressSummary?.current ||
+        historyItem?.progressCount ||
+        historyItem?.processedCount ||
+        0,
+    );
+    const errors = normalizeErrors(
+      historyItem?.supportStatus?.errors || historyItem?.error,
+    );
+    const failedCount = errors.length;
+    const succeededCount = Math.max(processedCount - failedCount, 0);
+    const undoAllowed =
+      historyItem?.supportStatus?.undoAllowed === true ||
+      historyItem?.undo?.allowed === true;
+    const currentUndoStatus = getUndoStatus(historyItem);
+    const hasStartedShopify = [
+      "awaiting_shopify",
+      "finalizing",
+      "completed",
+      "partial",
+      "failed",
+      "cancelled",
+    ].includes(status.key);
+    const hasSucceeded =
+      processedCount > 0 ||
+      ["completed", "partial"].includes(status.key);
+    const isComplete = ["completed", "partial"].includes(status.key);
+
+    return [
+      {
+        key: "target_frozen",
+        icon: CheckIcon,
+        tone: "success",
+        title: t("timelineTargetFrozen", {
+          count: formatCount(targetCount, i18n.language),
+          defaultValue: `Target frozen (${formatCount(
+            targetCount,
+            i18n.language,
+          )} products)`,
+        }),
+      },
+      {
+        key: "shopify_started",
+        icon: hasStartedShopify ? CheckIcon : PlayIcon,
+        tone: hasStartedShopify ? "success" : "info",
+        title: t("timelineShopifyMutationStarted", {
+          defaultValue: "Shopify mutation started",
+        }),
+        pending: !hasStartedShopify,
+      },
+      {
+        key: "succeeded",
+        icon: hasSucceeded ? CheckIcon : ClockIcon,
+        tone: hasSucceeded ? "success" : "subdued",
+        title: t("timelineSucceeded", {
+          count: formatCount(succeededCount || processedCount, i18n.language),
+          defaultValue: `${formatCount(
+            succeededCount || processedCount,
+            i18n.language,
+          )} succeeded`,
+        }),
+        pending: !hasSucceeded,
+      },
+      {
+        key: "failed",
+        icon: failedCount > 0 ? XIcon : CheckIcon,
+        tone: failedCount > 0 ? "critical" : "success",
+        title: t("timelineFailed", {
+          count: formatCount(failedCount, i18n.language),
+          defaultValue: `${formatCount(failedCount, i18n.language)} failed`,
+        }),
+        action:
+          failedCount > 0
+            ? {
+                content: t("view", { defaultValue: "view" }),
+                onAction: () => {
+                  setShowFailureInspector(true);
+                  failuresSectionRef.current?.scrollIntoView({
+                    behavior: "smooth",
+                    block: "start",
+                  });
+                },
+              }
+            : null,
+      },
+      {
+        key: "completed",
+        icon: isComplete ? CheckIcon : ClockIcon,
+        tone: isComplete ? "success" : "subdued",
+        title:
+          isComplete && Number(historyItem?.durationMs) > 0
+            ? t("timelineCompletedIn", {
+                duration: formatDuration(historyItem.durationMs),
+                defaultValue: `Completed in ${formatDuration(
+                  historyItem.durationMs,
+                )}`,
+              })
+            : t("timelineCompletionPending", {
+                defaultValue: "Completion pending",
+              }),
+        pending: !isComplete,
+      },
+      {
+        key: "undo",
+        icon:
+          currentUndoStatus?.key === "undo_completed"
+            ? CheckIcon
+            : undoAllowed
+              ? RefreshIcon
+              : XIcon,
+        tone:
+          currentUndoStatus?.key === "undo_completed"
+            ? "success"
+            : undoAllowed
+              ? "info"
+              : "subdued",
+        title: currentUndoStatus
+          ? t(`historyStatus.${currentUndoStatus.key}`, {
+              defaultValue: currentUndoStatus.key,
+            })
+          : undoAllowed
+            ? t("timelineUndoAvailable", {
+                defaultValue: "Undo available",
+              })
+            : t("timelineUndoUnavailable", {
+                defaultValue: "Undo unavailable",
+              }),
+      },
+    ];
+  }, [historyItem, i18n.language, t]);
+
   const handleDownloadLogs = useCallback(() => {
     if (!historyItem?.id || flattenedRows.length === 0) return;
 
@@ -514,6 +684,47 @@ const undoBadge = undoStatus
   const editErrors = normalizeErrors(
     historyItem?.supportStatus?.errors || historyItem?.error,
   );
+  const queuedForRetry =
+    historyItem?.supportStatus?.queuedForRetry === true ||
+    editErrors.some((entry) => entry?.retryable === true);
+  const failureRows = editErrors.map((entry, index) => [
+    <Text key={`failure-product-${index}`}>
+      {getFailureProductLabel(entry)}
+    </Text>,
+    <Text key={`failure-error-${index}`} tone="subdued">
+      {getFailureMessage(entry)}
+    </Text>,
+  ]);
+  const targetCountForEstimate = Number(
+    historyItem?.supportStatus?.targetSnapshotCount ||
+      historyItem?.targetSnapshotCount ||
+      historyItem?.totalItems ||
+      mainProgress.total ||
+      0,
+  );
+  const estimatedDurationMs = getEstimatedBulkEditMs(targetCountForEstimate);
+  const hasDuration = Number(historyItem?.durationMs) > 0;
+  const completionSpeedText =
+    hasDuration && ["completed", "partial"].includes(primaryStatus.key)
+      ? t("bulkEditCompletedSpeed", {
+          duration: formatDuration(historyItem.durationMs),
+          qualifier:
+            estimatedDurationMs > 0 && historyItem.durationMs < estimatedDurationMs
+              ? t("bulkEditFasterThanExpected", {
+                  defaultValue: "faster than expected",
+                })
+              : t("bulkEditWithinExpectedTime", {
+                  defaultValue: "within expected time",
+                }),
+          defaultValue: `Completed in ${formatDuration(
+            historyItem.durationMs,
+          )} (${
+            estimatedDurationMs > 0 && historyItem.durationMs < estimatedDurationMs
+              ? "faster than expected"
+              : "within expected time"
+          })`,
+        })
+      : "";
   const canDownload = primaryStatus.key === "completed" && flattenedRows.length > 0;
 
   return (
@@ -555,16 +766,38 @@ const undoBadge = undoStatus
                   tone={primaryStatus.key === "failed" ? "critical" : primaryStatus.key === "partial" ? "warning" : "primary"}
                 />
 
+                {isActiveStatus(primaryStatus) ? (
+                  <Text tone="subdued" variant="bodySm">
+                    {t("bulkEditApplyingChanges", {
+                      percent: Number(mainProgress.percent || 0),
+                      defaultValue: `Applying changes... ${Number(
+                        mainProgress.percent || 0,
+                      )}%`,
+                    })}
+                  </Text>
+                ) : null}
+
                 <InlineStack align="space-between">
                   <Text tone="subdued">
-                    {mainProgress.label || `${mainProgress.current} / ${mainProgress.total || mainProgress.current}`}
+                    {mainProgress.label ||
+                      t("bulkEditProcessedCount", {
+                        current: formatCount(mainProgress.current, i18n.language),
+                        total: formatCount(
+                          mainProgress.total || mainProgress.current,
+                          i18n.language,
+                        ),
+                        defaultValue: `${formatCount(
+                          mainProgress.current,
+                          i18n.language,
+                        )} / ${formatCount(
+                          mainProgress.total || mainProgress.current,
+                          i18n.language,
+                        )} processed`,
+                      })}
                   </Text>
 
-                  {Number(historyItem?.durationMs) > 0 ? (
-                    <Text tone="subdued">
-                      {t("Duration")}: {formatDuration(historyItem.durationMs)}
-
-                    </Text>
+                  {completionSpeedText ? (
+                    <Text tone="subdued">{completionSpeedText}</Text>
                   ) : null}
                 </InlineStack>
 
@@ -580,17 +813,55 @@ const undoBadge = undoStatus
                   </Text>
                 ) : null}
 
+                {queuedForRetry ? (
+                  <Banner tone="info">
+                    <BlockStack gap="100">
+                      <Text as="p" fontWeight="semibold">
+                        {t("offlineSafeQueuedForRetry", {
+                          defaultValue: "Queued for retry",
+                        })}
+                      </Text>
+                      <Text as="p" tone="subdued">
+                        {t("offlineSafeAutoComplete", {
+                          defaultValue:
+                            "Will auto-complete when Shopify recovers.",
+                        })}
+                      </Text>
+                    </BlockStack>
+                  </Banner>
+                ) : null}
+
                 {editErrors.length > 0 ? (
                   <Banner tone={primaryStatus.key === "partial" ? "warning" : "critical"}>
                     <BlockStack gap="200">
-                      <Text>
-                        {primaryStatus.key === "partial"
-                          ? t("editFinishedWithIssues")
-                          : t("editExecutionErrors")}
-                      </Text>
+                      <InlineStack align="space-between" blockAlign="center">
+                        <Text>
+                          {t("bulkEditFailuresCount", {
+                            count: formatCount(editErrors.length, i18n.language),
+                            defaultValue: `${formatCount(
+                              editErrors.length,
+                              i18n.language,
+                            )} products failed`,
+                          })}
+                        </Text>
+                        <Button
+                          variant="plain"
+                          onClick={() => {
+                            setShowFailureInspector(true);
+                            failuresSectionRef.current?.scrollIntoView({
+                              behavior: "smooth",
+                              block: "start",
+                            });
+                          }}
+                        >
+                          {t("viewFailures", {
+                            defaultValue: "View failures",
+                          })}
+                        </Button>
+                      </InlineStack>
                       {editErrors.slice(0, 3).map((entry, index) => (
                         <Text key={index} tone="subdued" variant="bodySm">
-                          - {entry?.message || entry?.code || "Unknown error"}
+                          - {getFailureMessage(entry)}
                         </Text>
                       ))}
                     </BlockStack>
@@ -600,6 +871,76 @@ const undoBadge = undoStatus
             </Box>
           </Card>
         </Layout.Section>
+
+        {editErrors.length > 0 ? (
+          <Layout.Section>
+            <div ref={failuresSectionRef} />
+            <Card>
+              <Box padding="400">
+                <BlockStack gap="300">
+                  <InlineStack align="space-between" blockAlign="center">
+                    <BlockStack gap="050">
+                      <Text variant="headingMd">
+                        {t("partialFailureInspectorTitle", {
+                          defaultValue: "Partial failure inspector",
+                        })}
+                      </Text>
+                      <Text tone="subdued" variant="bodySm">
+                        {t("partialFailureInspectorCount", {
+                          count: formatCount(editErrors.length, i18n.language),
+                          defaultValue: `${formatCount(
+                            editErrors.length,
+                            i18n.language,
+                          )} products failed`,
+                        })}
+                      </Text>
+                    </BlockStack>
+                    <InlineStack gap="200">
+                      <Button
+                        onClick={() =>
+                          setShowFailureInspector((current) => !current)
+                        }
+                      >
+                        {showFailureInspector
+                          ? t("hideFailures", {
+                              defaultValue: "Hide failures",
+                            })
+                          : t("viewFailures", {
+                              defaultValue: "View failures",
+                            })}
+                      </Button>
+                      <Button disabled>
+                        {t("retryFailedOnly", {
+                          defaultValue: "Retry failed only",
+                        })}
+                      </Button>
+                    </InlineStack>
+                  </InlineStack>
+
+                  {showFailureInspector ? (
+                    <DataTable
+                      columnContentTypes={["text", "text"]}
+                      headings={[
+                        t("table.product"),
+                        t("failureErrorColumn", {
+                          defaultValue: "Error",
+                        }),
+                      ]}
+                      rows={failureRows}
+                    />
+                  ) : null}
+
+                  <Text tone="subdued" variant="bodySm">
+                    {t("retryFailedOnlyUnavailable", {
+                      defaultValue:
+                        "Retry failed only will activate when Shopify returns product-level failure records for this operation.",
+                    })}
+                  </Text>
+                </BlockStack>
+              </Box>
+            </Card>
+          </Layout.Section>
+        ) : null}
 
         {undoStatus ? (
           <Layout.Section>
@@ -668,6 +1009,68 @@ const undoBadge = undoStatus
         ) : null}
 
         <Layout.Section>
+          <Card>
+            <Box padding="400">
+              <BlockStack gap="400">
+                <InlineStack align="space-between" blockAlign="center">
+                  <Text variant="headingMd">
+                    {t("ExecutionTimeline", {
+                      defaultValue: "Execution timeline",
+                    })}
+                  </Text>
+                  <Badge tone={primaryStatus.tone}>
+                    {primaryStatusLabel}
+                  </Badge>
+                </InlineStack>
+
+                <BlockStack gap="300">
+                  {timelineRows.map((step, index) => (
+                    <InlineStack
+                      key={step.key}
+                      gap="300"
+                      wrap={false}
+                      blockAlign="start"
+                    >
+                      <Box minWidth="28px">
+                        <Icon source={step.icon} tone={step.tone} />
+                      </Box>
+                      <BlockStack gap="050">
+                        <InlineStack gap="200" blockAlign="center">
+                          <Text
+                            as="p"
+                            variant="bodyMd"
+                            fontWeight={step.pending ? "regular" : "semibold"}
+                            tone={step.pending ? "subdued" : undefined}
+                          >
+                            {step.title}
+                          </Text>
+                          {step.action ? (
+                            <Button
+                              variant="plain"
+                              onClick={step.action.onAction}
+                            >
+                              {step.action.content}
+                            </Button>
+                          ) : null}
+                        </InlineStack>
+                        {index < timelineRows.length - 1 ? (
+                          <Box
+                            borderInlineStartWidth="025"
+                            borderColor="border"
+                            minHeight="16px"
+                          />
+                        ) : null}
+                      </BlockStack>
+                    </InlineStack>
+                  ))}
+                </BlockStack>
+              </BlockStack>
+            </Box>
+          </Card>
+        </Layout.Section>
+
+        <Layout.Section>
+          <div ref={changesSectionRef} />
           <Card>
             <Box padding="400">
               <BlockStack gap="300">

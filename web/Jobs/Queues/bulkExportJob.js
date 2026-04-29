@@ -1,17 +1,21 @@
 import { Queue } from "bullmq";
 import { connection } from "../../Config/redis.js";
 import {
+  OPERATION_QUEUE_NAMES,
+  buildOperationJobId,
+} from "./operationQueueRegistry.js";
+import {
   buildDefaultJobOptions,
   createLazyQueueProxy,
   mergeJobOptions,
 } from "../../utils/jobQueueUtils.js";
 
-const QUEUE_NAME = process.env.EXPORT_QUEUE || "bulk-export";
+const QUEUE_NAME = process.env.EXPORT_QUEUE || OPERATION_QUEUE_NAMES.EXPORT_EXECUTE;
 
 const defaultJobOptions = buildDefaultJobOptions({
-  attempts: 5,
+  attempts: 3,
   priority: 6,
-  backoffDelay: 30_000,
+  backoffDelay: 15_000,
   removeOnComplete: { age: 7 * 24 * 3600, count: 2_000 },
   removeOnFail: { age: 30 * 24 * 3600, count: 10_000 },
 });
@@ -41,7 +45,9 @@ export async function addbulkExportJob(data, options = {}) {
     data,
     mergeJobOptions(defaultJobOptions, {
       ...options,
-      jobId: options.jobId || data.exportJobId,
+      jobId:
+        options.jobId ||
+        buildOperationJobId(OPERATION_QUEUE_NAMES.EXPORT_EXECUTE, data),
     }),
   );
 }

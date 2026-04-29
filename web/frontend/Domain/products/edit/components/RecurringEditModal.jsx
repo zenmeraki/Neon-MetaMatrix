@@ -68,6 +68,49 @@ function buildIsoFromDateAndTime(dateValue, timeValue) {
   return new Date(`${dateValue}T${timeValue}:00`).toISOString();
 }
 
+function formatTimeLabel(timeValue) {
+  if (!timeValue) return "";
+
+  const [hours = "0", minutes = "0"] = timeValue.split(":");
+  const date = new Date();
+  date.setHours(Number(hours), Number(minutes), 0, 0);
+
+  return date.toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function getNextRecurringRunLabel({ frequency, timeToRun, startDate }) {
+  const now = new Date();
+  const [hours = "0", minutes = "0"] = (timeToRun || "00:00").split(":");
+  const next = startDate ? new Date(`${startDate}T${timeToRun}:00`) : new Date();
+  next.setHours(Number(hours), Number(minutes), 0, 0);
+
+  if (next.getTime() <= now.getTime()) {
+    if (frequency === "Hourly") {
+      next.setHours(now.getHours() + 1, 0, 0, 0);
+    } else if (frequency === "Every 2 Hours") {
+      next.setHours(now.getHours() + 2, 0, 0, 0);
+    } else {
+      next.setDate(next.getDate() + 1);
+    }
+  }
+
+  const tomorrow = new Date(now);
+  tomorrow.setDate(now.getDate() + 1);
+
+  if (next.toDateString() === tomorrow.toDateString()) {
+    return "tomorrow";
+  }
+
+  return next.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 function RecurringEditModal({
   show,
   onHide,
@@ -154,6 +197,38 @@ function RecurringEditModal({
     frequency === "Daily" || frequency === "Weekly" || frequency === "Monthly";
   const needsWeekdaySelection = frequency === "Weekly";
   const needsDayOfMonthSelection = frequency === "Monthly";
+  const schedulePreview = useMemo(() => {
+    const frequencyLabel = t(`recurringEditFrequencyOptions.${frequency}`, {
+      defaultValue: frequency,
+    }).toLowerCase();
+    const timeLabel = requiresTime
+      ? formatTimeLabel(timeToRun)
+      : t("recurringEditPreviewContinuous", { defaultValue: "continuously" });
+    const nextRun = getNextRecurringRunLabel({
+      frequency,
+      timeToRun,
+      startDate: hasStartAt ? startDate : "",
+    });
+
+    return {
+      runLine: t("recurringEditPreviewRunLine", {
+        frequency: frequencyLabel,
+        time: timeLabel,
+        defaultValue: `This rule will run ${frequencyLabel} at ${timeLabel}`,
+      }),
+      matchesLine: t("recurringEditPreviewMatchesLine", {
+        count,
+        defaultValue: `Estimated current matches: ${count} products`,
+      }),
+      nextRunLine: t("recurringEditPreviewNextRunLine", {
+        nextRun,
+        defaultValue: `Next run: ${nextRun}`,
+      }),
+      undoLine: t("recurringEditPreviewUndoLine", {
+        defaultValue: "Undo: enabled",
+      }),
+    };
+  }, [count, frequency, hasStartAt, requiresTime, startDate, timeToRun, t]);
 
   const validate = useCallback(() => {
     if (!title.trim()) {
@@ -489,6 +564,28 @@ function RecurringEditModal({
                   />
                 </FormLayout.Group>
               )}
+
+              <Banner tone="info">
+                <BlockStack gap="200">
+                  <Text as="p" variant="bodyMd" fontWeight="semibold">
+                    {t("recurringEditPreviewTitle", {
+                      defaultValue: "Schedule preview",
+                    })}
+                  </Text>
+                  <Text as="p" variant="bodyMd">
+                    {schedulePreview.runLine}
+                  </Text>
+                  <Text as="p" variant="bodyMd">
+                    {schedulePreview.matchesLine}
+                  </Text>
+                  <Text as="p" variant="bodyMd">
+                    {schedulePreview.nextRunLine}
+                  </Text>
+                  <Text as="p" variant="bodyMd">
+                    {schedulePreview.undoLine}
+                  </Text>
+                </BlockStack>
+              </Banner>
             </FormLayout>
           </BlockStack>
         </Modal.Section>

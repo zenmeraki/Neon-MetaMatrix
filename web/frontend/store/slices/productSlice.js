@@ -19,6 +19,19 @@ const productSlice = createSlice({
       state.products = action.payload;
     },
 
+    appendProducts(state, action) {
+      const seen = new Set(state.products.map((product) => String(product.id)));
+      const nextProducts = Array.isArray(action.payload) ? action.payload : [];
+
+      for (const product of nextProducts) {
+        const id = String(product?.id || "");
+        if (!id || seen.has(id)) continue;
+
+        seen.add(id);
+        state.products.push(product);
+      }
+    },
+
     setFilters(state, action) {
       state.filters = action.payload;
       state.page = 1; // reset page on filter change
@@ -59,6 +72,7 @@ const productSlice = createSlice({
 
 export const {
   setProducts,
+  appendProducts,
   setFilters,
   clearFilters,
   setSearch, // ✅ EXPORT

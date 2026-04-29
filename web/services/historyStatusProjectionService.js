@@ -489,6 +489,14 @@ export function projectEditHistoryStatus(record) {
   });
 
   const undoErrors = parseHistoryErrors(undo.error);
+  const batch = record.batch && typeof record.batch === "object" ? record.batch : {};
+  const lastRetryableError = errors
+    .slice()
+    .reverse()
+    .find((entry) => entry?.retryable === true);
+  const queuedForRetry = Boolean(
+    batch.lastRetryableErrorAt || lastRetryableError,
+  );
 
   const progress = buildProgressSummary({
     processedCount: record.processedCount,
@@ -510,6 +518,13 @@ export function projectEditHistoryStatus(record) {
       executionIdentity: record.executionIdentity || null,
       targetSnapshotCount: Number(record.targetSnapshotCount || 0),
       targetMirrorBatchId: record.targetMirrorBatchId || null,
+      queuedForRetry,
+      retryMessage: queuedForRetry
+        ? "Queued for retry. Will auto-complete when Shopify recovers."
+        : null,
+      lastRetryableErrorAt: batch.lastRetryableErrorAt || null,
+      lastRetryableErrorCode:
+        batch.lastRetryableErrorCode || lastRetryableError?.code || null,
       errors,
       lastError: errors[errors.length - 1] || null,
       undoState: undo.state || null,

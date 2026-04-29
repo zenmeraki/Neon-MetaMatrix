@@ -9,6 +9,7 @@ export function useBulkTargetSelection({
   sort,
 }) {
   const [mode, setMode] = useState("none");
+  const [scope, setScopeState] = useState("page");
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [excludedIds, setExcludedIds] = useState(() => new Set());
 
@@ -38,21 +39,39 @@ export function useBulkTargetSelection({
 
   const clearSelection = useCallback(() => {
     setMode("none");
+    setScopeState("page");
     setSelectedIds(new Set());
     setExcludedIds(new Set());
   }, []);
 
   const selectPage = useCallback(() => {
     setMode("page");
+    setScopeState("page");
     setSelectedIds(new Set(pageIds));
     setExcludedIds(new Set());
   }, [pageIds]);
 
   const selectAllMatching = useCallback(() => {
     setMode("query");
+    setScopeState("filtered_subset");
     setSelectedIds(new Set());
     setExcludedIds(new Set());
   }, []);
+
+  const setScope = useCallback(
+    (nextScope) => {
+      if (nextScope === "page") {
+        selectPage();
+        return;
+      }
+
+      setMode("query");
+      setScopeState(nextScope);
+      setSelectedIds(new Set());
+      setExcludedIds(new Set());
+    },
+    [selectPage]
+  );
 
   const toggleRow = useCallback(
     (id) => {
@@ -74,6 +93,7 @@ export function useBulkTargetSelection({
       }
 
       setMode("page");
+      setScopeState("page");
 
       setSelectedIds((current) => {
         const next = new Set(current);
@@ -102,11 +122,16 @@ export function useBulkTargetSelection({
 
   const buildTargetPayload = useCallback(() => {
     if (mode === "query") {
+      const allResultsScope = scope === "all_results";
+
       return {
         mode: "query",
-        querySignature,
-        filters,
-        search,
+        scope,
+        querySignature: allResultsScope
+          ? JSON.stringify({ search: "", filters: [], sort })
+          : querySignature,
+        filters: allResultsScope ? [] : filters,
+        search: allResultsScope ? "" : search,
         sort,
         excludedIds: Array.from(excludedIds),
       };
@@ -114,12 +139,23 @@ export function useBulkTargetSelection({
 
     return {
       mode: "ids",
+      scope,
       ids: Array.from(selectedIds),
     };
-  }, [excludedIds, filters, mode, querySignature, search, selectedIds, sort]);
+  }, [
+    excludedIds,
+    filters,
+    mode,
+    querySignature,
+    scope,
+    search,
+    selectedIds,
+    sort,
+  ]);
 
   return {
     mode,
+    scope,
     selectedSet,
     selectedCount,
     excludedCount: excludedIds.size,
@@ -128,6 +164,7 @@ export function useBulkTargetSelection({
     clearSelection,
     selectPage,
     selectAllMatching,
+    setScope,
     toggleRow,
     togglePage,
     buildTargetPayload,

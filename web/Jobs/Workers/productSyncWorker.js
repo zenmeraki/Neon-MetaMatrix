@@ -5,6 +5,8 @@ import { getCurrentBulkOperationStatus } from "../../utils/bulkOperationHelper.j
 import { productSyncQueue } from "../Queues/productSyncQueue.js";
 import { prisma } from "../../config/database.js";
 import shopify from "../../shopify.js";
+import { addDeadLetterJob } from "../Queues/deadLetterQueue.js";
+import { OPERATION_QUEUE_NAMES } from "../Queues/operationQueueRegistry.js";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -53,7 +55,7 @@ async function syncAllStoresBatched() {
 }
 
 export const productSyncWorker = new Worker(
-  "product-sync-queue",
+  process.env.PRODUCT_SYNC_QUEUE || OPERATION_QUEUE_NAMES.SYNC_CATALOG_START,
   async (job) => {
     const { shopUrl, type } = job.data;
 
@@ -221,7 +223,12 @@ productSyncWorker.on("completed", (job) => {
   console.log(`✅ Job ${job.id} completed`);
 });
 
-productSyncWorker.on("failed", (job, err) => {
+productSyncWorker.on("failed", async (job, err) => {
+  await addDeadLetterJob("sync_failed", {
+    job,
+    error: err,
+    reason: "product_sync_failed",
+  }).catch(() => {});
   console.error(`❌ Job ${job?.id} failed:`, err?.message || err);
 });
 

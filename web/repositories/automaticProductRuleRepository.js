@@ -22,7 +22,7 @@ export const automaticProductRuleRepository = {
   async listByShop(shop, db = prisma) {
     return getClient(db).automaticProductRule.findMany({
       where: { shop, isDeleted: false },
-      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      orderBy: [{ priority: "desc" }, { createdAt: "desc" }, { id: "desc" }],
     });
   },
 
@@ -50,10 +50,11 @@ export const automaticProductRuleRepository = {
         isDeleted: false,
         status: "ACTIVE",
         triggerType: { in: ["SCHEDULED", "HYBRID"] },
+        executionMode: "SCHEDULED",
         nextRunAt: { lte: now },
       },
       select: { id: true },
-      orderBy: [{ priority: "asc" }, { nextRunAt: "asc" }, { createdAt: "asc" }],
+      orderBy: [{ priority: "desc" }, { nextRunAt: "asc" }, { createdAt: "asc" }],
       take: limit,
     });
   },
@@ -65,6 +66,7 @@ export const automaticProductRuleRepository = {
         isDeleted: false,
         status: "ACTIVE",
         triggerType: { in: ["EVENT", "HYBRID"] },
+        executionMode: "REALTIME",
         OR: [
           { startAt: null },
           { startAt: { lte: now } },
@@ -78,7 +80,7 @@ export const automaticProductRuleRepository = {
           },
         ],
       },
-      orderBy: [{ priority: "asc" }, { createdAt: "asc" }],
+      orderBy: [{ priority: "desc" }, { createdAt: "asc" }],
     });
   },
 

@@ -8,6 +8,7 @@ import {
 import { prisma } from "../../config/database.js";
 import { executeProductIdQuery } from "../filterPlanner/filterExecutionService.js";
 import { productMirrorRepository } from "../../repositories/productMirrorRepository.js";
+import { hashHotQueryPart } from "../filterPlanner/hotQueryCache.js";
 
 const FILTER_VALUE_FIELD_MAP = {
   vendor: { source: "product", field: "vendor" },
@@ -112,10 +113,28 @@ function stableStringify(value) {
   return JSON.stringify(stableNormalize(value));
 }
 
-function buildProductFetchCacheKey({ shop, queryParams, filterParams }) {
-  return `${shop}:ProductFetch:${stableStringify(
-    queryParams
-  )}:${stableStringify(filterParams)}`;
+function buildProductFetchCacheKey({
+  shop,
+  mirrorBatchId,
+  page,
+  limit,
+  sortKey,
+  sortOrder,
+  filterParams,
+}) {
+  return [
+    shop,
+    "HotProductQuery",
+    mirrorBatchId,
+    "hydrated_products_page",
+    hashHotQueryPart({
+      filterParams,
+      page,
+      limit,
+      sortKey,
+      sortOrder,
+    }),
+  ].join(":");
 }
 
 function getDistinctRowValue(row, field) {
@@ -173,15 +192,6 @@ export async function getProductsWithFilters({
     sortOrder = "asc",
   } = queryParams;
 
-  const cacheKey = buildProductFetchCacheKey({
-    shop,
-    queryParams,
-    filterParams,
-  });
-  const cachedData = await getCache(cacheKey);
-
-  if (cachedData) return cachedData;
-
   const store = await prisma.store.findUnique({
     where: { shopUrl: shop },
     select: {
@@ -195,14 +205,31 @@ export async function getProductsWithFilters({
   }
 
   const mirrorBatchId = store?.activeMirrorBatchId || null;
+  const normalizedPage = Math.max(Number.parseInt(page, 10) || 1, 1);
+  const normalizedLimit = Math.max(Number.parseInt(limit, 10) || 20, 1);
+  const cacheKey = mirrorBatchId
+    ? buildProductFetchCacheKey({
+        shop,
+        mirrorBatchId,
+        page: normalizedPage,
+        limit: normalizedLimit,
+        sortKey,
+        sortOrder,
+        filterParams,
+      })
+    : null;
+  const cachedData = cacheKey ? await getCache(cacheKey) : null;
+
+  if (cachedData) return cachedData;
+
   if (!mirrorBatchId) {
     const emptyResult = {
       products: [],
       count: 0,
       pagination: {
         total: 0,
-        page: Math.max(Number.parseInt(page, 10) || 1, 1),
-        limit: Math.max(Number.parseInt(limit, 10) || 20, 1),
+        page: normalizedPage,
+        limit: normalizedLimit,
         totalPages: 0,
         hasNextPage: false,
         hasPrevPage: false,
@@ -211,13 +238,9 @@ export async function getProductsWithFilters({
       engine: "none",
       engineReason: "product mirror has not been synced yet",
     };
-
-    await setCache(cacheKey, emptyResult, 30);
     return emptyResult;
   }
 
-  const normalizedPage = Math.max(Number.parseInt(page, 10) || 1, 1);
-  const normalizedLimit = Math.max(Number.parseInt(limit, 10) || 20, 1);
   const targetingResult = await executeProductIdQuery({
     filterParams,
     shop,

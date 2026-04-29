@@ -28,8 +28,9 @@ import {
   buildExportExecutionError,
   isTerminalExportExecutionState,
 } from "../../services/exportExecutionStateService.js";
+import { OPERATION_QUEUE_NAMES } from "../Queues/operationQueueRegistry.js";
 
-const QUEUE_NAME = process.env.EXPORT_QUEUE || "bulk-export";
+const QUEUE_NAME = process.env.EXPORT_QUEUE || OPERATION_QUEUE_NAMES.EXPORT_EXECUTE;
 const WORKER_NAME = "bulkExportWorker";
 
 const PRODUCT_FIELD_RESOLVERS = {

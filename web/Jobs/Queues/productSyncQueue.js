@@ -2,6 +2,8 @@
 import { Queue } from "bullmq";
 import { connection } from "../../Config/redis.js";
 import { createLazyQueueProxy } from "../../utils/jobQueueUtils.js";
+import { OPERATION_QUEUE_NAMES } from "./operationQueueRegistry.js";
+import { applyQueueBackpressure } from "./queueBackpressure.js";
 
 const defaultJobOptions = {
   attempts: 3,
@@ -22,10 +24,15 @@ let productSyncQueueInstance = null;
 
 function getProductSyncQueue() {
   if (!productSyncQueueInstance) {
-    productSyncQueueInstance = new Queue("product-sync-queue", {
-      connection,
-      defaultJobOptions,
-    });
+    productSyncQueueInstance = applyQueueBackpressure(
+      new Queue(
+        process.env.PRODUCT_SYNC_QUEUE || OPERATION_QUEUE_NAMES.SYNC_CATALOG_START,
+        {
+          connection,
+          defaultJobOptions,
+        },
+      ),
+    );
   }
 
   return productSyncQueueInstance;

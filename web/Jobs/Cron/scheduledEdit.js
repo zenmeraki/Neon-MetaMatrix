@@ -2,7 +2,7 @@
 import cron from "node-cron";
 import { addbulkEditJob } from "../../Jobs/Queues/bulkEditJob.js";
 import { addBulkUndoJob } from "../../Jobs/Queues/bulkUndoJob.js";
-import { scheduledEditQueue } from "../Queues/scheduledEditQueue.js";
+import { addScheduledEditJob } from "../Queues/scheduledEditQueue.js";
 import { clearKeyCaches } from "../../utils/cacheUtils.js";
 import { getSession } from "../../utils/sessionHandler.js";
 import {
@@ -12,6 +12,9 @@ import {
   buildExecutionError,
   normalizeUndoState,
 } from "../../services/bulkEditExecutionStateService.js";
+import { OPERATION_TYPES } from "../../constants/operationTypes.js";
+import { scheduledEditRunRepository } from "../../repositories/scheduledEditRunRepository.js";
+import { startBulkEditOperationForHistory } from "../../services/execution/bulkEditOperationStartService.js";
 
 // ✅ Prisma
 import { prisma } from "../../config/database.js";
@@ -23,7 +26,12 @@ import { prisma } from "../../config/database.js";
  * @param {string} historyId - EditHistory.id (Prisma)
  * @param {boolean} isUndo   - false → run edit; true → run undo
  */
-export const updateProducts = async (historyId, isUndo, shopFromJob = null) => {
+export const updateProducts = async (
+  historyId,
+  isUndo,
+  shopFromJob = null,
+  scheduledRunId = null,
+) => {
   let history = null;
   let session = null;
 
@@ -52,12 +60,35 @@ export const updateProducts = async (historyId, isUndo, shopFromJob = null) => {
       //  Scheduled EDIT
       // ─────────────────────────────────────────────────────────
       try {
-        await addbulkEditJob({
-          historyId: history.id, // Prisma PK
-          shop: history.shop,
-          source: "scheduled_edit",
-          executionId: history.executionIdentity || history.id,
+        const operation = await startBulkEditOperationForHistory({
+          history,
+          operationType: OPERATION_TYPES.SCHEDULED_EDIT,
+          source: "SCHEDULED",
+          userId: "system",
+          clientRequestId: scheduledRunId || history.id,
+          onStarted: async (startedOperation) => {
+            if (scheduledRunId) {
+              await scheduledEditRunRepository.markStarted(
+                scheduledRunId,
+                startedOperation.id,
+              );
+            }
+
+            await addbulkEditJob({
+              historyId: history.id, // Prisma PK
+              shop: history.shop,
+              source: "scheduled_edit",
+              executionId: history.executionIdentity || history.id,
+              operationId: startedOperation.id,
+            });
+          },
         });
+
+        return {
+          success: true,
+          message: "scheduled task triggered",
+          operationId: operation.id,
+        };
       } catch (error) {
         const existingErrors = Array.isArray(history.error)
           ? history.error
@@ -129,7 +160,7 @@ export const updateProducts = async (historyId, isUndo, shopFromJob = null) => {
             };
           }
 
-          await scheduledEditQueue.add(
+          await addScheduledEditJob(
             "undo-task",
             { historyId: history.id, shop: history.shop },
             {

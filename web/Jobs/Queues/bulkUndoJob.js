@@ -1,17 +1,21 @@
 import { Queue } from "bullmq";
 import { connection } from "../../Config/redis.js";
 import {
+  OPERATION_QUEUE_NAMES,
+  buildOperationJobId,
+} from "./operationQueueRegistry.js";
+import {
   buildDefaultJobOptions,
   createLazyQueueProxy,
   mergeJobOptions,
 } from "../../utils/jobQueueUtils.js";
 
-const QUEUE_NAME = process.env.UNDO_QUEUE || "bulk-undo";
+const QUEUE_NAME = process.env.UNDO_QUEUE || OPERATION_QUEUE_NAMES.UNDO_EXECUTE;
 
 const defaultJobOptions = buildDefaultJobOptions({
-  attempts: 6,
+  attempts: 2,
   priority: 7,
-  backoffDelay: 10_000,
+  backoffDelay: 30_000,
   removeOnComplete: { age: 48 * 3600, count: 1_000 },
   removeOnFail: { age: 14 * 24 * 3600, count: 5_000 },
 });
@@ -36,7 +40,12 @@ export async function addBulkUndoJob(data, options = {}) {
     throw new Error("bulk undo job requires historyId, shop, and executionId");
   }
 
-  const jobId = options.jobId || `bulk-undo:${data?.historyId}`;
+  const jobId =
+    options.jobId ||
+    buildOperationJobId(OPERATION_QUEUE_NAMES.UNDO_EXECUTE, {
+      ...data,
+      undoOperationId: data.undoOperationId || data.operationId || data.executionId,
+    });
 
   return getBulkUndoQueue().add(
     "bulk-undo",

@@ -1,5 +1,6 @@
 import { prisma } from "../config/database.js";
 import { recordMirrorAnomaly } from "./mirrorAnomalyService.js";
+import { LOCK_NS, buildShopLockKey } from "../constants/lockNamespaces.js";
 
 // AFTER — wrap in a transaction so lock auto-releases when transaction ends
 async function tryAdvisoryLock(client, lockKey, transactional = true) {
@@ -28,7 +29,7 @@ export function buildShopWorkLockKey(shop) {
     throw new Error("shop is required for exclusive shop work locking");
   }
 
-  return `shop-exclusive-work:${shop}`;
+  return buildShopLockKey(shop, LOCK_NS.WRITE_CATALOG);
 }
 
 export async function acquireExclusiveShopWork({

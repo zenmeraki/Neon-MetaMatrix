@@ -6,6 +6,7 @@ import { clearKeyCaches } from "../../utils/cacheUtils.js";
 import { logWebhookError } from "../../utils/errorLogUtils.js";
 import { prisma } from "../../config/database.js";
 import logger from "../../utils/loggerUtils.js";
+import { shopUninstallCleanupService } from "../../services/shopUninstallCleanupService.js";
 
 const QUEUE_NAME = "appUninstall";
 
@@ -48,6 +49,7 @@ const appUninstallWorker = new Worker(
       });
 
       const historyIdList = editHistoryIds.map((record) => record.id);
+      const cleanupResult = await shopUninstallCleanupService.cleanupShop(shop);
 
       await prisma.$transaction(async (tx) => {
         if (historyIdList.length) {
@@ -101,6 +103,7 @@ const appUninstallWorker = new Worker(
         worker: "appUninstallWorker",
         jobId: job.id,
         shop,
+        cleanupResult,
       });
 
       return {

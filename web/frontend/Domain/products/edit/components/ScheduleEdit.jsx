@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Modal,
@@ -7,7 +7,7 @@ import {
   Checkbox,
   TextField,
   Banner,
-  InlineStack,
+  BlockStack,
   Text,
   Box,
   Frame,
@@ -50,6 +50,47 @@ function ScheduleEdit({
 
   // Check if the form is valid
   const isFormValid = startEditChecked && startEditDate && startEditTime;
+  const scheduledPreview = useMemo(() => {
+    if (!startEditChecked || !startEditDate || !startEditTime) return null;
+
+    const scheduledDate = new Date(`${startEditDate}T${startEditTime}:00`);
+    const nextRunLabel = scheduledDate.toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+    const runTimeLabel = scheduledDate.toLocaleTimeString(undefined, {
+      hour: "numeric",
+      minute: "2-digit",
+    });
+
+    return {
+      runLine: t("scheduledEditPreviewRunLine", {
+        time: runTimeLabel,
+        defaultValue: `This edit will run at ${runTimeLabel}`,
+      }),
+      matchesLine: t("scheduledEditPreviewMatchesLine", {
+        count,
+        defaultValue: `Estimated current matches: ${count} products`,
+      }),
+      nextRunLine: t("scheduledEditPreviewNextRunLine", {
+        date: nextRunLabel,
+        defaultValue: `Next run: ${nextRunLabel}`,
+      }),
+      undoLine: t("scheduledEditPreviewUndoLine", {
+        state: undoStartEditChecked
+          ? t("enabled", { defaultValue: "enabled" })
+          : t("disabled", { defaultValue: "disabled" }),
+        defaultValue: `Undo: ${undoStartEditChecked ? "enabled" : "disabled"}`,
+      }),
+    };
+  }, [
+    startEditChecked,
+    startEditDate,
+    startEditTime,
+    undoStartEditChecked,
+    count,
+  ]);
 
   // Handle date input changes
   const handleDateChange = useCallback((value, type) => {
@@ -323,39 +364,28 @@ function ScheduleEdit({
               </FormLayout.Group>
             )}
 
-            {startEditChecked && startEditDate && startEditTime && (
+            {scheduledPreview && (
               <Box paddingBlockStart="400">
-                <Banner status="info">
-                  <InlineStack gap="200" direction="vertical">
+                <Banner tone="info">
+                  <BlockStack gap="200">
                     <Text as="p" variant="bodyMd" fontWeight="semibold">
-                      {t("edit_summary")}:
+                      {t("scheduledEditPreviewTitle", {
+                        defaultValue: "Schedule preview",
+                      })}
                     </Text>
                     <Text as="p" variant="bodyMd">
-                      {t("field")}:{" "}
-                      <strong>
-                        {t(`fieldLabels.${editedField}`, editedField)}
-                      </strong>
+                      {scheduledPreview.runLine}
                     </Text>
                     <Text as="p" variant="bodyMd">
-                      {t("Products")}: <strong>{count}</strong>
+                      {scheduledPreview.matchesLine}
                     </Text>
                     <Text as="p" variant="bodyMd">
-                      {t("scheduled_for")}:{" "}
-                      <strong>
-                        {startEditDate} {t("at")} {startEditTime}
-                      </strong>
+                      {scheduledPreview.nextRunLine}
                     </Text>
-                    {undoStartEditChecked &&
-                      undoStartEditDate &&
-                      undoStartEditTime && (
-                        <Text as="p" variant="bodyMd">
-                          {t("undo_scheduled_for")}:{" "}
-                          <strong>
-                            {undoStartEditDate} {t("at")} {undoStartEditTime}
-                          </strong>
-                        </Text>
-                      )}
-                  </InlineStack>
+                    <Text as="p" variant="bodyMd">
+                      {scheduledPreview.undoLine}
+                    </Text>
+                  </BlockStack>
                 </Banner>
               </Box>
             )}

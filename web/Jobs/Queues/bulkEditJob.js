@@ -1,12 +1,17 @@
 import { Queue } from "bullmq";
 import { connection } from "../../Config/redis.js";
 import {
+  OPERATION_QUEUE_NAMES,
+  buildOperationJobId,
+} from "./operationQueueRegistry.js";
+import {
   buildDefaultJobOptions,
   createLazyQueueProxy,
   mergeJobOptions,
 } from "../../utils/jobQueueUtils.js";
+import { applyQueueBackpressure } from "./queueBackpressure.js";
 
-const QUEUE_NAME = process.env.EDIT_QUEUE || "bulk-edit";
+const QUEUE_NAME = process.env.EDIT_QUEUE || OPERATION_QUEUE_NAMES.BULK_EDIT_EXECUTE;
 
 const defaultJobOptions = buildDefaultJobOptions({
   attempts: 6,
@@ -20,10 +25,12 @@ let bulkEditQueueInstance = null;
 
 function getBulkEditQueue() {
   if (!bulkEditQueueInstance) {
-    bulkEditQueueInstance = new Queue(QUEUE_NAME, {
-      connection,
-      defaultJobOptions,
-    });
+    bulkEditQueueInstance = applyQueueBackpressure(
+      new Queue(QUEUE_NAME, {
+        connection,
+        defaultJobOptions,
+      }),
+    );
   }
 
   return bulkEditQueueInstance;
@@ -36,12 +43,22 @@ export async function addbulkEditJob(data, options = {}) {
     throw new Error("bulk edit job requires historyId, shop, and executionId");
   }
 
+  const shopPriority = Number(options.priority ?? data.shopWeight ?? data.priority);
+
   return getBulkEditQueue().add(
     "bulk-edit",
     data,
     mergeJobOptions(defaultJobOptions, {
       ...options,
-      jobId: options.jobId || `bulk-edit:${data.historyId}`,
+      ...(Number.isFinite(shopPriority) && shopPriority > 0
+        ? { priority: Math.floor(shopPriority) }
+        : {}),
+      jobId:
+        options.jobId ||
+        buildOperationJobId(OPERATION_QUEUE_NAMES.BULK_EDIT_EXECUTE, {
+          ...data,
+          operationId: data.operationId || data.executionId || data.historyId,
+        }),
     }),
   );
 }

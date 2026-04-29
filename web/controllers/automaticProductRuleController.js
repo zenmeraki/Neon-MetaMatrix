@@ -2,12 +2,15 @@ import {
   createAutomaticProductRule,
   deleteAutomaticProductRule,
   getAutomaticProductRuleById,
+  getAutomaticProductRuleBuilderOptions,
   listAutomaticProductRuleRuns,
   listAutomaticProductRules,
+  previewAutomaticProductRuleAst,
   pauseAutomaticProductRule,
   resumeAutomaticProductRule,
   runAutomaticProductRuleNow,
   updateAutomaticProductRule,
+  validateAutomaticProductRuleAst,
 } from "../services/automaticProductRuleService.js";
 import { logApiError } from "../utils/errorLogUtils.js";
 
@@ -61,6 +64,54 @@ export async function listAutomaticProductRulesController(req, res) {
     return res.status(error.message === "Session expired" ? 403 : 500).json({
       success: false,
       message: error.message || "Failed to fetch automatic rules",
+    });
+  }
+}
+
+export async function getAutomaticProductRuleBuilderOptionsController(_req, res) {
+  return res.status(200).json({
+    success: true,
+    data: getAutomaticProductRuleBuilderOptions(),
+    message: "Automatic rule builder options fetched successfully",
+  });
+}
+
+export async function validateAutomaticProductRuleAstController(req, res) {
+  let session;
+
+  try {
+    session = getSessionOrThrow(res);
+    const data = await validateAutomaticProductRuleAst({
+      shop: session.shop,
+      body: req.body,
+    });
+
+    return res.status(200).json({ success: true, data, message: "Automatic rule AST validated successfully" });
+  } catch (error) {
+    await logApiError({ shop: session?.shop, err: error, req, source: "automaticProductRuleController.validateAst" });
+    return res.status(getErrorStatusCode(error)).json({
+      success: false,
+      message: error.message || "Failed to validate automatic rule AST",
+    });
+  }
+}
+
+export async function previewAutomaticProductRuleAstController(req, res) {
+  let session;
+
+  try {
+    session = getSessionOrThrow(res);
+    const data = await previewAutomaticProductRuleAst({
+      shop: session.shop,
+      body: req.body,
+    });
+
+    return res.status(200).json({ success: true, data, message: "Automatic rule preview generated successfully" });
+  } catch (error) {
+    await logApiError({ shop: session?.shop, err: error, req, source: "automaticProductRuleController.previewAst" });
+    return res.status(getErrorStatusCode(error)).json({
+      success: false,
+      message: error.message || "Failed to preview automatic rule AST",
     });
   }
 }
@@ -159,6 +210,7 @@ export async function runAutomaticProductRuleNowController(req, res) {
       shop: session.shop,
       automaticProductRuleId: req.params.id,
       subscription: req.subscription,
+      dryRun: Boolean(req.body?.dryRun),
     });
 
     return res.status(202).json({ success: true, data, message: "Automatic rule run queued successfully" });

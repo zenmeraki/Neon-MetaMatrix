@@ -99,6 +99,167 @@ function buildCollectionTitleToken(value) {
   return `"title":${JSON.stringify(value)}`;
 }
 
+export const RULE_FIELD_REGISTRY = {
+  inventory: {
+    column: "variant_inventory",
+    filterField: "variant_inventory_q",
+    type: "number",
+    entity: "VARIANT",
+  },
+  total_inventory: {
+    column: "total_inventory",
+    filterField: "inventory",
+    type: "number",
+    entity: "PRODUCT",
+  },
+  status: {
+    column: "product_status",
+    filterField: "status",
+    type: "string",
+    entity: "PRODUCT",
+  },
+  tags: {
+    column: "tags",
+    filterField: "tag",
+    type: "string_array",
+    entity: "PRODUCT",
+  },
+  tag: {
+    column: "tags",
+    filterField: "tag",
+    type: "string_array",
+    entity: "PRODUCT",
+  },
+  vendor: {
+    column: "vendor",
+    filterField: "vendor",
+    type: "string",
+    entity: "PRODUCT",
+  },
+  title: {
+    column: "title",
+    filterField: "title",
+    type: "string",
+    entity: "PRODUCT",
+  },
+  product_type: {
+    column: "product_type",
+    filterField: "product_type",
+    type: "string",
+    entity: "PRODUCT",
+  },
+  collection: {
+    column: "collections",
+    filterField: "collection",
+    type: "string",
+    entity: "PRODUCT",
+  },
+  price: {
+    column: "variant_price",
+    filterField: "price",
+    type: "number",
+    entity: "VARIANT",
+  },
+  sku: {
+    column: "variant_sku",
+    filterField: "sku",
+    type: "string",
+    entity: "VARIANT",
+  },
+  barcode: {
+    column: "variant_barcode",
+    filterField: "barcode",
+    type: "string",
+    entity: "VARIANT",
+  },
+};
+
+const RULE_OPERATOR_MAP = {
+  EQ: "equals",
+  NEQ: "does not equal",
+  GT: ">",
+  GTE: ">=",
+  LT: "<",
+  LTE: "<=",
+  IN: "in",
+  NOT_IN: "not_in",
+  CONTAINS: "contains",
+  NOT_CONTAINS: "does not contain",
+  STARTS_WITH: "starts with",
+  ENDS_WITH: "ends with",
+  IS_NULL: "is empty",
+  NOT_NULL: "is not empty",
+  ARRAY_CONTAINS: "contains",
+  ARRAY_OVERLAP: "in",
+  BETWEEN: "between",
+};
+
+export function getRuleFieldConfig(field) {
+  return RULE_FIELD_REGISTRY[field] || null;
+}
+
+function normalizeRuleOperator(operator) {
+  const op = String(operator || "").trim().toUpperCase();
+  return RULE_OPERATOR_MAP[op] || operator;
+}
+
+function buildBetweenNode(config, value) {
+  if (!Array.isArray(value) || value.length !== 2) {
+    throw new Error("BETWEEN operator requires a two-item value array");
+  }
+
+  return {
+    type: "group",
+    operator: "AND",
+    children: [
+      {
+        type: "predicate",
+        field: config.field,
+        operator: "GTE",
+        value: value[0],
+      },
+      {
+        type: "predicate",
+        field: config.field,
+        operator: "LTE",
+        value: value[1],
+      },
+    ],
+  };
+}
+
+function normalizeRulePredicateNode(node) {
+  const config = getRuleFieldConfig(node.field);
+  if (!config) {
+    throw new Error(`Unsupported rule field: ${node.field}`);
+  }
+
+  const operator = String(node.operator || "").trim().toUpperCase();
+  if (operator === "BETWEEN") {
+    return buildBetweenNode({ ...config, field: node.field }, node.value);
+  }
+
+  const normalized = {
+    field: config.filterField,
+    operator: normalizeRuleOperator(operator),
+    value: node.value,
+  };
+
+  if (operator === "NOT_IN") {
+    return {
+      type: "not",
+      child: {
+        type: "predicate",
+        field: node.field,
+        operator: "IN",
+        value: node.value,
+      },
+    };
+  }
+
+  return normalized;
+}
+
 export function buildPrismaStringFilter(field, operator, value) {
   const op = normalizeOperator(operator);
 
@@ -499,6 +660,7 @@ export function getProductPrismaWhere(filterParams = [], shop) {
         break;
 
       case "inventory_q":
+      case "inventory":
         AND.push(buildPrismaNumberFilter("totalInventory", operator, value));
         break;
 
@@ -834,4 +996,117 @@ export function getProductPrismaWhere(filterParams = [], shop) {
   }
 
   return where;
+}
+
+function stripShopClause(where = {}) {
+  const { shop: _shop, ...rest } = where;
+  return rest;
+}
+
+function normalizeAstLogic(value, fallback = "AND") {
+  const logic = String(value || fallback).trim().toUpperCase();
+  if (!["AND", "OR", "NOT"].includes(logic)) {
+    throw new Error(`Unsupported filter AST logic: ${value}`);
+  }
+  return logic;
+}
+
+function isConditionNode(node) {
+  return Boolean(
+    (node?.field && node?.operator) ||
+      (node?.type === "predicate" && node?.field),
+  );
+}
+
+function compileConditionNode(node, shop) {
+  const normalizedNode =
+    node?.type === "predicate" ? normalizeRulePredicateNode(node) : node;
+
+  if (normalizedNode?.type === "not") {
+    return compileFilterAstNode(normalizedNode, shop);
+  }
+
+  if (normalizedNode?.type === "group") {
+    return compileFilterAstNode(normalizedNode, shop);
+  }
+
+  const compiled = getProductPrismaWhere(
+    [
+      {
+        field: normalizedNode.field,
+        operator: normalizedNode.operator,
+        value: normalizedNode.value,
+      },
+    ],
+    shop,
+  );
+
+  const stripped = stripShopClause(compiled);
+  if (Array.isArray(stripped.AND) && stripped.AND.length === 1) {
+    return stripped.AND[0];
+  }
+
+  return stripped;
+}
+
+function compileFilterAstNode(node, shop) {
+  if (!node) return {};
+
+  if (Array.isArray(node)) {
+    return compileFilterAstNode({ type: "group", operator: "AND", children: node }, shop);
+  }
+
+  if (isConditionNode(node)) {
+    return compileConditionNode(node, shop);
+  }
+
+  if (node.type === "not") {
+    if (!node.child) {
+      throw new Error("NOT filter AST nodes require a child");
+    }
+    return { NOT: compileFilterAstNode(node.child, shop) };
+  }
+
+  const logic = normalizeAstLogic(node.operator || node.logic || node.type, "AND");
+  const children = Array.isArray(node.children)
+    ? node.children
+    : Array.isArray(node.conditions)
+      ? node.conditions
+      : [];
+
+  if (logic === "NOT") {
+    if (children.length !== 1) {
+      throw new Error("NOT filter AST nodes require exactly one child");
+    }
+    return { NOT: compileFilterAstNode(children[0], shop) };
+  }
+
+  const compiledChildren = children
+    .map((child) => compileFilterAstNode(child, shop))
+    .filter((child) => Object.keys(child).length > 0);
+
+  if (!compiledChildren.length) return {};
+  if (compiledChildren.length === 1) return compiledChildren[0];
+
+  return { [logic]: compiledChildren };
+}
+
+export function getProductPrismaWhereFromAst(conditionAst = [], shop) {
+  if (typeof shop !== "string" || !shop.trim()) {
+    throw new Error("shop is required for product filters");
+  }
+
+  const ast =
+    conditionAst &&
+    typeof conditionAst === "object" &&
+    !Array.isArray(conditionAst) &&
+    conditionAst.version &&
+    conditionAst.filter
+      ? conditionAst.filter
+      : conditionAst;
+  const compiled = compileFilterAstNode(ast, shop);
+  return {
+    shop,
+    ...(Object.keys(compiled).length ? { AND: [compiled] } : {}),
+  };
 }

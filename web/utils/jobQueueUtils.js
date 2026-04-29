@@ -18,10 +18,17 @@ function normalizePositiveInteger(value, fallback) {
   return parsed;
 }
 
+export function withRetryJitter(delay = 5_000, jitterMs = 2_000) {
+  const baseDelay = normalizeDelay(delay) ?? 5_000;
+  const maxJitter = Math.max(0, Number(jitterMs) || 0);
+
+  return baseDelay + Math.floor(Math.random() * (maxJitter + 1));
+}
+
 export function buildJobBackoff(delay = 5_000) {
   return {
     type: "exponential",
-    delay: normalizeDelay(delay) ?? 5_000,
+    delay: withRetryJitter(delay),
   };
 }
 
