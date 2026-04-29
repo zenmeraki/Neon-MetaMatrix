@@ -8,7 +8,12 @@ import {
   BULK_EDIT_EXECUTION_STATES,
   BULK_UNDO_STATES,
   normalizeUndoState,
+  buildPlannedUndoState,
 } from "../../services/bulkEditExecutionStateService.js";
+import { addbulkUndoJob } from "../../Jobs/Queues/bulkUndoJob.js";
+import crypto from "crypto";
+
+import { clearKeyCaches } from "../../utils/cacheUtils.js";
 
 async function claimScheduledEdit(historyId, shop) {
   const result = await prisma.editHistory.updateMany({
