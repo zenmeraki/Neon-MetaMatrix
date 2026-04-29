@@ -19,11 +19,7 @@ model Product {
   vendor                      String?
   tags                        String[]
   templateSuffix              String?
-
-  // split raw html from filterable text
-  descriptionHtml             String?
-  descriptionText             String?
-
+  description                 String?
   createdAt                   DateTime?
   updatedAt                   DateTime?
   publishedAt                 DateTime?
@@ -123,9 +119,6 @@ model Product {
   @@index([shop, mirrorBatchId, option3Name])
   @@index([shop, mirrorBatchId, productType])
   @@index([shop, mirrorBatchId, vendor])
-
-  // add this because search/filter now uses descriptionText
-  @@index([shop, mirrorBatchId, descriptionText])
 }
 
 model Variant {
@@ -296,7 +289,7 @@ model SyncHistory {
   responseUrl          String?
   status               SyncStatus         @default(processing)
   stage                String?
-  errorMessage         String?
+  errorSummary         String?
   duration             Int?               @default(0)
   recordCount          Int?
   operationType        SyncOperationType?
