@@ -42,49 +42,54 @@ function CatalogStatusCard({
   const statusIcon = isReady
     ? CheckCircleIcon
     : isInconsistent || isFailed
-    ? AlertCircleIcon
-    : RefreshIcon;
+      ? AlertCircleIcon
+      : RefreshIcon;
   const statusTone =
     isReady || isStale
       ? "success"
       : isInconsistent || isFailed
-      ? "critical"
-      : "base";
+        ? "critical"
+        : "base";
   const statusLabel = isReady
     ? t("ready", "Ready")
     : isSyncing
-    ? t("initialSyncRunning", "Initial sync running")
-    : isStale
-    ? t("stale", "Stale")
-    : isFailed
-    ? t("failed", "Failed")
-    : isInconsistent
-    ? t("inconsistent", "Inconsistent")
-    : t("notSynced", "Not synced");
+      ? t("initialSyncRunning", "Initial sync running")
+      : isStale
+        ? t("stale", "Stale")
+        : isFailed
+          ? t("failed", "Failed")
+          : isInconsistent
+            ? t("inconsistent", "Inconsistent")
+            : t("notSynced", "Not synced");
 
   return (
     <Card roundedAbove="sm">
       <Box padding="500">
         <BlockStack gap="400">
           <InlineStack align="space-between" blockAlign="start" gap="400">
-            <InlineStack gap="300" blockAlign="center" wrap={false}>
+            <InlineStack gap="100" blockAlign="start" wrap={false}>
               <Box
                 background="bg-surface-secondary"
                 borderRadius="300"
-                padding="300"
+                padding="200"
+                minWidth="40px"
+                minHeight="40px"
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
               >
                 <Icon source={statusIcon} tone={statusTone} />
               </Box>
-
               <BlockStack gap="050">
+
                 <Text as="h2" variant="headingMd">
                   {t("catalogSync", "Catalog sync")}
                 </Text>
                 <Text as="p" variant="bodySm" tone="subdued">
                   {lastSyncedAt
                     ? t("lastSyncedAt", "Last synced: {{lastSyncedAt}}", {
-                        lastSyncedAt,
-                      })
+                      lastSyncedAt,
+                    })
                     : t("syncNotCompletedYet", "Sync has not completed yet.")}
                 </Text>
               </BlockStack>
@@ -129,38 +134,47 @@ function CatalogStatusCard({
             </Banner>
           ) : null}
 
-          <InlineGrid columns={{ xs: 1, sm: 2, md: 2, lg: 2, xl: 2 }} gap="400">
-            <BlockStack gap="050">
-              <Text as="p" variant="headingLg">
-                {formatDashboardNumber(products)}
-              </Text>
-              <Text as="p" variant="bodySm" tone="subdued">
-                {t("products", "Products")}
-              </Text>
-            </BlockStack>
-
-            <BlockStack gap="050">
-              <Text as="p" variant="headingLg">
-                {formatDashboardNumber(variants)}
-              </Text>
-              <Text as="p" variant="bodySm" tone="subdued">
-                {t("variants", "Variants")}
-              </Text>
-            </BlockStack>
-          </InlineGrid>
-
-          <InlineStack gap="200">
-            <Button
-              icon={RefreshIcon}
-              onClick={onSyncNow}
-              loading={syncSubmitting}
-              disabled={syncSubmitting}
+          <Box paddingBlockStart="200">
+            <InlineGrid
+              columns={{ xs: 1, sm: 2, md: 2, lg: 2, xl: 2 }}
+              gap="600"
             >
-              {t("syncNow", "Sync now")}
-            </Button>
+              <BlockStack gap="050">
+                <Box paddingInlineStart="1000">
+                  <Text as="p" variant="headingLg">
+                    {formatDashboardNumber(products)}
+                  </Text>
+                  <Text as="p" variant="bodySm" tone="subdued">
+                    {t("products", "Products")}
+                  </Text></Box>
+              </BlockStack>
+
+              <BlockStack gap="050">
+                <Text as="p" variant="headingLg">
+                  {formatDashboardNumber(variants)}
+                </Text>
+                <Text as="p" variant="bodySm" tone="subdued">
+                  {t("variants", "Variants")}
+                </Text>
+              </BlockStack>
+            </InlineGrid>
+          </Box>
+
+          <InlineStack gap="200" blockAlign="center" wrap>
+            <Box paddingInlineStart="800">
+              <Button
+                icon={RefreshIcon}
+                onClick={onSyncNow}
+                loading={syncSubmitting}
+                disabled={syncSubmitting}
+              >
+                {t("syncNow", "Sync now")}
+              </Button></Box>
+
             <Button variant="plain" onClick={onViewProgress}>
               {t("viewProgress", "View progress")}
             </Button>
+
             {isFailed && diagnosticId ? (
               <Button variant="plain" onClick={onCopyDiagnostic}>
                 {t("copyDiagnosticId", "Copy diagnostic ID")}

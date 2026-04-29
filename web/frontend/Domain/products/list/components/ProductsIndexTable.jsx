@@ -1,33 +1,94 @@
-import React, { memo, useCallback, useEffect, useMemo, useState } from "react";
+// web/frontend/Domain/products/components/ProductsIndexTable.jsx
+
+import React, { memo, useCallback, useMemo, useState } from "react";
 import {
+  Badge,
   Banner,
   BlockStack,
   Box,
   Button,
   EmptyState,
   IndexTable,
+  InlineStack,
   SkeletonBodyText,
   SkeletonDisplayText,
   Text,
+  Thumbnail,
   Tooltip,
 } from "@shopify/polaris";
+import { ImageIcon } from "@shopify/polaris-icons";
 import { useTranslation } from "react-i18next";
-import ProductCell from "./ProductCell";
 import ProductRowActions from "./ProductRowActions";
-import StatusBadge from "./StatusBadge";
 import InlineEditableCell from "./InlineEditableCell";
-import InventoryStatus from "./InventoryStatus";
 
-const SKELETON_ROWS = 6;
-const INITIAL_RENDER_ROWS = 12;
-const ROW_RENDER_CHUNK = 16;
+const SKELETON_ROWS = 8;
+
+function getStatusTone(status) {
+  const normalized = String(status || "").toUpperCase();
+
+  if (normalized === "ACTIVE") return "success";
+  if (normalized === "ARCHIVED") return "critical";
+  if (normalized === "DRAFT") return "attention";
+
+  return undefined;
+}
+
+function ProductTitleCell({ product }) {
+  const imageUrl =
+    product.featuredImageUrl ||
+    product.featuredMedia?.preview?.image?.url ||
+    product.image ||
+    "";
+
+  return (
+    <InlineStack gap="300" blockAlign="center" wrap={false}>
+      <Thumbnail source={imageUrl || ImageIcon} alt="" size="small" />
+
+      <Box maxWidth="520px">
+        <Text as="p" variant="bodyMd" fontWeight="semibold" truncate>
+          {product.title || "-"}
+        </Text>
+
+        <Text as="p" variant="bodySm" tone="subdued" truncate>
+          /{product.handle || "-"}
+        </Text>
+      </Box>
+    </InlineStack>
+  );
+}
+
+function InventoryCell({ product }) {
+  const totalInventory = Number(product.totalInventory ?? 0);
+  const variantsCount =
+    product.variantsCount ||
+    product.variantCount ||
+    product.variants?.length ||
+    1;
+
+  if (totalInventory <= 0) {
+    return (
+      <InlineStack gap="150" blockAlign="center" wrap={false}>
+        <Badge tone="critical">!</Badge>
+        <Text as="span" tone="critical">
+          Out of stock ({variantsCount} variants)
+        </Text>
+      </InlineStack>
+    );
+  }
+
+  return (
+    <Text as="span" tone="subdued">
+      {totalInventory.toLocaleString()} in stock
+    </Text>
+  );
+}
 
 const ProductsIndexTable = memo(function ProductsIndexTable({
   products = [],
   loading,
-  onClearAll,
   error,
   onRetry,
+  onClearAll,
   selectedSet = new Set(),
   selectedCount = 0,
   allMatchingSelected = false,
@@ -45,7 +106,6 @@ const ProductsIndexTable = memo(function ProductsIndexTable({
   const { t, i18n } = useTranslation();
   const [hoveredRowId, setHoveredRowId] = useState("");
   const [focusedRowId, setFocusedRowId] = useState("");
-  const [visibleRowCount, setVisibleRowCount] = useState(INITIAL_RENDER_ROWS);
 
   const resourceName = useMemo(
     () => ({
@@ -61,12 +121,13 @@ const ProductsIndexTable = memo(function ProductsIndexTable({
       { title: t("status", { defaultValue: "Status" }) },
       { title: t("inventory", { defaultValue: "Inventory" }) },
       { title: t("productType", { defaultValue: "Type" }) },
-      { title: t("vendor", { defaultValue: "Vendor" }) },
+      { title: t("vendorAndTags", { defaultValue: "Vendor / tags" }) },
       { title: t("actions", { defaultValue: "Actions" }) },
     ],
     [t, i18n.language]
   );
 
+  const selectedItemsCount = allMatchingSelected ? "All" : selectedCount;
   const emptyValue = t("emptyValueDash", { defaultValue: "-" });
 
   const handleSelectionChange = useCallback(
@@ -77,6 +138,7 @@ const ProductsIndexTable = memo(function ProductsIndexTable({
       }
 
       const selectedId = Array.isArray(selection) ? selection[0] : selection;
+
       if (selectedId) {
         onToggleRow?.(selectedId);
       }
@@ -84,78 +146,9 @@ const ProductsIndexTable = memo(function ProductsIndexTable({
     [onTogglePage, onToggleRow]
   );
 
-  const selectedItemsCount = allMatchingSelected ? "All" : selectedCount;
-  const visibleProducts = useMemo(
-    () => products.slice(0, visibleRowCount),
-    [products, visibleRowCount]
-  );
-
-  useEffect(() => {
-    setVisibleRowCount(Math.min(INITIAL_RENDER_ROWS, products.length));
-  }, [products]);
-
-  useEffect(() => {
-    if (visibleRowCount >= products.length) return undefined;
-
-    const schedule =
-      typeof window.requestIdleCallback === "function"
-        ? window.requestIdleCallback
-        : (callback) => window.setTimeout(callback, 16);
-    const cancel =
-      typeof window.cancelIdleCallback === "function"
-        ? window.cancelIdleCallback
-        : window.clearTimeout;
-
-    const handle = schedule(() => {
-      setVisibleRowCount((current) =>
-        Math.min(products.length, current + ROW_RENDER_CHUNK)
-      );
-    });
-
-    return () => cancel(handle);
-  }, [products.length, visibleRowCount]);
-
-  const focusProductRow = useCallback((productId) => {
-    window.requestAnimationFrame(() => {
-      document
-        .querySelector(`[data-product-row-id="${CSS.escape(productId)}"]`)
-        ?.focus();
-    });
-  }, []);
-
-  const handleRowKeyDown = useCallback(
-    (event, product, index) => {
-      if (event.key === "Enter") {
-        event.preventDefault();
-        onPreviewProduct?.(product);
-        return;
-      }
-
-      if (event.key === "ArrowDown") {
-        event.preventDefault();
-        const nextProduct =
-          visibleProducts[Math.min(index + 1, visibleProducts.length - 1)];
-        if (nextProduct?.id) {
-          const nextId = String(nextProduct.id);
-          setFocusedRowId(nextId);
-          setHoveredRowId(nextId);
-          focusProductRow(nextId);
-        }
-        return;
-      }
-
-      if (event.key === "ArrowUp") {
-        event.preventDefault();
-        const previousProduct = visibleProducts[Math.max(index - 1, 0)];
-        if (previousProduct?.id) {
-          const previousId = String(previousProduct.id);
-          setFocusedRowId(previousId);
-          setHoveredRowId(previousId);
-          focusProductRow(previousId);
-        }
-      }
-    },
-    [focusProductRow, onPreviewProduct, visibleProducts]
+  const buildInlineSaveHandler = useCallback(
+    (product, field) => (_field, value) => onInlineSave?.(product, field, value),
+    [onInlineSave]
   );
 
   if (error) {
@@ -205,7 +198,9 @@ const ProductsIndexTable = memo(function ProductsIndexTable({
           action={
             onClearAll
               ? {
-                  content: t("clearFilters", { defaultValue: "Clear filters" }),
+                  content: t("clearFilters", {
+                    defaultValue: "Clear filters",
+                  }),
                   onAction: onClearAll,
                 }
               : undefined
@@ -223,7 +218,6 @@ const ProductsIndexTable = memo(function ProductsIndexTable({
 
   return (
     <IndexTable
-      condensed
       selectable
       resourceName={resourceName}
       itemCount={products.length}
@@ -231,22 +225,13 @@ const ProductsIndexTable = memo(function ProductsIndexTable({
       onSelectionChange={handleSelectionChange}
       headings={headings}
     >
-      {visibleProducts.map((product, index) => {
+      {products.map((product, index) => {
         const productId = String(product.id);
-        const imageUrl =
-          product.featuredImageUrl ||
-          product.featuredMedia?.preview?.image?.url ||
-          "";
-
-        const inventory =
-          product.totalInventory === null ||
-          product.totalInventory === undefined
-            ? emptyValue
-            : Number(product.totalInventory).toLocaleString(i18n.language);
-        const inventoryDisplay = <InventoryStatus product={product} />;
-
-        const buildInlineSaveHandler = (field) => (_field, value) =>
-          onInlineSave?.(product, field, value);
+        const status = String(product.status || "DRAFT").toUpperCase();
+        const isRowActive =
+          hoveredRowId === productId ||
+          focusedRowId === productId ||
+          selectedSet.has(productId);
 
         return (
           <IndexTable.Row
@@ -254,33 +239,14 @@ const ProductsIndexTable = memo(function ProductsIndexTable({
             key={productId}
             position={index}
             selected={selectedSet.has(productId)}
-            data-product-row-id={productId}
-            data-product-row-active={
-              hoveredRowId === productId || focusedRowId === productId
-                ? "true"
-                : "false"
-            }
-            tabIndex={0}
             onClick={() => onPreviewProduct?.(product)}
-            onFocus={() => {
-              setFocusedRowId(productId);
-              setHoveredRowId(productId);
-            }}
-            onBlur={() => setFocusedRowId("")}
-            onKeyDown={(event) => handleRowKeyDown(event, product, index)}
             onMouseEnter={() => setHoveredRowId(productId)}
-            onMouseLeave={() => {
-              if (focusedRowId !== productId) {
-                setHoveredRowId("");
-              }
-            }}
+            onMouseLeave={() => setHoveredRowId("")}
+            onFocus={() => setFocusedRowId(productId)}
+            onBlur={() => setFocusedRowId("")}
           >
             <IndexTable.Cell>
-              <ProductCell
-                title={product.title ?? ""}
-                handle={product.handle ?? ""}
-                imageUrl={imageUrl}
-              />
+              <ProductTitleCell product={product} />
             </IndexTable.Cell>
 
             <IndexTable.Cell>
@@ -288,14 +254,16 @@ const ProductsIndexTable = memo(function ProductsIndexTable({
                 <InlineEditableCell
                   field="status"
                   type="status"
-                  value={product.status || "DRAFT"}
-                  displayValue={<StatusBadge status={product.status} />}
+                  value={status}
+                  displayValue={
+                    <Badge tone={getStatusTone(status)}>{status}</Badge>
+                  }
                   emptyValue={emptyValue}
                   saving={savingInlineCell === `${productId}:status`}
-                  onSave={buildInlineSaveHandler("status")}
+                  onSave={buildInlineSaveHandler(product, "status")}
                 />
               ) : (
-                <StatusBadge status={product.status} />
+                <Badge tone={getStatusTone(status)}>{status}</Badge>
               )}
             </IndexTable.Cell>
 
@@ -305,13 +273,13 @@ const ProductsIndexTable = memo(function ProductsIndexTable({
                   field="inventory"
                   type="number"
                   value={product.totalInventory ?? ""}
-                  displayValue={inventoryDisplay}
+                  displayValue={<InventoryCell product={product} />}
                   emptyValue={emptyValue}
                   saving={savingInlineCell === `${productId}:inventory`}
-                  onSave={buildInlineSaveHandler("inventory")}
+                  onSave={buildInlineSaveHandler(product, "inventory")}
                 />
               ) : (
-                inventoryDisplay
+                <InventoryCell product={product} />
               )}
             </IndexTable.Cell>
 
@@ -326,33 +294,39 @@ const ProductsIndexTable = memo(function ProductsIndexTable({
             </IndexTable.Cell>
 
             <IndexTable.Cell>
-              {onInlineSave ? (
-                <InlineEditableCell
-                  field="vendor"
-                  value={product.vendor || ""}
-                  emptyValue={emptyValue}
-                  saving={savingInlineCell === `${productId}:vendor`}
-                  onSave={buildInlineSaveHandler("vendor")}
-                />
-              ) : (
+              <InlineStack gap="200" blockAlign="center" wrap={false}>
                 <Box maxWidth="220px">
-                  <Tooltip content={product.vendor || emptyValue}>
-                    <Text as="span" truncate>
-                      {product.vendor || emptyValue}
-                    </Text>
-                  </Tooltip>
+                  {onInlineSave ? (
+                    <InlineEditableCell
+                      field="vendor"
+                      value={product.vendor || ""}
+                      emptyValue={emptyValue}
+                      saving={savingInlineCell === `${productId}:vendor`}
+                      onSave={buildInlineSaveHandler(product, "vendor")}
+                    />
+                  ) : (
+                    <Tooltip content={product.vendor || emptyValue}>
+                      <Text as="span" tone="magic" truncate>
+                        {product.vendor || emptyValue}
+                      </Text>
+                    </Tooltip>
+                  )}
                 </Box>
-              )}
+
+                {Array.isArray(product.tags) && product.tags.length > 0 ? (
+                  <Box maxWidth="260px">
+                    <Text as="span" tone="magic" truncate>
+                      {product.tags.slice(0, 2).join(" ")}
+                    </Text>
+                  </Box>
+                ) : null}
+              </InlineStack>
             </IndexTable.Cell>
 
             <IndexTable.Cell>
               <ProductRowActions
                 product={product}
-                visible={
-                  hoveredRowId === productId ||
-                  focusedRowId === productId ||
-                  selectedSet.has(productId)
-                }
+                visible={isRowActive}
                 onView={onViewProduct}
                 onEdit={onEditProduct}
                 onDuplicate={onDuplicateProduct}

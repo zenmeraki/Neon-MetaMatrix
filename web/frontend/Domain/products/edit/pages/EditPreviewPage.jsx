@@ -1197,21 +1197,25 @@ export default function EditPreviewPage() {
                   borderBlockStartWidth="025"
                   borderColor="border"
                 >
-                  <BlockStack gap="200">
-                    {editGuarantees.map((guarantee) => (
-                      <InlineStack
-                        key={guarantee}
-                        gap="200"
-                        blockAlign="center"
-                        wrap={false}
-                      >
-                        <Icon source={CheckCircleIcon} tone="success" />
-                        <Text as="span" variant="bodySm" fontWeight="medium">
-                          {guarantee}
-                        </Text>
-                      </InlineStack>
-                    ))}
-                  </BlockStack>
+                 <BlockStack gap="200">
+  {editGuarantees.map((guarantee) => (
+    <InlineStack
+      key={guarantee}
+      gap="150"
+      align="start"
+      blockAlign="center"
+      wrap={false}
+    >
+      <Box minWidth="20px">
+        <Icon source={CheckCircleIcon} tone="success" />
+      </Box>
+
+      <Text as="span" variant="bodySm" fontWeight="medium">
+        {guarantee}
+      </Text>
+    </InlineStack>
+  ))}
+</BlockStack>
                 </Box>
               </BlockStack>
             </Box>

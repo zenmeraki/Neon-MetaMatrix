@@ -99,11 +99,9 @@ const ProductsFiltersBar = memo(function ProductsFiltersBar({
             <Button
               type="button"
               onClick={openPicker}
-              accessibilityLabel={t("addProductFilterAccessibilityLabel", {
-                defaultValue: "Add product filter",
-              })}
+              accessibilityLabel={t("addProductFilterAccessibilityLabel", )}
             >
-              {t("addFilterPlus", { defaultValue: "Add filter +" })}
+              {t("addFilterPlus",)}
             </Button>
           }
           autofocusTarget="first-node"
@@ -137,24 +135,20 @@ const ProductsFiltersBar = memo(function ProductsFiltersBar({
             type="button"
             variant="plain"
             onClick={onClearAll}
-            accessibilityLabel={t("clearProductFiltersAccessibilityLabel", {
-              defaultValue: "Clear all product filters",
-            })}
+            accessibilityLabel={t("clearProductFiltersAccessibilityLabel",)}
           >
-            {t("clearFilters", { defaultValue: "Clear filters" })}
+            {t("clearFilters",)}
           </Button>
         ) : null}
         </InlineStack>
 
         <Box minWidth="180px">
           <Select
-            label={t("filterMatchMode", { defaultValue: "Filter match mode" })}
+            label={t("filterMatchMode",)}
             labelHidden
             options={[
               {
-                label: t("matchAllFilters", {
-                  defaultValue: "Match all filters",
-                }),
+                label: t("matchAllFilters",),
                 value: "all",
               },
             ]}

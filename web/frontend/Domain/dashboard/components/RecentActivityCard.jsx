@@ -24,17 +24,22 @@ const ACTIVITY_ICON_MAP = {
   sync: RefreshIcon,
 };
 
-function RecentActivityCard({ activities, onViewHistory, onStartEditing }) {
+function RecentActivityCard({
+  activities = [],
+  onViewHistory,
+  onStartEditing,
+}) {
   const { t } = useTranslation();
 
   return (
-    <Card roundedAbove="sm">
+    <Card>
       <Box padding="500">
         <BlockStack gap="400">
-          <InlineStack align="space-between" blockAlign="center" gap="400">
+          <InlineStack align="space-between" blockAlign="center" wrap={false}>
             <Text as="h2" variant="headingMd">
               {t("recentActivity", "Recent activity")}
             </Text>
+
             <Button variant="plain" onClick={onViewHistory}>
               {t("viewHistory", "View history")}
             </Button>
@@ -45,21 +50,29 @@ function RecentActivityCard({ activities, onViewHistory, onStartEditing }) {
               {activities.map((activity) => {
                 const ActivityIcon =
                   ACTIVITY_ICON_MAP[activity.type] || PageClockFilledIcon;
+
                 return (
                   <InlineStack
                     key={activity.id}
                     gap="300"
                     blockAlign="start"
+                    align="start"
                     wrap={false}
                   >
-                    <Icon source={ActivityIcon} tone="base" />
+                    <Box paddingBlockStart="025">
+                      <Icon source={ActivityIcon} tone="base" />
+                    </Box>
+
                     <BlockStack gap="050">
                       <Text as="p" variant="bodyMd">
                         {activity.title}
                       </Text>
-                      <Text as="p" variant="bodySm" tone="subdued">
-                        {activity.description}
-                      </Text>
+
+                      {activity.description ? (
+                        <Text as="p" variant="bodySm" tone="subdued">
+                          {activity.description}
+                        </Text>
+                      ) : null}
                     </BlockStack>
                   </InlineStack>
                 );
@@ -71,6 +84,7 @@ function RecentActivityCard({ activities, onViewHistory, onStartEditing }) {
                 <Text as="p" variant="bodyMd">
                   {t("noRecentActivity", "No recent activity yet.")}
                 </Text>
+
                 <Text as="p" variant="bodySm" tone="subdued">
                   {t(
                     "activityWillAppearHere",
@@ -78,7 +92,8 @@ function RecentActivityCard({ activities, onViewHistory, onStartEditing }) {
                   )}
                 </Text>
               </BlockStack>
-              <InlineStack>
+
+              <InlineStack align="start">
                 <Button variant="primary" onClick={onStartEditing}>
                   {t("editProducts", "Edit products")}
                 </Button>

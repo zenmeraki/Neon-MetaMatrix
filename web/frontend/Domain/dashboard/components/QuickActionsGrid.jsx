@@ -25,10 +25,12 @@ const QuickActionCard = memo(function QuickActionCard({
   loading = false,
   onAction,
 }) {
+  const bodyText = description || trustCopy;
+
   return (
     <Card roundedAbove="sm">
-      <Box padding="400" height="100%">
-        <BlockStack gap="300">
+      <Box padding="400" minHeight="260px">
+        <BlockStack gap="400">
           <InlineStack gap="300" blockAlign="center" wrap={false}>
             <Box
               background="bg-surface-secondary"
@@ -37,35 +39,39 @@ const QuickActionCard = memo(function QuickActionCard({
             >
               <Icon source={icon} tone="base" />
             </Box>
+
             <Text as="h3" variant="headingSm">
               {title}
             </Text>
           </InlineStack>
 
-          <Text as="p" variant="bodySm" tone="subdued">
-            {description}
-          </Text>
+          <Box minHeight="48px">
+            {bodyText ? (
+              <Text as="p" variant="bodySm" tone="subdued">
+                {bodyText}
+              </Text>
+            ) : null}
+          </Box>
 
-          {disabled && disabledReason ? (
-            <Text as="p" variant="bodySm" tone="critical">
-              {disabledReason}
-            </Text>
-          ) : null}
+          <Box minHeight="24px">
+            {disabled && disabledReason ? (
+              <Text as="p" variant="bodySm" tone="critical">
+                {disabledReason}
+              </Text>
+            ) : null}
+          </Box>
 
-          {trustCopy ? (
-            <Text as="p" variant="bodySm" tone="subdued">
-              {trustCopy}
-            </Text>
-          ) : null}
-
-          <Button
-            variant={primary ? "primary" : undefined}
-            onClick={onAction}
-            disabled={disabled}
-            loading={loading}
-          >
-            {actionText}
-          </Button>
+          <Box paddingBlockStart="300">
+            <Button
+              fullWidth
+              variant={primary ? "primary" : undefined}
+              onClick={onAction}
+              disabled={disabled}
+              loading={loading}
+            >
+              {actionText}
+            </Button>
+          </Box>
         </BlockStack>
       </Box>
     </Card>
@@ -78,18 +84,20 @@ function QuickActionsGrid({ actions }) {
   return (
     <BlockStack gap="400">
       <BlockStack gap="100">
-        <Text as="h2" variant="headingLg">
-          {t("quickActions", "Quick actions")}
-        </Text>
-        <Text as="p" variant="bodyMd" tone="subdued">
-          {t(
-            "quickActionsDescription",
-            "Run common catalog workflows without leaving the dashboard."
-          )}
-        </Text>
+        <Box paddingInlineStart="200">
+          <Text as="h2" variant="headingLg">
+            {t("quickActions", "Quick actions")}
+          </Text>
+
+          <Text as="p" variant="bodyMd" tone="subdued">
+            {t(
+              "quickActionsDescription",
+              "Run common catalog workflows without leaving the dashboard."
+            )}
+          </Text></Box>
       </BlockStack>
 
-      <InlineGrid columns={QUICK_ACTION_COLUMNS} gap="400">
+      <InlineGrid columns={QUICK_ACTION_COLUMNS} gap="400" alignItems="stretch">
         {actions.map((action) => (
           <QuickActionCard key={action.key} {...action} />
         ))}

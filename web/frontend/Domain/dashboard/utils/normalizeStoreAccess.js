@@ -29,7 +29,7 @@ function readBoolean(value, fallback = true) {
 
 function normalizeCatalog(raw, { productCount, variantCount }) {
   const rawStatus = String(
-    raw?.mirrorHealthState ?? raw?.catalogStatus ?? raw?.syncStatus ?? ""
+    raw?.mirrorHealthState ?? raw?.catalogStatus ?? raw?.syncStatus ?? "",
   ).toLowerCase();
   const hasCatalogData = productCount > 0 || variantCount > 0;
   const syncRunId = raw?.syncRunId ?? raw?.currentSyncRunId ?? null;
@@ -84,7 +84,7 @@ function normalizeCatalog(raw, { productCount, variantCount }) {
     productCount,
     variantCount,
     lastSyncedAt: formatDashboardDateTime(
-      raw?.lastProductSyncAt ?? raw?.lastSyncedAt
+      raw?.lastProductSyncAt ?? raw?.lastSyncedAt,
     ),
     syncRunId,
     mirrorBatchId,
@@ -108,33 +108,33 @@ function normalizePermissions(raw) {
       permissions.canBulkEdit ??
         permissions.canEditProducts ??
         permissions.bulkEdit,
-      true
+      true,
     ),
     canExport: readBoolean(
       permissions.canExport ??
         permissions.canExportProducts ??
         permissions.exportProducts,
-      true
+      true,
     ),
     canImport: readBoolean(
       permissions.canImport ??
         permissions.canImportProducts ??
         permissions.importProducts,
-      true
+      true,
     ),
     canSync: readBoolean(
       permissions.canSync ??
         permissions.canSyncCatalog ??
         permissions.syncProducts,
-      true
+      true,
     ),
     canManageBilling: readBoolean(
       permissions.canManageBilling ?? permissions.billing,
-      true
+      true,
     ),
     canManageSnippets: readBoolean(
       permissions.canManageSnippets ?? permissions.snippetStudio,
-      true
+      true,
     ),
   };
 }
@@ -165,7 +165,7 @@ function normalizePlan(raw, { currentEditCount }) {
     status,
     usageLabel: hasLimit
       ? `Bulk edits: ${formatDashboardNumber(
-          currentEditCount
+          currentEditCount,
         )} / ${formatDashboardNumber(maxEdits)} this month`
       : `Bulk edits: ${formatDashboardNumber(currentEditCount)} this month`,
     currentEditCount,
@@ -211,8 +211,8 @@ function normalizeJobs(raw) {
         readNumber(
           jobs.exportsQueued,
           jobs.queuedExports,
-          raw?.exportJobsQueued
-        )
+          raw?.exportJobsQueued,
+        ),
       )} exports queued`,
       status: "queued",
     },
@@ -220,7 +220,7 @@ function normalizeJobs(raw) {
       id: "edits-queued",
       type: "edit",
       label: `${formatDashboardNumber(
-        readNumber(jobs.editsQueued, jobs.queuedEdits, raw?.editJobsQueued)
+        readNumber(jobs.editsQueued, jobs.queuedEdits, raw?.editJobsQueued),
       )} bulk edits queued`,
       status: "queued",
     },
@@ -232,8 +232,8 @@ function normalizeJobs(raw) {
         readNumber(
           jobs.importsQueued,
           jobs.queuedImports,
-          raw?.importJobsQueued
-        )
+          raw?.importJobsQueued,
+        ),
       )} imports queued`,
       status: "queued",
     },
@@ -273,17 +273,17 @@ export function normalizeDashboardState(raw) {
   const productCount = readNumber(
     raw?.storeTotalProducts,
     raw?.productCount,
-    raw?.totalProductCount
+    raw?.totalProductCount,
   );
   const variantCount = readNumber(
     raw?.storeTotalVariants,
     raw?.variantCount,
-    raw?.totalVariantCount
+    raw?.totalVariantCount,
   );
   const currentEditCount = readNumber(
     raw?.currentEditCount,
     raw?.totalBulkEditCount,
-    raw?.totalbulkEditCount
+    raw?.totalbulkEditCount,
   );
   const exportsCount = readNumber(raw?.totalExportCount);
   const importsCount = readNumber(raw?.totalImportCount);

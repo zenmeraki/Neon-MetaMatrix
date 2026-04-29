@@ -133,7 +133,7 @@ export default function DashboardPage() {
   );
 
   const handleRefreshDashboard = useCallback(() => {
-    return refetch({ forceRefresh: true }).catch(() => {});
+    return refetch({ forceRefresh: true }).catch(() => { });
   }, [refetch]);
 
   const handleCopyDiagnostic = useCallback(
@@ -252,18 +252,13 @@ export default function DashboardPage() {
         key: "edit-products",
         icon: PlusIcon,
         title: t("editProducts", "Edit products"),
-        description: actionGuards.bulkEdit.disabled
-          ? actionGuards.bulkEdit.disabledReason
-          : t(
-              "editProductsTaskDescription",
-              "Create a bulk edit from filters, selected products, or saved rules."
-            ),
+        description: "",
         actionText: dashboardState.catalog.canPreview
           ? t("previewProducts", "Preview products")
           : t("startEditing", "Start editing"),
         primary: true,
-        disabled: actionLocked || actionGuards.bulkEdit.disabled,
-        disabledReason: actionGuards.bulkEdit.disabledReason,
+        disabled: false,
+        disabledReason: null,
         loading: pendingActionKey === "edit-products",
         trustCopy: t(
           dashboardState.catalog.canPreview &&
