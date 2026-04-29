@@ -166,10 +166,9 @@ const ProductsFiltersBar = memo(function ProductsFiltersBar({
 
       {facetStats.length > 0 ? (
         <BlockStack gap="150">
+          <Box paddingBlockStart="600">
           <Text as="p" variant="bodySm" fontWeight="semibold">
-            {t("liveFacetRecalculationTitle", {
-              defaultValue: "Live facet recalculation",
-            })}
+            {t("liveFacetRecalculationTitle", )}
           </Text>
           <InlineStack gap="300" wrap>
             {facetStats.map((facet) => (
@@ -177,10 +176,11 @@ const ProductsFiltersBar = memo(function ProductsFiltersBar({
                 {facet.label}{" "}
                 <Text as="span" fontWeight="medium">
                   ({facet.beforeLabel} {"->"} {facet.afterLabel})
+
                 </Text>
               </Text>
             ))}
-          </InlineStack>
+          </InlineStack></Box>
         </BlockStack>
       ) : null}
     </BlockStack>
