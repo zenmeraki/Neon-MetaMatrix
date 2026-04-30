@@ -127,6 +127,7 @@ const ProductsIndexTable = memo(function ProductsIndexTable({
     [t, i18n.language]
   );
 
+
   const selectedItemsCount = allMatchingSelected ? "All" : selectedCount;
   const emptyValue = t("emptyValueDash", { defaultValue: "-" });
 
@@ -198,11 +199,11 @@ const ProductsIndexTable = memo(function ProductsIndexTable({
           action={
             onClearAll
               ? {
-                  content: t("clearFilters", {
-                    defaultValue: "Clear filters",
-                  }),
-                  onAction: onClearAll,
-                }
+                content: t("clearFilters", {
+                  defaultValue: "Clear filters",
+                }),
+                onAction: onClearAll,
+              }
               : undefined
           }
         >
@@ -326,7 +327,7 @@ const ProductsIndexTable = memo(function ProductsIndexTable({
             <IndexTable.Cell>
               <ProductRowActions
                 product={product}
-                visible={isRowActive}
+                visible
                 onView={onViewProduct}
                 onEdit={onEditProduct}
                 onDuplicate={onDuplicateProduct}

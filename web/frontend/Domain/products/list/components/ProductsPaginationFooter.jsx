@@ -1,4 +1,4 @@
-import React, { memo } from "react";
+import { memo } from "react";
 import { Box, InlineStack, Pagination, Text } from "@shopify/polaris";
 import { useTranslation } from "react-i18next";
 
@@ -10,11 +10,14 @@ const ProductsPaginationFooter = memo(function ProductsPaginationFooter({
   onPrev,
 }) {
   const { t, i18n } = useTranslation();
+
   const page = Number(pagination?.page || 1);
   const pageSize = Number(pagination?.limit || products.length || 0);
   const total = Number(pagination?.total ?? pagination?.totalCount ?? 0);
-  const start = total > 0 ? (page - 1) * pageSize + 1 : 0;
+
+  const start = total > 0 && pageSize > 0 ? (page - 1) * pageSize + 1 : 0;
   const end = total > 0 ? Math.min(start + products.length - 1, total) : 0;
+
   const rangeLabel =
     total > 0
       ? t("productsPaginationRange", {
@@ -30,6 +33,7 @@ const ProductsPaginationFooter = memo(function ProductsPaginationFooter({
       : t("productsPaginationHint", {
           defaultValue: "Showing current result",
         });
+
   const lastUpdatedLabel = getLastUpdatedLabel({ lastUpdatedAt, t });
 
   return (
@@ -39,18 +43,15 @@ const ProductsPaginationFooter = memo(function ProductsPaginationFooter({
       borderBlockStartWidth="025"
       borderColor="border"
       background="bg-surface"
-      position="sticky"
-      insetBlockEnd="0"
-      zIndex="1"
     >
       <InlineStack align="space-between" blockAlign="center" gap="300" wrap>
         <InlineStack gap="200" blockAlign="center" wrap>
-          <Text tone="subdued" variant="bodySm">
+          <Text as="span" tone="subdued" variant="bodySm">
             {rangeLabel}
           </Text>
 
           {lastUpdatedLabel ? (
-            <Text tone="subdued" variant="bodySm">
+            <Text as="span" tone="subdued" variant="bodySm">
               {lastUpdatedLabel}
             </Text>
           ) : null}
@@ -90,6 +91,7 @@ function getLastUpdatedLabel({ lastUpdatedAt, t }) {
   }
 
   const elapsedHours = Math.floor(elapsedMinutes / 60);
+
   return t("lastUpdatedHoursAgo", {
     count: elapsedHours,
     defaultValue: `Last updated ${elapsedHours} hr ago`,

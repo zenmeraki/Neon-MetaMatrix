@@ -1627,7 +1627,7 @@ export default function ProductsPage() {
               </Box>
             ) : null}
 
-            <Box borderBlockStartWidth="025" borderColor="border">
+            <Box borderBlockStartWidth="025" borderColor="border"   overflowX="auto">
               <ProductsIndexTable
                 products={products}
                 loading={shouldShowLoadingState}
