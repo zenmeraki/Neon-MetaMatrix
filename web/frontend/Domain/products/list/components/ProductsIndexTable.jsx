@@ -121,12 +121,11 @@ const ProductsIndexTable = memo(function ProductsIndexTable({
       { title: t("status", { defaultValue: "Status" }) },
       { title: t("inventory", { defaultValue: "Inventory" }) },
       { title: t("productType", { defaultValue: "Type" }) },
-      { title: t("vendorAndTags", { defaultValue: "Vendor / tags" }) },
+      { title: t("vendor", { defaultValue: "Vendor" }) },
       { title: t("actions", { defaultValue: "Actions" }) },
     ],
     [t, i18n.language]
   );
-
 
   const selectedItemsCount = allMatchingSelected ? "All" : selectedCount;
   const emptyValue = t("emptyValueDash", { defaultValue: "-" });
@@ -181,6 +180,7 @@ const ProductsIndexTable = memo(function ProductsIndexTable({
       <Box padding="400">
         <BlockStack gap="300">
           <SkeletonDisplayText size="small" />
+
           {Array.from({ length: SKELETON_ROWS }).map((_, index) => (
             <SkeletonBodyText key={index} lines={1} />
           ))}
@@ -229,6 +229,7 @@ const ProductsIndexTable = memo(function ProductsIndexTable({
       {products.map((product, index) => {
         const productId = String(product.id);
         const status = String(product.status || "DRAFT").toUpperCase();
+
         const isRowActive =
           hoveredRowId === productId ||
           focusedRowId === productId ||
@@ -295,39 +296,29 @@ const ProductsIndexTable = memo(function ProductsIndexTable({
             </IndexTable.Cell>
 
             <IndexTable.Cell>
-              <InlineStack gap="200" blockAlign="center" wrap={false}>
-                <Box maxWidth="220px">
-                  {onInlineSave ? (
-                    <InlineEditableCell
-                      field="vendor"
-                      value={product.vendor || ""}
-                      emptyValue={emptyValue}
-                      saving={savingInlineCell === `${productId}:vendor`}
-                      onSave={buildInlineSaveHandler(product, "vendor")}
-                    />
-                  ) : (
-                    <Tooltip content={product.vendor || emptyValue}>
-                      <Text as="span" tone="magic" truncate>
-                        {product.vendor || emptyValue}
-                      </Text>
-                    </Tooltip>
-                  )}
-                </Box>
-
-                {Array.isArray(product.tags) && product.tags.length > 0 ? (
-                  <Box maxWidth="260px">
+              <Box maxWidth="220px">
+                {onInlineSave ? (
+                  <InlineEditableCell
+                    field="vendor"
+                    value={product.vendor || ""}
+                    emptyValue={emptyValue}
+                    saving={savingInlineCell === `${productId}:vendor`}
+                    onSave={buildInlineSaveHandler(product, "vendor")}
+                  />
+                ) : (
+                  <Tooltip content={product.vendor || emptyValue}>
                     <Text as="span" tone="magic" truncate>
-                      {product.tags.slice(0, 2).join(" ")}
+                      {product.vendor || emptyValue}
                     </Text>
-                  </Box>
-                ) : null}
-              </InlineStack>
+                  </Tooltip>
+                )}
+              </Box>
             </IndexTable.Cell>
 
             <IndexTable.Cell>
               <ProductRowActions
                 product={product}
-                visible
+                visible={isRowActive}
                 onView={onViewProduct}
                 onEdit={onEditProduct}
                 onDuplicate={onDuplicateProduct}
