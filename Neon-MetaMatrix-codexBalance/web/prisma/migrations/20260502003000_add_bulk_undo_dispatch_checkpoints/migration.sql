@@ -1,0 +1,5 @@
+ALTER TABLE "BulkUndoExecution"
+  ADD COLUMN IF NOT EXISTS "dispatchStartedAt" TIMESTAMP(3),
+  ADD COLUMN IF NOT EXISTS "dispatchCompletedAt" TIMESTAMP(3),
+  ADD COLUMN IF NOT EXISTS "jsonlFileBytes" BIGINT,
+  ADD COLUMN IF NOT EXISTS "dispatchProductCount" INTEGER NOT NULL DEFAULT 0;

@@ -1,0 +1,2 @@
+ALTER TABLE "SyncHistory"
+  ADD COLUMN IF NOT EXISTS "metadata" JSONB;
