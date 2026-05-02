@@ -1,0 +1,769 @@
+import { Worker } from "bullmq";
+import { connection } from "../../Config/redis.js";
+import { getCurrentBulkOperationStatus } from "../../utils/bulkOperationHelper.js";
+import ProductBulkService from "../../services/productService/productBulkEditService.js";
+import { clearKeyCaches } from "../../utils/cacheUtils.js";
+import { logWorkerError } from "../../utils/errorLogUtils.js";
+import { finalizeRecurringRunFromHistory } from "../../services/recurringEditExecutionService.js";
+import { finalizeAutomaticProductRuleRunFromHistory } from "../../services/automaticProductRuleExecutionService.js";
+import { prisma } from "../../config/database.js";
+import { recordMirrorAnomaly } from "../../services/mirrorAnomalyService.js";
+import { storeOperationRepository } from "../../repositories/storeOperationRepository.js";
+import { storeOperationalStateRepository } from "../../repositories/storeOperationalStateRepository.js";
+import {
+  acquireExclusiveShopWork,
+  releaseExclusiveShopWork,
+} from "../../services/shopWorkLeaseService.js";
+import {
+  getJobAttempt,
+  isRetryExhausted,
+  recordRetryExhausted,
+} from "../../utils/workerTelemetry.js";
+import { addDeadLetterJob } from "../Queues/deadLetterQueue.js";
+import { OPERATION_QUEUE_NAMES } from "../Queues/operationQueueRegistry.js";
+import { operationEventRepository } from "../../repositories/operationEventRepository.js";
+import { requireJobData } from "../../utils/jobPayloadValidation.js";
+import { getSession } from "../../utils/sessionHandler.js";
+import logger from "../../utils/loggerUtils.js";
+import {
+  BULK_EDIT_EXECUTION_STATES,
+  appendExecutionError,
+  buildExecutionError,
+  isTerminalExecutionState,
+} from "../../services/bulkEditExecutionStateService.js";
+
+const QUEUE_NAME =
+  process.env.EDIT_QUEUE || OPERATION_QUEUE_NAMES.BULK_EDIT_EXECUTE;
+
+const WORKER_NAME = "bulkEditWorker";
+const WORKER_ID = `${WORKER_NAME}:${process.pid}`;
+const LEASE_RENEW_MS = 10_000;
+const LEASE_TTL_MS = 30_000;
+const STALE_DISPATCH_MS = 20 * 60 * 1000;
+
+class RetryableBulkEditError extends Error {
+  constructor(message, code = "retryable_bulk_edit") {
+    super(message);
+    this.name = "RetryableBulkEditError";
+    this.retryable = true;
+    this.code = code;
+  }
+}
+
+function isRetryableError(error) {
+  return Boolean(error?.retryable);
+}
+
+function isStaleDispatch(batch) {
+  const startedAt = batch?.dispatchStartedAt;
+  if (!startedAt) return false;
+
+  const startedTs = new Date(startedAt).getTime();
+  if (Number.isNaN(startedTs)) return false;
+
+  return Date.now() - startedTs > STALE_DISPATCH_MS;
+}
+
+async function claimHistoryExecution(historyId, shop, executionId, jobId, attempt) {
+  const history = await prisma.editHistory.findUnique({
+    where: { id: historyId },
+    select: {
+      id: true,
+      shop: true,
+      status: true,
+      executionState: true,
+      rules: true,
+      batch: true,
+      targetSnapshotCount: true,
+      executionIdentity: true,
+      bulkOperationId: true,
+      error: true,
+      completedAt: true,
+    },
+  });
+
+  if (!history) {
+    throw new Error("Edit history not found");
+  }
+
+  if (history.shop !== shop) {
+    throw new Error("Cross-shop bulk edit execution blocked");
+  }
+
+  if (
+    executionId &&
+    history.executionIdentity &&
+    executionId !== history.executionIdentity
+  ) {
+    throw new Error("Bulk edit execution identity mismatch");
+  }
+
+  if (
+    isTerminalExecutionState(history.executionState) ||
+    ["completed", "failed", "cancelled", "partial"].includes(history.status)
+  ) {
+    return { state: "terminal", history };
+  }
+
+  if (
+    history.executionState === BULK_EDIT_EXECUTION_STATES.AWAITING_SHOPIFY &&
+    history.bulkOperationId
+  ) {
+    return { state: "awaiting_shopify", history };
+  }
+
+  if (history.executionState === BULK_EDIT_EXECUTION_STATES.FINALIZING) {
+    return { state: "finalizing", history };
+  }
+
+  const batch =
+    history.batch && typeof history.batch === "object" ? history.batch : {};
+
+  if (history.executionState === BULK_EDIT_EXECUTION_STATES.DISPATCHING) {
+    if (!history.bulkOperationId && isStaleDispatch(batch)) {
+      const structuredError = buildExecutionError({
+        code: "dispatch_stalled",
+        stage: "dispatch",
+        message: "Bulk edit dispatch stalled before Shopify mutation confirmation",
+        retryable: false,
+        details: {
+          dispatchStartedAt: batch.dispatchStartedAt,
+          dispatchJobId: batch.dispatchJobId || null,
+          dispatchAttempt: batch.dispatchAttempt || null,
+        },
+      });
+
+      await prisma.editHistory.updateMany({
+        where: {
+          id: historyId,
+          shop,
+          executionState: BULK_EDIT_EXECUTION_STATES.DISPATCHING,
+          bulkOperationId: null,
+        },
+        data: {
+          status: "failed",
+          executionState: BULK_EDIT_EXECUTION_STATES.FAILED,
+          failureStage: "dispatch_timeout",
+          error: appendExecutionError(history.error, structuredError),
+          completedAt: new Date(),
+        },
+      });
+
+      return { state: "stale_dispatch_failed", history };
+    }
+
+    return { state: "already_running", history };
+  }
+
+  const nextBatch = {
+    ...batch,
+    dispatchStartedAt: new Date().toISOString(),
+    dispatchJobId: jobId,
+    dispatchAttempt: attempt,
+    activeExecutionId: history.executionIdentity,
+  };
+
+  const updated = await prisma.editHistory.updateMany({
+    where: {
+      id: historyId,
+      shop,
+      bulkOperationId: null,
+      executionState: {
+        in: [
+          BULK_EDIT_EXECUTION_STATES.PLANNED,
+          BULK_EDIT_EXECUTION_STATES.QUEUED,
+          BULK_EDIT_EXECUTION_STATES.FAILED,
+        ],
+      },
+      status: { notIn: ["completed", "failed", "cancelled", "partial"] },
+    },
+    data: {
+      status: "processing",
+      executionState: BULK_EDIT_EXECUTION_STATES.DISPATCHING,
+      error: null,
+      failureStage: null,
+      batch: nextBatch,
+    },
+  });
+
+  if (!updated.count) {
+    return { state: "not_claimed", history };
+  }
+
+  const claimedHistory = await prisma.editHistory.findUnique({
+    where: { id: historyId },
+    select: {
+      id: true,
+      shop: true,
+      rules: true,
+      batch: true,
+      targetSnapshotCount: true,
+      executionIdentity: true,
+    },
+  });
+
+  return { state: "claimed", history: claimedHistory };
+}
+
+async function markHistoryRetryable(historyId, shop, error, attempt, details = {}) {
+  const history = await prisma.editHistory.findFirst({
+    where: { id: historyId, shop },
+    select: {
+      error: true,
+      batch: true,
+    },
+  });
+
+  if (!history) return;
+
+  const batch =
+    history.batch && typeof history.batch === "object" ? history.batch : {};
+
+  await prisma.editHistory.updateMany({
+    where: {
+      id: historyId,
+      shop,
+      executionState: BULK_EDIT_EXECUTION_STATES.DISPATCHING,
+      bulkOperationId: null,
+    },
+    data: {
+      status: "pending",
+      executionState: BULK_EDIT_EXECUTION_STATES.QUEUED,
+      failureStage: error.code || "retryable",
+      error: appendExecutionError(
+        history.error,
+        buildExecutionError({
+          code: error.code || "retryable_execution",
+          stage: "dispatch",
+          message: error.message,
+          retryable: true,
+          details: {
+            ...details,
+            attempt,
+          },
+        }),
+      ),
+      batch: {
+        ...batch,
+        lastRetryableErrorAt: new Date().toISOString(),
+        lastRetryableErrorCode: error.code || "retryable_execution",
+      },
+    },
+  });
+}
+
+async function markHistoryFailure(historyId, shop, error, attempt, executionId, source) {
+  const history = await prisma.editHistory.findFirst({
+    where: { id: historyId, shop },
+    select: {
+      error: true,
+    },
+  });
+
+  await prisma.editHistory
+    .updateMany({
+      where: { id: historyId, shop },
+      data: {
+        status: "failed",
+        executionState: BULK_EDIT_EXECUTION_STATES.FAILED,
+        failureStage: "queue_execution",
+        completedAt: new Date(),
+        error: appendExecutionError(
+          history?.error,
+          buildExecutionError({
+            code: error.code || "bulk_edit_worker_failure",
+            stage: "queue_execution",
+            message: error.message,
+            retryable: false,
+            details: {
+              stack: error.stack || null,
+              attempt,
+              source,
+              executionId,
+            },
+          }),
+        ),
+      },
+    })
+    .catch(() => {});
+}
+
+function resolveOperationField(rules) {
+  if (Array.isArray(rules)) {
+    return rules
+      .map((rule) => rule?.field)
+      .filter(Boolean)
+      .join(",");
+  }
+
+  return rules?.[0]?.field || null;
+}
+
+function resolveMutationFields(rules) {
+  return Array.isArray(rules)
+    ? rules.map((rule) => rule?.field).filter(Boolean)
+    : [];
+}
+
+async function processBulkEdit(job) {
+  const data = requireJobData(job, ["historyId", "shop"], "bulk edit");
+  const {
+    historyId,
+    shop,
+    source = "bulk-edit",
+    executionId = null,
+    operationId = null,
+  } = data;
+
+  const attempt = getJobAttempt(job);
+
+  let shopLockKey = null;
+  let activeOperationId = operationId;
+  let leaseRenewal = null;
+
+  try {
+    const session = await getSession(shop);
+
+    if (!session?.shop || session.shop !== shop) {
+      throw new Error("Shop session not available for bulk edit execution");
+    }
+
+    const lock = await acquireExclusiveShopWork({
+      shop,
+      activity: "bulk_edit_execution",
+      worker: WORKER_NAME,
+      queue: QUEUE_NAME,
+      jobId: job.id,
+      entityType: "editHistory",
+      entityId: historyId,
+      executionId,
+    });
+
+    if (!lock.acquired) {
+      throw new RetryableBulkEditError(
+        "Another heavy job is already running for this shop",
+        "shop_work_conflict",
+      );
+    }
+
+    shopLockKey = lock.lockKey;
+
+    const claimResult = await claimHistoryExecution(
+      historyId,
+      shop,
+      executionId,
+      job.id,
+      attempt,
+    );
+
+    if (
+      [
+        "terminal",
+        "awaiting_shopify",
+        "finalizing",
+        "already_running",
+        "not_claimed",
+        "stale_dispatch_failed",
+      ].includes(claimResult.state)
+    ) {
+      return {
+        skipped: true,
+        reason: claimResult.state,
+        shop,
+        historyId,
+      };
+    }
+
+    const history = claimResult.history;
+    activeOperationId = activeOperationId || history?.batch?.operationId || null;
+
+    if (activeOperationId) {
+      const lease = await storeOperationRepository.acquireLease(
+        activeOperationId,
+        WORKER_ID,
+        new Date(Date.now() + LEASE_TTL_MS),
+      );
+
+      if (!lease.count) {
+        throw new RetryableBulkEditError(
+          "Bulk edit operation lease is held by another worker",
+          "operation_lease_held",
+        );
+      }
+
+      leaseRenewal = setInterval(() => {
+        storeOperationRepository
+          .renewLease(
+            activeOperationId,
+            WORKER_ID,
+            new Date(Date.now() + LEASE_TTL_MS),
+          )
+          .catch(() => {});
+      }, LEASE_RENEW_MS);
+
+      leaseRenewal.unref?.();
+
+      await storeOperationRepository.markRunningForLease(
+        activeOperationId,
+        WORKER_ID,
+      );
+    }
+
+    const { status } = await getCurrentBulkOperationStatus(session);
+
+    if (status === "RUNNING") {
+      throw new RetryableBulkEditError(
+        "Another Shopify bulk operation is already running",
+        "shopify_bulk_busy",
+      );
+    }
+
+    await clearKeyCaches(`${shop}:fetchHistories`);
+    await clearKeyCaches(`${shop}:historyDetails:${historyId}`);
+
+    const service = new ProductBulkService(session);
+
+    const {
+      formattedProducts,
+      changes,
+      hasMore,
+      lastProductId,
+      lastOrdinal,
+      batchId,
+      batchTargetCount,
+    } = await service._preparingBulkOperation({ historyId });
+
+    if (!Array.isArray(formattedProducts)) {
+      throw new Error(
+        `INVALID_PREPARATION_OUTPUT: expected formattedProducts array, got ${typeof formattedProducts}`,
+      );
+    }
+
+    const safeChanges = Array.isArray(changes) ? changes : [];
+
+    if (formattedProducts.length === 0) {
+      await prisma.editHistory.updateMany({
+        where: {
+          id: historyId,
+          shop,
+          executionState: BULK_EDIT_EXECUTION_STATES.DISPATCHING,
+          bulkOperationId: null,
+        },
+        data: {
+          status: "completed",
+          executionState: BULK_EDIT_EXECUTION_STATES.COMPLETED,
+          completedAt: new Date(),
+          processedCount: history.targetSnapshotCount,
+          processingBatchId: null,
+          batch: {
+            ...(history.batch || {}),
+            hasMore: false,
+            lastProductId: null,
+            lastOrdinal: 0,
+            currentBatchTargetCount: 0,
+            dispatchCompletedAt: new Date().toISOString(),
+          },
+        },
+      });
+
+      if (activeOperationId) {
+        await storeOperationRepository.completeForLease(
+          activeOperationId,
+          WORKER_ID,
+        );
+        await storeOperationalStateRepository.clearActiveWrite(
+          shop,
+          activeOperationId,
+        );
+      }
+
+      return {
+        success: true,
+        skipped: true,
+        reason: "no_frozen_targets_remaining",
+        shop,
+        historyId,
+      };
+    }
+
+    const operationField = resolveOperationField(history.rules);
+    const mutationFields = resolveMutationFields(history.rules);
+
+    const executableProducts = formattedProducts;
+    const executableChanges = safeChanges;
+
+    if (batchId) {
+      await prisma.changeRecord.deleteMany({
+        where: {
+          editHistoryId: historyId,
+          shop,
+          batchId,
+        },
+      });
+    }
+
+    await clearKeyCaches(`${shop}:historyChanges:${historyId}`);
+
+    const result = await service._bulkOperationHelper({
+      formattedProducts: executableProducts,
+      field: history.rules?.[0]?.field || "",
+      fields: mutationFields,
+    });
+
+    if (!result?.bulkOperation?.id) {
+      throw new Error("Missing bulkOperationId in Shopify response");
+    }
+
+    const shopifyBulkOperationId = result.bulkOperation.id;
+
+    if (executableChanges.length > 0) {
+      await prisma.changeRecord.createMany({
+        data: executableChanges.map((change) => ({
+          ...change,
+          operationId: activeOperationId,
+          entityType: "PRODUCT",
+          entityId: change.productId,
+          field: operationField,
+          oldValue: change.productFieldChanges || change.variantFieldChanges || null,
+          newValue: change.options || null,
+          status: "submitted",
+        })),
+        skipDuplicates: true,
+      });
+    }
+
+    if (activeOperationId && executableChanges.length > 0 && operationField) {
+      await prisma.operationMutation.createMany({
+        data: executableChanges.map((change) => ({
+          shop,
+          operationId: activeOperationId,
+          entityId: change.productId,
+          field: operationField,
+          status: "SUBMITTED",
+          shopifyBulkOperationId,
+        })),
+        skipDuplicates: true,
+      });
+    }
+
+    if (activeOperationId) {
+      await operationEventRepository.emit({
+        shop,
+        operationId: activeOperationId,
+        type: "BATCH_PROCESSED",
+        payload: {
+          batchId,
+          targetCount: batchTargetCount,
+          changeCount: executableChanges.length,
+          bulkOperationId: shopifyBulkOperationId,
+        },
+      });
+    }
+
+    const existingBatch = history.batch ?? {};
+    const updatedBatch = {
+      ...existingBatch,
+      lastProductId,
+      lastOrdinal,
+      hasMore,
+      currentBatchCount: executableChanges.length,
+      currentBatchTargetCount: batchTargetCount,
+      currentBatchId: batchId,
+      dispatchCompletedAt: new Date().toISOString(),
+      lastSubmittedBulkOperationId: shopifyBulkOperationId,
+    };
+
+    const updated = await prisma.editHistory.updateMany({
+      where: {
+        id: historyId,
+        shop,
+        bulkOperationId: null,
+        executionState: BULK_EDIT_EXECUTION_STATES.DISPATCHING,
+      },
+      data: {
+        bulkOperationId: shopifyBulkOperationId,
+        batch: updatedBatch,
+        processingBatchId: batchId,
+        failureStage: null,
+        executionState: BULK_EDIT_EXECUTION_STATES.AWAITING_SHOPIFY,
+      },
+    });
+
+    if (!updated.count) {
+      throw new Error("Bulk edit dispatch state could not be persisted safely");
+    }
+
+    logger.info("Bulk edit worker queued Shopify bulk mutation", {
+      worker: WORKER_NAME,
+      queue: QUEUE_NAME,
+      shop,
+      jobId: job.id,
+      historyId,
+      executionId: executionId || history.executionIdentity || null,
+      attempt,
+      source,
+      batchId,
+      targetCount: batchTargetCount,
+      changeCount: executableChanges.length,
+      bulkOperationId: shopifyBulkOperationId,
+    });
+
+    return {
+      success: true,
+      shop,
+      historyId,
+      bulkOperationId: shopifyBulkOperationId,
+      attempt,
+    };
+  } catch (err) {
+    if (isRetryableError(err)) {
+      await markHistoryRetryable(historyId, shop, err, attempt, {
+        source,
+        worker: WORKER_NAME,
+        queue: QUEUE_NAME,
+        jobId: job?.id || null,
+      }).catch(() => {});
+    } else {
+      if (activeOperationId && err.code === "OPERATION_CIRCUIT_OPEN") {
+        await storeOperationRepository.failPartialForLease(
+          activeOperationId,
+          WORKER_ID,
+          {
+            errorCode: err.code,
+            errorMessage: err.message,
+          },
+        );
+      }
+
+      await markHistoryFailure(historyId, shop, err, attempt, executionId, source);
+
+      await finalizeRecurringRunFromHistory({
+        historyId,
+        status: "FAILED",
+        errorMessage: err.message,
+      }).catch(() => {});
+
+      await finalizeAutomaticProductRuleRunFromHistory({
+        historyId,
+        status: "FAILED",
+        errorMessage: err.message,
+      }).catch(() => {});
+
+      await recordMirrorAnomaly({
+        shop: shop || "unknown",
+        severity: "high",
+        type: "bulk_edit_worker_failure",
+        entityType: "editHistory",
+        entityId: historyId,
+        message: err.message,
+        details: {
+          stage: "queue_execution",
+          worker: WORKER_NAME,
+          queue: QUEUE_NAME,
+          jobId: job?.id || null,
+          attempt,
+          source,
+          executionId,
+        },
+      }).catch(() => {});
+    }
+
+    await clearKeyCaches(`${shop}:fetchHistories`);
+    await clearKeyCaches(`${shop}:historyDetails:${historyId}`);
+
+    await logWorkerError({
+      shop,
+      err,
+      source: "BulkEditWorker",
+      metadata: {
+        queue: QUEUE_NAME,
+        worker: WORKER_NAME,
+        jobId: job?.id || null,
+        historyId,
+        executionId,
+        attempt,
+        source,
+        retryable: isRetryableError(err),
+      },
+    });
+
+    if (activeOperationId && !isRetryableError(err)) {
+      await storeOperationRepository.failForLease(activeOperationId, WORKER_ID, {
+        errorCode: err.code || "BULK_EDIT_FAILED",
+        errorMessage: err.message,
+      });
+
+      await storeOperationalStateRepository.clearActiveWrite(
+        shop,
+        activeOperationId,
+      );
+    }
+
+    throw err;
+  } finally {
+    if (leaseRenewal) {
+      clearInterval(leaseRenewal);
+    }
+
+    await releaseExclusiveShopWork(shopLockKey);
+  }
+}
+
+const bulkEditWorker = new Worker(QUEUE_NAME, processBulkEdit, {
+  connection,
+  concurrency: 1,
+});
+
+bulkEditWorker.on("completed", (job, result) => {
+  logger.info("Bulk edit worker completed job", {
+    worker: WORKER_NAME,
+    queue: QUEUE_NAME,
+    jobId: job?.id,
+    shop: job?.data?.shop,
+    historyId: job?.data?.historyId,
+    executionId: job?.data?.executionId || null,
+    attempt: getJobAttempt(job),
+    result,
+  });
+});
+
+bulkEditWorker.on("failed", async (job, error) => {
+  const shop = job?.data?.shop;
+  const historyId = job?.data?.historyId;
+  const executionId = job?.data?.executionId || null;
+
+  logger.error("Bulk edit worker failed", {
+    worker: WORKER_NAME,
+    queue: QUEUE_NAME,
+    jobId: job?.id,
+    shop,
+    historyId,
+    executionId,
+    attempt: getJobAttempt(job),
+    message: error.message,
+  });
+
+  if (isRetryExhausted(job)) {
+    await addDeadLetterJob("bulk_edit_failed", {
+      job,
+      error,
+      reason: "bulk_edit_retries_exhausted",
+    }).catch(() => {});
+
+    await recordRetryExhausted({
+      job,
+      shop,
+      worker: WORKER_NAME,
+      queue: QUEUE_NAME,
+      entityType: "editHistory",
+      entityId: historyId,
+      executionId,
+      message: "Bulk edit worker exhausted retries",
+      details: {
+        source: job?.data?.source || null,
+      },
+    });
+  }
+});
+
+export default bulkEditWorker;

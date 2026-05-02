@@ -1,0 +1,55 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "20f31d269398d5f23df95d0450e772e9"
+name = "test-app"
+application_url = "https://bases-laura-reproduction-coated.trycloudflare.com"
+embedded = true
+handle = "test-app-11537"
+
+[webhooks]
+api_version = "2025-04"
+
+  [[webhooks.subscriptions]]
+  topics = [
+  "inventory_items/delete",
+  "collections/create",
+  "collections/update",
+  "inventory_levels/disconnect",
+  "shop/update",
+  "products/update",
+  "products/create",
+  "inventory_levels/connect",
+  "collections/delete",
+  "inventory_levels/update",
+  "inventory_items/update",
+  "bulk_operations/finish",
+  "products/delete",
+  "inventory_items/create",
+  "app/uninstalled"
+]
+  uri = "/api/webhooks"
+  compliance_topics = [ "customers/data_request", "customers/redact", "shop/redact" ]
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "read_inventory,read_locations,read_metaobjects,read_products,write_products"
+optional_scopes = [ ]
+use_legacy_install_flow = false
+
+[auth]
+redirect_urls = [
+  "https://bases-laura-reproduction-coated.trycloudflare.com/auth/callback",
+  "https://bases-laura-reproduction-coated.trycloudflare.com/auth/shopify/callback",
+  "https://bases-laura-reproduction-coated.trycloudflare.com/api/auth/callback"
+]
+
+[app_proxy]
+url = "https://automatic-learners-excluded-decorative.trycloudflare.com/storefront/subscription"
+subpath = "proxy"
+prefix = "apps"
+
+[pos]
+embedded = false
+
+[build]
+automatically_update_urls_on_dev = true

@@ -1,0 +1,36 @@
+.DemoVideo__shell {
+  background: linear-gradient(180deg, #f6f6f7 0%, #ffffff 45%, #f6f6f7 100%);
+}
+
+.DemoVideo__preview {
+  background: linear-gradient(135deg, #111827 0%, #1f2937 55%, #374151 100%);
+}
+
+.DemoVideo__previewContent {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  min-height: 280px;
+  position: relative;
+}
+
+.DemoVideo__playerFrame {
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+}
+
+.DemoVideo__aspect {
+  aspect-ratio: 16 / 9;
+  position: relative;
+  width: 100%;
+}
+
+.DemoVideo__loadingOverlay {
+  z-index: 1;
+}
+
+.DemoVideo__iframe {
+  border: 0;
+  display: block;
+  height: 100%;
+  width: 100%;
+}

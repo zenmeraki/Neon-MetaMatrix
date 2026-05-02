@@ -1,0 +1,305 @@
+import crypto from "crypto";
+import { productFilterService } from "../services/productService/productFilterService.js";
+import { resolveCanonicalProductTarget } from "../services/productService/productTargetingService.js";
+import { errorResponse } from "../utils/responseUtils.js";
+import { logApiError } from "../utils/errorLogUtils.js";
+import { prisma } from "../config/database.js";
+import {
+  buildHotQueryCacheKey,
+  getHotQueryCache,
+  setHotQueryCache,
+} from "../services/filterPlanner/hotQueryCache.js";
+import { choosePlanner } from "../services/filterPlanner/queryCostPlannerService.js";
+
+const TARGET_OWNER_TYPE = "AD_HOC_PRODUCT_TARGET";
+const MAX_EXCLUDED_IDS = 10_000;
+const MAX_DIRECT_IDS = 10_000;
+
+function stableNormalize(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => stableNormalize(item));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.keys(value)
+      .sort()
+      .reduce((result, key) => {
+        result[key] = stableNormalize(value[key]);
+        return result;
+      }, {});
+  }
+
+  return value;
+}
+
+function buildQuerySignature({ filters, search, sort, excludedIds }) {
+  return crypto
+    .createHash("sha256")
+    .update(
+      JSON.stringify(
+        stableNormalize({
+          filters,
+          search,
+          sort,
+          excludedIds,
+        })
+      )
+    )
+    .digest("hex");
+}
+
+function createTargetSnapshotId() {
+  return `target_${crypto.randomBytes(12).toString("hex")}`;
+}
+
+function normalizeStringArray(value, maxItems) {
+  if (!Array.isArray(value)) return [];
+
+  return [
+    ...new Set(
+      value
+        .map((item) => (typeof item === "string" ? item.trim() : ""))
+        .filter(Boolean)
+    ),
+  ].slice(0, maxItems);
+}
+
+function normalizeFilters(filters, search) {
+  const normalizedFilters = Array.isArray(filters) ? filters : [];
+  const normalizedSearch = typeof search === "string" ? search.trim() : "";
+
+  if (
+    !normalizedSearch ||
+    normalizedFilters.some((filter) => filter?.field === "search")
+  ) {
+    return normalizedFilters;
+  }
+
+  return [
+    ...normalizedFilters,
+    {
+      field: "search",
+      operator: "contains",
+      value: normalizedSearch,
+    },
+  ];
+}
+
+function withExcludedIds(where, excludedIds) {
+  if (!excludedIds.length) return where;
+
+  return {
+    AND: [
+      where,
+      {
+        NOT: {
+          id: {
+            in: excludedIds,
+          },
+        },
+      },
+    ],
+  };
+}
+
+function normalizeSort(value) {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "string") return value.trim() || null;
+
+  return value;
+}
+
+export const freezeProductTarget = async (req, res) => {
+  const session = res.locals.shopify?.session;
+
+  try {
+    if (!session?.shop) {
+      return res.status(403).json(errorResponse("Session expired"));
+    }
+
+    const mode = req.body?.mode === "ids" ? "ids" : "query";
+    const targetSnapshotId = createTargetSnapshotId();
+
+    if (mode === "ids") {
+      const ids = normalizeStringArray(req.body?.ids, MAX_DIRECT_IDS);
+
+      if (!ids.length) {
+        return res
+          .status(400)
+          .json(errorResponse("At least one product id is required"));
+      }
+
+      const target = await resolveCanonicalProductTarget({
+        shop: session.shop,
+        explicitProductIds: ids,
+        queryParams: { page: 1, limit: 1 },
+        sampleLimit: 1,
+        freeze: true,
+        ownerType: TARGET_OWNER_TYPE,
+        ownerId: targetSnapshotId,
+      });
+
+      return res.status(200).json({
+        targetSnapshotId,
+        count: target.frozenCount ?? target.count ?? 0,
+      });
+    }
+
+    const filters = normalizeFilters(req.body?.filters, req.body?.search);
+    const excludedIds = normalizeStringArray(
+      req.body?.excludedIds,
+      MAX_EXCLUDED_IDS
+    );
+    const sort = normalizeSort(req.body?.sort);
+    const computedQuerySignature = buildQuerySignature({
+      filters,
+      search:
+        typeof req.body?.search === "string" ? req.body.search.trim() : "",
+      sort,
+      excludedIds,
+    });
+
+    if (
+      req.body?.querySignature &&
+      String(req.body.querySignature) !== computedQuerySignature &&
+      process.env.NODE_ENV !== "production"
+    ) {
+      console.warn("Product target query signature mismatch", {
+        shop: session.shop,
+        received: req.body.querySignature,
+        computed: computedQuerySignature,
+      });
+    }
+
+    const baseWhere = productFilterService.getProductPrismaWhere(
+      filters,
+      session.shop
+    );
+    const target = await resolveCanonicalProductTarget({
+      shop: session.shop,
+      explicitWhere: withExcludedIds(baseWhere, excludedIds),
+      queryParams: { page: 1, limit: 1 },
+      sampleLimit: 1,
+      freeze: true,
+      ownerType: TARGET_OWNER_TYPE,
+      ownerId: targetSnapshotId,
+    });
+
+    return res.status(200).json({
+      targetSnapshotId,
+      count: target.frozenCount ?? target.count ?? 0,
+    });
+  } catch (err) {
+    await logApiError({
+      shop: session?.shop,
+      err,
+      req,
+      source: "POST /api/products/targets/freeze",
+    });
+
+    return res
+      .status(400)
+      .json(errorResponse(err.message || "Failed to freeze product target"));
+  }
+};
+
+export const countProductTarget = async (req, res) => {
+  const session = res.locals.shopify?.session;
+
+  try {
+    if (!session?.shop) {
+      return res.status(403).json(errorResponse("Session expired"));
+    }
+
+    const store = await prisma.store.findUnique({
+      where: { shopUrl: session.shop },
+      select: { activeMirrorBatchId: true, storeTotalProducts: true },
+    });
+
+    if (!store?.activeMirrorBatchId) {
+      return res.status(200).json({
+        total: 0,
+        vendorsCount: 0,
+        typesCount: 0,
+        inStockCount: 0,
+      });
+    }
+
+    const filters = normalizeFilters(req.body?.filters, req.body?.search);
+    const baseWhere = productFilterService.getProductPrismaWhere(
+      filters,
+      session.shop
+    );
+    const countCacheKey = buildHotQueryCacheKey({
+      shop: session.shop,
+      catalogBatchId: store.activeMirrorBatchId,
+      namespace: "target_count",
+      ast: filters,
+      page: 1,
+      limit: 1,
+      sort: normalizeSort(req.body?.sort),
+      extra: {
+        search:
+          typeof req.body?.search === "string" ? req.body.search.trim() : "",
+      },
+    });
+    const cachedCount = await getHotQueryCache(countCacheKey);
+
+    if (cachedCount) {
+      return res.status(200).json(cachedCount);
+    }
+
+    const where = {
+      AND: [baseWhere, { mirrorBatchId: store.activeMirrorBatchId }],
+    };
+
+    const [total, vendorRows, typeRows, inStockCount] = await Promise.all([
+      prisma.product.count({ where }),
+      prisma.product.findMany({
+        where: {
+          AND: [where, { NOT: [{ vendor: null }, { vendor: "" }] }],
+        },
+        select: { vendor: true },
+        distinct: ["vendor"],
+      }),
+      prisma.product.findMany({
+        where: {
+          AND: [where, { NOT: [{ productType: null }, { productType: "" }] }],
+        },
+        select: { productType: true },
+        distinct: ["productType"],
+      }),
+      prisma.product.count({
+        where: {
+          AND: [where, { totalInventory: { gt: 0 } }],
+        },
+      }),
+    ]);
+
+    const result = {
+      total,
+      vendorsCount: vendorRows.length,
+      typesCount: typeRows.length,
+      inStockCount,
+      queryPlan: choosePlanner({
+        estimatedRows: store.storeTotalProducts || total,
+        hasClickHouse: Boolean(process.env.CLICKHOUSE_URL),
+      }),
+    };
+
+    await setHotQueryCache(countCacheKey, result);
+
+    return res.status(200).json(result);
+  } catch (err) {
+    await logApiError({
+      shop: session?.shop,
+      err,
+      req,
+      source: "POST /api/products/targets/count",
+    });
+
+    return res
+      .status(400)
+      .json(errorResponse(err.message || "Failed to count product target"));
+  }
+};

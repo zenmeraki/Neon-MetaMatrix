@@ -1,0 +1,10 @@
+@import "tailwindcss";
+
+tr[data-product-row-active="true"] {
+  background: var(--p-color-bg-surface-hover);
+}
+
+tr[data-product-row-id]:focus {
+  outline: var(--p-border-width-050) solid var(--p-color-border-focus);
+  outline-offset: calc(var(--p-space-050) * -1);
+}
