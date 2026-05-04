@@ -106,40 +106,43 @@ export class ScheduledExportService {
   }
 
   async createScheduledExport({
-    name,
-    frequency,
-    timezone = "UTC",
+  name,
+  scheduledAt,
+  timezone = "UTC",
+  filterParams,
+  queryWhere,
+  productIds,
+  requestedColumns,
+  subscription,
+}) {
+  assertProSubscription(subscription);
+
+  if (!name?.trim()) throw new Error("Scheduled export name is required");
+
+  if (!scheduledAt || isNaN(new Date(scheduledAt).getTime())) {
+    throw new Error("A valid scheduled date and time is required");
+  }
+
+  if (!Array.isArray(requestedColumns) || !requestedColumns.length) {
+    throw new Error("At least one export column is required");
+  }
+
+  return scheduledExportRepository.create({
+    shop: this.session.shop,
+    name: name.trim(),
+    title: name.trim(),
+    type: "PRODUCT_EXPORT",
+    scheduleType: "ONE_TIME",
+    scheduleConfig: {}, 
+    timezone,
     filterParams,
     queryWhere,
     productIds,
     requestedColumns,
-    subscription,
-  }) {
-    assertProSubscription(subscription);
-
-    if (!name?.trim()) throw new Error("Scheduled export name is required");
-
-    const safeFrequency = normalizeFrequency(frequency);
-
-    if (!Array.isArray(requestedColumns) || !requestedColumns.length) {
-      throw new Error("At least one export column is required");
-    }
-
-    return scheduledExportRepository.create({
-      shop: this.session.shop,
-      name: name.trim(),
-      title: name.trim(),
-      type: "PRODUCT_EXPORT",
-      frequency: safeFrequency.toUpperCase(),
-      timezone,
-      filterParams,
-      queryWhere,
-      productIds,
-      requestedColumns,
-      filename: buildScheduledFileNameTemplate(name),
-      nextRunAt: computeNextRunAt(safeFrequency, timezone),
-    });
-  }
+    filename: buildScheduledFileNameTemplate(name),
+    nextRunAt: new Date(scheduledAt),
+  });
+}
 
   async listScheduledExports() {
     return scheduledExportRepository.listByShop(this.session.shop);
@@ -153,28 +156,33 @@ export class ScheduledExportService {
     });
   }
 
-  async resumeScheduledExport(id) {
-    const scheduledExport = await scheduledExportRepository.findByIdForShop(
-      id,
-      this.session.shop,
-    );
-
-    if (!scheduledExport) {
-      throw new Error("Scheduled export not found");
-    }
-
-    const nextRunAt = computeNextRunAt(
-      scheduledExport.frequency,
-      scheduledExport.timezone,
-      new Date(),
-    );
-
-    return scheduledExportRepository.updateByIdForShop(id, this.session.shop, {
-      status: SCHEDULED_EXPORT_STATUS.ACTIVE,
-      nextRunAt,
-      error: null,
-    });
+ async resumeScheduledExport(id) {
+  const scheduledExport = await scheduledExportRepository.findByIdForShop(
+    id,
+    this.session.shop,
+  );
+  
+  
+  if (!scheduledExport) {
+    throw new Error("Scheduled export not found");
   }
+
+  if (scheduledExport.scheduleType === "ONE_TIME") {
+    throw new Error("One-time exports cannot be resumed");
+  }
+
+  const nextRunAt = computeNextRunAt(
+    scheduledExport.frequency,
+    scheduledExport.timezone,
+    new Date(),
+  );
+
+  return scheduledExportRepository.updateByIdForShop(id, this.session.shop, {
+    status: SCHEDULED_EXPORT_STATUS.ACTIVE,
+    nextRunAt,
+    error: null,
+  });
+}
 
   async deleteScheduledExport(id) {
     return scheduledExportRepository.softDelete(id, this.session.shop);
@@ -283,19 +291,35 @@ export class ScheduledExportService {
       throw error;
     }
 
-    const nextRunAt = computeNextRunAt(
-      scheduledExport.frequency,
-      scheduledExport.timezone,
-      scheduledFor,
-    );
+   if (scheduledExport.scheduleType === "ONE_TIME") {
+  await scheduledExportRepository.updateByIdForShop(
+    scheduledExport.id,
+    scheduledExport.shop,
+    {
+      status: "COMPLETED",
+      lastRunAt: dispatchTime,
+      nextRunAt: null,          // stops it from being picked up again
+      lastExportJobId: exportJob.id,
+      lockedAt: null,
+      lockedBy: null,
+      error: null,
+    },
+  );
+} else {
+  const nextRunAt = computeNextRunAt(
+    scheduledExport.frequency,
+    scheduledExport.timezone,
+    scheduledFor,
+  );
 
-    await scheduledExportRepository.markRunQueued({
-      id: scheduledExport.id,
-      exportJobId: exportJob.id,
-      nextRunAt,
-      lockedBy,
-      now: dispatchTime,
-    });
+  await scheduledExportRepository.markRunQueued({
+    id: scheduledExport.id,
+    exportJobId: exportJob.id,
+    nextRunAt,
+    lockedBy,
+    now: dispatchTime,
+  });
+}
 
     return exportJob;
   }

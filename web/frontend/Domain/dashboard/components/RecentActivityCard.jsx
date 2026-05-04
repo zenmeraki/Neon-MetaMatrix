@@ -56,7 +56,7 @@ function RecentActivityCard({
                     {i > 0 ? <Divider /> : null}
                     <Box paddingBlock="250">
                       <InlineStack gap="200" blockAlign="center" wrap={false}>
-                        <Icon source={ActivityIcon} />
+                        <Icon source={ActivityIcon} tone="subdued" />
                         <BlockStack gap="0">
                           <Text as="p" variant="bodySm">
                             {activity.title}
@@ -75,7 +75,7 @@ function RecentActivityCard({
             </BlockStack>
           ) : (
             <BlockStack gap="200">
-              <Text as="p" variant="bodySm" >
+              <Text as="p" variant="bodySm">
                 {t(
                   "activityWillAppearHere",
                   "Bulk edits, exports, imports, and sync events will appear here."

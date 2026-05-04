@@ -33,7 +33,7 @@ export async function createScheduledExportController(req, res, next) {
     const service = new ScheduledExportService(session);
     const data = await service.createScheduledExport({
       name: req.body.name,
-      frequency: req.body.frequency,
+      scheduledAt: req.body.scheduledAt,
       timezone: req.body.timezone,
       filterParams: req.body.filterParams,
       queryWhere: req.body.queryWhere,

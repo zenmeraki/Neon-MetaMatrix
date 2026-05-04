@@ -64,7 +64,7 @@ function PlanUsageCard({
               <Text as="h2" variant="headingMd">
                 {t("planUsage", "Plan usage")}
               </Text>
-              <Text as="p" variant="bodySm" >
+              <Text as="p" variant="bodySm">
                 {planName || t("currentPlan", "Current plan")}
               </Text>
             </BlockStack>
@@ -85,7 +85,7 @@ function PlanUsageCard({
                     ? "critical"
                     : status === "near_limit"
                       ? "caution"
-                      : "subdued"
+                      : undefined
                 }
               >
                 {statusText}
@@ -96,7 +96,7 @@ function PlanUsageCard({
           {percentage != null ? (
             <>
               <ProgressBar progress={percentage} size="small" tone={progressTone} />
-              <Text as="p" variant="bodySm" >
+              <Text as="p" variant="bodySm" tone="subdued">
                 {t("planUsagePercent", "{{percentage}}% of monthly limit used", { percentage })}
               </Text>
             </>

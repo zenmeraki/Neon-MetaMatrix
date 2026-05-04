@@ -37,14 +37,16 @@ function ScheduledExportModal({
     message: "",
     error: false,
   });
+const [frequency, setFrequency] = useState("daily");
 
   const isFormValid =
-    startExportChecked &&
-    Boolean(startExportDate) &&
-    Boolean(startExportTime) &&
-    Boolean(fileName?.trim()) &&
-    Array.isArray(selectedFields) &&
-    selectedFields.length > 0;
+  startExportChecked &&
+  Boolean(startExportDate) &&
+  Boolean(startExportTime) &&
+  Boolean(frequency) &&
+  Boolean(fileName?.trim()) &&
+  Array.isArray(selectedFields) &&
+  selectedFields.length > 0;
 
   const resetForm = useCallback(() => {
     setStartExportChecked(true);
@@ -68,20 +70,19 @@ function ScheduledExportModal({
     setUpgradeWarning(null);
 
     try {
-      const scheduledAt = new Date(
-        `${startExportDate}T${startExportTime}:00`
-      ).toISOString();
+    const scheduledAt = new Date(
+  `${startExportDate}T${startExportTime}:00`
+).toISOString();
 
-      const payload = {
-        title: fileName.replace(/\.csv$/i, ""),
-        filename: fileName,
-        fields: selectedFields,
-        filterParams: filters,
-        targetSnapshotId: targetSnapshotId || undefined,
-        scheduledAt,
-        status: "Active",
-      };
-
+const payload = {
+  name: fileName.replace(/\.csv$/i, ""),
+  scheduledAt,                                          // ← one-time datetime
+  timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+  filename: fileName,
+  requestedColumns: selectedFields,
+  filterParams: filters,
+  targetSnapshotId: targetSnapshotId || undefined,
+};
       const response = await fetchWithAuth(
         "/api/products/create-scheduled-export",
         {
@@ -142,6 +143,7 @@ function ScheduledExportModal({
   }, [
     fileName,
     filters,
+    frequency, 
     targetSnapshotId,
     handleClose,
     isFormValid,
@@ -227,6 +229,7 @@ function ScheduledExportModal({
                   onChange={setStartExportTime}
                   helpText={t("scheduledExport.timeHelpText")}
                 />
+       
               </FormLayout.Group>
             )}
 

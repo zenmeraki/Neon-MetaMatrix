@@ -1165,6 +1165,17 @@
   "exportDownloadLinkMissing": "Download link not available.",
   "exportDownloadFailed": "Failed to download file.",
   "scheduledExport": {
+    "errors": {
+    "SCHEDULED_EXPORT_FAILED": "Failed to schedule export",
+    "SCHEDULED_EXPORT_PLAN_UPGRADE_REQUIRED": "Upgrade your plan to use scheduled exports"
+  },
+    "frequencyLabel": "Export frequency",
+  "frequency": {
+    "hourly":  "Every hour",
+    "daily":   "Every day",
+    "weekly":  "Every week",
+    "monthly": "Every month"
+  },
     "modalTitle": "Schedule Export",
     "scheduleButton": "Schedule",
     "cancelButton": "Cancel",

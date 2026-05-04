@@ -2,14 +2,16 @@ import React, { useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Modal,
-  Button,
   FormLayout,
   Checkbox,
   TextField,
   Banner,
   BlockStack,
+  InlineStack,
   Text,
   Box,
+  Badge,
+  Divider,
   Frame,
   Toast,
 } from "@shopify/polaris";
@@ -30,7 +32,7 @@ function ScheduleEdit({
   supportValue,
 }) {
   const navigate = useNavigate();
-  // State for form fields
+
   const [startEditChecked, setStartEditChecked] = useState(false);
   const [undoStartEditChecked, setUndoStartEditChecked] = useState(false);
   const [startEditDate, setStartEditDate] = useState("");
@@ -38,8 +40,6 @@ function ScheduleEdit({
   const [undoStartEditDate, setUndoStartEditDate] = useState("");
   const [undoStartEditTime, setUndoStartEditTime] = useState("");
   const [upgradeWarning, setUpgradeWarning] = useState(null);
-
-  // State for UI
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [toastState, setToastState] = useState({
@@ -48,86 +48,45 @@ function ScheduleEdit({
     error: false,
   });
 
-  // Check if the form is valid
   const isFormValid = startEditChecked && startEditDate && startEditTime;
+
   const scheduledPreview = useMemo(() => {
     if (!startEditChecked || !startEditDate || !startEditTime) return null;
-
     const scheduledDate = new Date(`${startEditDate}T${startEditTime}:00`);
-    const nextRunLabel = scheduledDate.toLocaleDateString(undefined, {
+    const dateLabel = scheduledDate.toLocaleDateString(undefined, {
+      weekday: "short",
       month: "short",
       day: "numeric",
       year: "numeric",
     });
-    const runTimeLabel = scheduledDate.toLocaleTimeString(undefined, {
+    const timeLabel = scheduledDate.toLocaleTimeString(undefined, {
       hour: "numeric",
       minute: "2-digit",
     });
 
-    return {
-      runLine: t("scheduledEditPreviewRunLine", {
-        time: runTimeLabel,
-        defaultValue: `This edit will run at ${runTimeLabel}`,
-      }),
-      matchesLine: t("scheduledEditPreviewMatchesLine", {
-        count,
-        defaultValue: `Estimated current matches: ${count} products`,
-      }),
-      nextRunLine: t("scheduledEditPreviewNextRunLine", {
-        date: nextRunLabel,
-        defaultValue: `Next run: ${nextRunLabel}`,
-      }),
-      undoLine: t("scheduledEditPreviewUndoLine", {
-        state: undoStartEditChecked
-          ? t("enabled", { defaultValue: "enabled" })
-          : t("disabled", { defaultValue: "disabled" }),
-        defaultValue: `Undo: ${undoStartEditChecked ? "enabled" : "disabled"}`,
-      }),
-    };
-  }, [
-    startEditChecked,
-    startEditDate,
-    startEditTime,
-    undoStartEditChecked,
-    count,
-  ]);
+    return { dateLabel, timeLabel };
+  }, [startEditChecked, startEditDate, startEditTime]);
 
-  // Handle date input changes
-  const handleDateChange = useCallback((value, type) => {
+  const handleDateChange = useCallback((val, type) => {
+    if (type === "start") setStartEditDate(val);
+    else setUndoStartEditDate(val);
+  }, []);
+
+  const handleTimeChange = useCallback((val, type) => {
+    if (type === "start") setStartEditTime(val);
+    else setUndoStartEditTime(val);
+  }, []);
+
+  const handleCheckboxChange = useCallback((val, type) => {
     if (type === "start") {
-      setStartEditDate(value);
+      setStartEditChecked(val);
+      if (!val) { setStartEditDate(""); setStartEditTime(""); }
     } else {
-      setUndoStartEditDate(value);
+      setUndoStartEditChecked(val);
+      if (!val) { setUndoStartEditDate(""); setUndoStartEditTime(""); }
     }
   }, []);
 
-  // Handle time input changes
-  const handleTimeChange = useCallback((value, type) => {
-    if (type === "start") {
-      setStartEditTime(value);
-    } else {
-      setUndoStartEditTime(value);
-    }
-  }, []);
-
-  // Handle checkbox changes
-  const handleCheckboxChange = useCallback((value, type) => {
-    if (type === "start") {
-      setStartEditChecked(value);
-      if (!value) {
-        setStartEditDate("");
-        setStartEditTime("");
-      }
-    } else {
-      setUndoStartEditChecked(value);
-      if (!value) {
-        setUndoStartEditDate("");
-        setUndoStartEditTime("");
-      }
-    }
-  }, []);
-
-  // Reset the form to its initial state
   const resetForm = useCallback(() => {
     setStartEditChecked(false);
     setUndoStartEditChecked(false);
@@ -136,25 +95,19 @@ function ScheduleEdit({
     setUndoStartEditDate("");
     setUndoStartEditTime("");
     setError(null);
+    setUpgradeWarning(null);
   }, []);
 
-  // Handle schedule edit submission
   const handleScheduleEdit = useCallback(async () => {
     if (!isFormValid) return;
-
     setSubmitting(true);
     setError(null);
 
     try {
-      const scheduledAt = new Date(
-        `${startEditDate}T${startEditTime}:00`
-      ).toISOString();
-
+      const scheduledAt = new Date(`${startEditDate}T${startEditTime}:00`).toISOString();
       const scheduledUndoAt =
         undoStartEditChecked && undoStartEditDate && undoStartEditTime
-          ? new Date(
-              `${undoStartEditDate}T${undoStartEditTime}:00`
-            ).toISOString()
+          ? new Date(`${undoStartEditDate}T${undoStartEditTime}:00`).toISOString()
           : null;
 
       if (
@@ -180,9 +133,7 @@ function ScheduleEdit({
 
       const response = await fetch("/api/products/schedule-task", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
@@ -190,74 +141,35 @@ function ScheduleEdit({
 
       if (!response.ok) {
         const errorMessage = data?.message || data?.error || t("schedule_fail");
-
-        if (data.code === "PRODUCT_LIMIT_EXCEEDED") {
+        if (data.code === "PRODUCT_LIMIT_EXCEEDED" || data.code === "UPGRADE_REQUIRED") {
           setUpgradeWarning(errorMessage);
           return;
         }
-
-        if (data.code === "UPGRADE_REQUIRED") {
-          setUpgradeWarning(errorMessage);
-          return;
-        }
-
         throw new Error(errorMessage);
       }
 
-      // Show success toast
-      setToastState({
-        active: true,
-        message: t("schedule_msg"),
-        error: false,
-      });
-
-      // Reset form, close modal, and navigate to history
-      setTimeout(() => {
-        resetForm();
-        onHide();
-        navigate("/history");
-      }, 1000);
-    } catch (error) {
-      console.error("Error scheduling edit:", error);
-      setError(error.message || t("try_again"));
-      setToastState({
-        active: true,
-        message: error.message || t("try_again"),
-        error: true,
-      });
+      setToastState({ active: true, message: t("schedule_msg"), error: false });
+      setTimeout(() => { resetForm(); onHide(); navigate("/history"); }, 1000);
+    } catch (err) {
+      setError(err.message || t("try_again"));
+      setToastState({ active: true, message: err.message || t("try_again"), error: true });
     } finally {
       setSubmitting(false);
     }
   }, [
-    isFormValid,
-    startEditDate,
-    startEditTime,
-    undoStartEditChecked,
-    undoStartEditDate,
-    undoStartEditTime,
-    editedField,
-    editedBy,
-    value,
-    searchKey,
-    replaceText,
-    location,
-    filters,
-    targetSnapshotId,
-    supportValue,
-    resetForm,
-    onHide,
-    navigate,
-    setToastState,
+    isFormValid, startEditDate, startEditTime, undoStartEditChecked,
+    undoStartEditDate, undoStartEditTime, editedField, editedBy, value,
+    searchKey, replaceText, location, filters, targetSnapshotId, supportValue,
+    resetForm, onHide, navigate,
   ]);
 
-  // Toast to show success/error messages
+  const handleClose = useCallback(() => { resetForm(); onHide(); }, [resetForm, onHide]);
+
   const toastMarkup = toastState.active ? (
     <Toast
       content={toastState.message}
       error={toastState.error}
-      onDismiss={() =>
-        setToastState({ active: false, message: "", error: false })
-      }
+      onDismiss={() => setToastState({ active: false, message: "", error: false })}
     />
   ) : null;
 
@@ -265,132 +177,174 @@ function ScheduleEdit({
     <Frame>
       <Modal
         open={show}
-        onClose={() => {
-          resetForm();
-          onHide();
-        }}
-        title={t("scheduleEditLabel")}
+        onClose={handleClose}
+        title={t("scheduleEditLabel", { defaultValue: "Schedule this edit" })}
         primaryAction={{
-          content: t("schedule"),
+          content: t("schedule", { defaultValue: "Schedule edit" }),
           onAction: handleScheduleEdit,
           loading: submitting,
           disabled: !isFormValid || submitting,
         }}
         secondaryActions={[
           {
-            content: t("cancel"),
-            onAction: () => {
-              resetForm();
-              onHide();
-            },
+            content: t("cancel", { defaultValue: "Cancel" }),
+            onAction: handleClose,
           },
         ]}
       >
         <Modal.Section>
-          <FormLayout>
+          <BlockStack gap="500">
+            {/* Banners */}
             {upgradeWarning && (
               <Banner
                 tone="warning"
-                title="Upgrade Required"
+                title={t("upgradeRequired", { defaultValue: "Upgrade required" })}
                 onDismiss={() => setUpgradeWarning(null)}
-                action={{
-                  content: "Upgrade Plan",
-                  onAction: () => navigate("/pricing"),
-                }}
+                action={{ content: t("upgradePlan", { defaultValue: "Upgrade plan" }), onAction: () => navigate("/pricing") }}
               >
-                <p>{upgradeWarning}</p>
+                <Text as="p">{upgradeWarning}</Text>
               </Banner>
             )}
-
             {error && (
-              <Banner status="critical" onDismiss={() => setError(null)}>
-                {error}
+              <Banner tone="critical" onDismiss={() => setError(null)}>
+                <Text as="p">{error}</Text>
               </Banner>
             )}
 
-            <Checkbox
-              label={t("startEditTime")}
-              checked={startEditChecked}
-              onChange={(checked) => handleCheckboxChange(checked, "start")}
-            />
-
-            {startEditChecked && (
-              <FormLayout.Group>
-                <TextField
-                  label={t("date")}
-                  type="date"
-                  value={startEditDate}
-                  onChange={(value) => handleDateChange(value, "start")}
-                  helpText={t("selectDateRunEdit")}
-                  min={new Date().toISOString().split("T")[0]} // Today or later
-                />
-                <TextField
-                  label={t("time")}
-                  type="time"
-                  value={startEditTime}
-                  onChange={(value) => handleTimeChange(value, "start")}
-                  helpText={t("selectTimeRunEdit")}
-                />
-              </FormLayout.Group>
-            )}
-
-            <Box paddingBlockStart="400">
+            {/* Schedule start */}
+            <BlockStack gap="300">
               <Checkbox
-                label={t("scheduleUndo")}
+                label={
+                  <Text as="span" variant="bodyMd" fontWeight="semibold">
+                    {t("startEditTime", { defaultValue: "Schedule a start time" })}
+                  </Text>
+                }
+                helpText={t("startEditHelpText", { defaultValue: "The edit will run automatically at the selected date and time." })}
+                checked={startEditChecked}
+                onChange={(checked) => handleCheckboxChange(checked, "start")}
+              />
+              {startEditChecked && (
+                <Box paddingInlineStart="600">
+                  <FormLayout>
+                    <FormLayout.Group condensed>
+                      <TextField
+                        label={t("date", { defaultValue: "Date" })}
+                        type="date"
+                        value={startEditDate}
+                        onChange={(val) => handleDateChange(val, "start")}
+                        helpText={t("selectDateRunEdit", { defaultValue: "Select the date to run this edit" })}
+                        min={new Date().toISOString().split("T")[0]}
+                      />
+                      <TextField
+                        label={t("time", { defaultValue: "Time" })}
+                        type="time"
+                        value={startEditTime}
+                        onChange={(val) => handleTimeChange(val, "start")}
+                        helpText={t("selectTimeRunEdit", { defaultValue: "Select the time to run this edit" })}
+                      />
+                    </FormLayout.Group>
+                  </FormLayout>
+                </Box>
+              )}
+            </BlockStack>
+
+            {startEditChecked && <Divider />}
+
+            {/* Schedule undo */}
+            <BlockStack gap="300">
+              <Checkbox
+                label={
+                  <Text as="span" variant="bodyMd" fontWeight="semibold">
+                    {t("scheduleUndo", { defaultValue: "Schedule automatic undo" })}
+                  </Text>
+                }
+                helpText={t("revertChangesNote", { defaultValue: "Automatically revert all changes at a later time." })}
                 checked={undoStartEditChecked}
                 onChange={(checked) => handleCheckboxChange(checked, "undo")}
                 disabled={!startEditChecked}
-                helpText={t("revertChangesNote")}
               />
-            </Box>
-
-            {undoStartEditChecked && (
-              <FormLayout.Group>
-                <TextField
-                  label={t("undoDate")}
-                  type="date"
-                  value={undoStartEditDate}
-                  onChange={(value) => handleDateChange(value, "undo")}
-                  helpText={t("selectDateUndoEdit")}
-                  min={startEditDate || new Date().toISOString().split("T")[0]} // Start date or today
-                />
-                <TextField
-                  label={t("undoTime")}
-                  type="time"
-                  value={undoStartEditTime}
-                  onChange={(value) => handleTimeChange(value, "undo")}
-                  helpText={t("selectTimeUndoEdit")}
-                />
-              </FormLayout.Group>
-            )}
-
-            {scheduledPreview && (
-              <Box paddingBlockStart="400">
-                <Banner tone="info">
-                  <BlockStack gap="200">
-                    <Text as="p" variant="bodyMd" fontWeight="semibold">
-                      {t("scheduledEditPreviewTitle", {
-                        defaultValue: "Schedule preview",
-                      })}
-                    </Text>
-                    <Text as="p" variant="bodyMd">
-                      {scheduledPreview.runLine}
-                    </Text>
-                    <Text as="p" variant="bodyMd">
-                      {scheduledPreview.matchesLine}
-                    </Text>
-                    <Text as="p" variant="bodyMd">
-                      {scheduledPreview.nextRunLine}
-                    </Text>
-                    <Text as="p" variant="bodyMd">
-                      {scheduledPreview.undoLine}
-                    </Text>
-                  </BlockStack>
-                </Banner>
-              </Box>
-            )}
-          </FormLayout>
+              {undoStartEditChecked && (
+                <Box paddingInlineStart="600">
+                  <FormLayout>
+                    <FormLayout.Group condensed>
+                      <TextField
+                        label={t("undoDate", { defaultValue: "Undo date" })}
+                        type="date"
+                        value={undoStartEditDate}
+                        onChange={(val) => handleDateChange(val, "undo")}
+                        helpText={t("selectDateUndoEdit", { defaultValue: "Must be after the scheduled start date" })}
+                        min={startEditDate || new Date().toISOString().split("T")[0]}
+                      />
+                      <TextField
+                        label={t("undoTime", { defaultValue: "Undo time" })}
+                        type="time"
+                        value={undoStartEditTime}
+                        onChange={(val) => handleTimeChange(val, "undo")}
+                        helpText={t("selectTimeUndoEdit", { defaultValue: "Must be after the scheduled start time" })}
+                      />
+                    </FormLayout.Group>
+                  </FormLayout>
+                </Box>
+              )}
+            </BlockStack>
+          </BlockStack>
         </Modal.Section>
+
+        {/* Schedule preview — only shown when form is valid */}
+        {scheduledPreview && (
+          <Modal.Section>
+            <BlockStack gap="300">
+              <Text as="p" variant="bodyMd" fontWeight="semibold">
+                {t("scheduledEditPreviewTitle", { defaultValue: "Schedule summary" })}
+              </Text>
+              <Box
+                background="bg-surface-secondary"
+                padding="400"
+                borderRadius="200"
+              >
+                <BlockStack gap="200">
+                  <InlineStack gap="300" blockAlign="center" wrap={false}>
+                    <Box minWidth="120px">
+                      <Text as="span" variant="bodySm" tone="subdued">
+                        {t("scheduledRunDate", { defaultValue: "Runs on" })}
+                      </Text>
+                    </Box>
+                    <InlineStack gap="150" blockAlign="center">
+                      <Badge tone="info">{scheduledPreview.dateLabel}</Badge>
+                      <Text as="span" variant="bodySm" fontWeight="medium">
+                        {t("at", { defaultValue: "at" })} {scheduledPreview.timeLabel}
+                      </Text>
+                    </InlineStack>
+                  </InlineStack>
+
+                  <InlineStack gap="300" blockAlign="center" wrap={false}>
+                    <Box minWidth="120px">
+                      <Text as="span" variant="bodySm" tone="subdued">
+                        {t("scheduledProducts", { defaultValue: "Products" })}
+                      </Text>
+                    </Box>
+                    <Badge tone="attention">
+                      {count?.toLocaleString() || 0} {t("products", { defaultValue: "products" })}
+                    </Badge>
+                  </InlineStack>
+
+                  <InlineStack gap="300" blockAlign="center" wrap={false}>
+                    <Box minWidth="120px">
+                      <Text as="span" variant="bodySm" tone="subdued">
+                        {t("scheduledUndo", { defaultValue: "Auto-undo" })}
+                      </Text>
+                    </Box>
+                    <Badge tone={undoStartEditChecked ? "success" : "enabled"}>
+                      {undoStartEditChecked
+                        ? t("enabled", { defaultValue: "Enabled" })
+                        : t("disabled", { defaultValue: "Disabled" })}
+                    </Badge>
+                  </InlineStack>
+                </BlockStack>
+              </Box>
+            </BlockStack>
+          </Modal.Section>
+        )}
       </Modal>
       {toastMarkup}
     </Frame>

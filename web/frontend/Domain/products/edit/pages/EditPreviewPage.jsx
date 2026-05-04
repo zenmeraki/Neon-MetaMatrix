@@ -15,8 +15,15 @@ import {
   Icon,
   Modal,
   TextField,
+  Divider,
+  InlineGrid,
 } from "@shopify/polaris";
-import { CheckCircleIcon, ChevronLeftIcon } from "@shopify/polaris-icons";
+import {
+  CheckCircleIcon,
+  ChevronLeftIcon,
+  ClockIcon,
+  RefreshIcon,
+} from "@shopify/polaris-icons";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-hot-toast";
@@ -47,80 +54,70 @@ const FIELD_SAFETY_NOTES = {
     titleKey: "bulkEditSafetyStatusTitle",
     messageKey: "bulkEditSafetyStatusText",
     defaultTitle: "Status changes affect product visibility",
-    defaultMessage:
-      "Products may become visible or hidden immediately after the edit runs.",
+    defaultMessage: "Products may become visible or hidden immediately after the edit runs.",
   },
   handle: {
     tone: "warning",
     titleKey: "bulkEditSafetyHandleTitle",
     messageKey: "bulkEditSafetyHandleText",
     defaultTitle: "Changing product handle may break URLs",
-    defaultMessage:
-      "Confirm redirects are expected before applying this change.",
+    defaultMessage: "Confirm redirects are expected before applying this change.",
   },
   price: {
     tone: "warning",
     titleKey: "bulkEditSafetyPriceTitle",
     messageKey: "bulkEditSafetyPriceText",
     defaultTitle: "Price changes affect storefront and checkout",
-    defaultMessage:
-      "Review the current and new values carefully before running this edit.",
+    defaultMessage: "Review the current and new values carefully before running this edit.",
   },
   inventoryPolicy: {
     tone: "warning",
     titleKey: "bulkEditSafetyInventoryTitle",
     messageKey: "bulkEditSafetyInventoryText",
     defaultTitle: "Inventory changes can affect sell-through",
-    defaultMessage:
-      "Review inventory behavior before applying changes across variants.",
+    defaultMessage: "Review inventory behavior before applying changes across variants.",
   },
   option1Values: {
     tone: "warning",
     titleKey: "bulkEditSafetyVariantsTitle",
     messageKey: "bulkEditSafetyVariantsText",
     defaultTitle: "Variant changes can affect options",
-    defaultMessage:
-      "Confirm option values and variant previews before applying this edit.",
+    defaultMessage: "Confirm option values and variant previews before applying this edit.",
   },
   option2Values: {
     tone: "warning",
     titleKey: "bulkEditSafetyVariantsTitle",
     messageKey: "bulkEditSafetyVariantsText",
     defaultTitle: "Variant changes can affect options",
-    defaultMessage:
-      "Confirm option values and variant previews before applying this edit.",
+    defaultMessage: "Confirm option values and variant previews before applying this edit.",
   },
   option3Values: {
     tone: "warning",
     titleKey: "bulkEditSafetyVariantsTitle",
     messageKey: "bulkEditSafetyVariantsText",
     defaultTitle: "Variant changes can affect options",
-    defaultMessage:
-      "Confirm option values and variant previews before applying this edit.",
+    defaultMessage: "Confirm option values and variant previews before applying this edit.",
   },
   metaTitle: {
     tone: "info",
     titleKey: "bulkEditSafetySeoTitleTitle",
     messageKey: "bulkEditSafetySeoTitleText",
     defaultTitle: "SEO title changes can affect search snippets",
-    defaultMessage:
-      "Keep titles accurate, readable, and aligned with the product title.",
+    defaultMessage: "Keep titles accurate, readable, and aligned with the product title.",
   },
   tags: {
     tone: "info",
     titleKey: "bulkEditSafetyTagsTitle",
     messageKey: "bulkEditSafetyTagsText",
     defaultTitle: "Tag changes can affect automations and collections",
-    defaultMessage:
-      "Tags may drive store logic, customer segments, reports, or sales channels.",
+    defaultMessage: "Tags may drive store logic, customer segments, reports, or sales channels.",
   },
   collections: {
     tone: "warning",
     titleKey: "bulkEditSafetyCollectionsTitle",
     messageKey: "bulkEditSafetyCollectionsText",
     defaultTitle: "Collection changes can affect merchandising",
-    defaultMessage:
-      "Products may move in or out of storefront collection pages.",
+    defaultMessage: "Products may move in or out of storefront collection pages.",
   },
 };
 
@@ -128,7 +125,7 @@ const RECIPE_TEMPLATES = [
   {
     key: "draftOutOfStock",
     labelKey: "bulkEditRecipeDraftOutOfStock",
-    defaultLabel: "Put out-of-stock products into Draft",
+    defaultLabel: "Draft out-of-stock",
     field: "status",
     actionValue: "Set status",
     value: "DRAFT",
@@ -137,7 +134,7 @@ const RECIPE_TEMPLATES = [
   {
     key: "addSaleTag",
     labelKey: "bulkEditRecipeAddSaleTag",
-    defaultLabel: "Add sale tag to selected products",
+    defaultLabel: "Add sale tag",
     field: "tags",
     actionValue: "Add tag(s) to product",
     value: "sale",
@@ -145,7 +142,7 @@ const RECIPE_TEMPLATES = [
   {
     key: "increasePriceTen",
     labelKey: "bulkEditRecipeIncreasePriceTen",
-    defaultLabel: "Increase prices by 10%",
+    defaultLabel: "Increase prices 10%",
     field: "price",
     actionValue: "Increase by percent",
     value: "10",
@@ -153,7 +150,7 @@ const RECIPE_TEMPLATES = [
   {
     key: "removeVendorPrefix",
     labelKey: "bulkEditRecipeRemoveVendorPrefix",
-    defaultLabel: "Remove vendor prefix from titles",
+    defaultLabel: "Remove vendor prefix",
     field: "title",
     actionValue: "Search/Replace",
     searchReplace: { search: "{{vendor}} - ", replace: "" },
@@ -161,7 +158,7 @@ const RECIPE_TEMPLATES = [
   {
     key: "setSeoTitle",
     labelKey: "bulkEditRecipeSetSeoTitle",
-    defaultLabel: "Set SEO title from product title",
+    defaultLabel: "SEO title from title",
     field: "metaTitle",
     actionValue: "Set text to value",
     value: "{{title}}",
@@ -211,7 +208,6 @@ function getEstimatedBulkEditSeconds(count) {
 function formatEstimatedBulkEditDuration(count, language) {
   const seconds = getEstimatedBulkEditSeconds(count);
   if (seconds <= 0) return "0s";
-
   const minutes = Math.max(1, Math.round(seconds / 60));
   if (minutes < 2) return "~1 minute";
   return `~${minutes.toLocaleString(language)} minutes`;
@@ -223,38 +219,27 @@ function getImpactHeatmapRows({ selectedField, previewTotal, t }) {
   const primaryLabel = t(`fieldLabels.${selectedField.value}`, {
     defaultValue: selectedField.label || selectedField.value,
   });
-  const primaryCount = Number(previewTotal || 0);
-  const rows = [
-    {
-      key: selectedField.value,
-      label: primaryLabel,
-      count: primaryCount,
-    },
-  ];
+  const rows = [{ key: selectedField.value, label: primaryLabel, count: Number(previewTotal || 0) }];
 
   if (selectedField.value === "price") {
     rows.push({
       key: "compareAtPrice",
-      label: t("fieldLabels.compareAtPrice", {
-        defaultValue: "Compare at price",
-      }),
-      count: Math.round(primaryCount * 0.35),
+      label: t("fieldLabels.compareAtPrice", { defaultValue: "Compare at price" }),
+      count: Math.round(previewTotal * 0.35),
     });
   }
-
   if (selectedField.value === "tags") {
     rows.push({
       key: "collections",
       label: t("fieldLabels.collections", { defaultValue: "Collections" }),
-      count: Math.round(primaryCount * 0.45),
+      count: Math.round(previewTotal * 0.45),
     });
   }
-
   if (selectedField.value === "vendor") {
     rows.push({
       key: "title",
       label: t("fieldLabels.title", { defaultValue: "Title" }),
-      count: Math.round(primaryCount * 0.25),
+      count: Math.round(previewTotal * 0.25),
     });
   }
 
@@ -273,16 +258,11 @@ export default function EditPreviewPage() {
   const { isSyncInProgress } = useProductSyncStatus();
   const fetchWithAuth = useAuthenticatedFetch();
 
-  const [selectedField, setSelectedField] = useState(
-    getFieldDefinition("price")
-  );
+  const [selectedField, setSelectedField] = useState(getFieldDefinition("price"));
   const [editType, setEditType] = useState(null);
   const [inputValue, setInputValue] = useState("");
   const [supportValue, setSupportValue] = useState("");
-  const [searchReplace, setSearchReplace] = useState({
-    search: "",
-    replace: "",
-  });
+  const [searchReplace, setSearchReplace] = useState({ search: "", replace: "" });
   const [locationValue, setLocationValue] = useState("");
   const [limitWarning, setLimitWarning] = useState(null);
   const [conflictWarning, setConflictWarning] = useState(null);
@@ -293,19 +273,10 @@ export default function EditPreviewPage() {
   const [isVariant, setIsVariant] = useState(false);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [previewMeta, setPreviewMeta] = useState({
-    mirrorBatchId: "",
-    total: 0,
-  });
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 10,
-    totalPages: 1,
-  });
-  const [modalState, setModalState] = useState({
-    scheduleEdit: false,
-    recurringEdit: false,
-  });
+  const [previewMeta, setPreviewMeta] = useState({ mirrorBatchId: "", total: 0 });
+  const [pagination, setPagination] = useState({ page: 1, limit: 10, totalPages: 1 });
+  const [modalState, setModalState] = useState({ scheduleEdit: false, recurringEdit: false });
+
   const targetSnapshotId =
     typeof searchParams.get("targetSnapshotId") === "string"
       ? searchParams.get("targetSnapshotId")
@@ -314,9 +285,7 @@ export default function EditPreviewPage() {
       : typeof frozenTarget?.targetSnapshotId === "string"
       ? frozenTarget.targetSnapshotId
       : "";
-  const frozenTargetCount = Number(
-    location.state?.targetCount || frozenTarget?.count || 0
-  );
+  const frozenTargetCount = Number(location.state?.targetCount || frozenTarget?.count || 0);
   const targetPayload = location.state?.targetPayload || frozenTarget?.payload || null;
   const [previewTotal, setPreviewTotal] = useState(frozenTargetCount || 0);
   const debouncedValue = useDebounce(inputValue, 600);
@@ -324,7 +293,6 @@ export default function EditPreviewPage() {
 
   useEffect(() => {
     if (!selectedField) return;
-
     const actions = selectedField.actions;
     if (actions?.length) {
       setEditType(actions[0]);
@@ -332,7 +300,7 @@ export default function EditPreviewPage() {
       setSupportValue("");
       setSearchReplace({ search: "", replace: "" });
       setLocationValue("");
-      setPagination((current) => ({ ...current, page: 1 }));
+      setPagination((c) => ({ ...c, page: 1 }));
     }
   }, [selectedField]);
 
@@ -342,29 +310,14 @@ export default function EditPreviewPage() {
     editType?.value?.toLowerCase().includes("set") &&
     !isPercentage;
 
-  const submitError = useFieldValidation(
-    inputValue,
-    getValueValidationRules(isPercentage, isFixedValue)
-  );
-
+  const submitError = useFieldValidation(inputValue, getValueValidationRules(isPercentage, isFixedValue));
   const shouldHideEditTypeSelector =
     selectedField?.value === "status" || selectedField?.actions?.length <= 1;
 
   const effectiveFilters = useMemo(() => {
-    const baseFilters = filters.filter((f) => f.field !== "search");
-
-    if (!search?.trim()) {
-      return baseFilters;
-    }
-
-    return [
-      ...baseFilters,
-      {
-        field: "search",
-        operator: "contains",
-        value: search.trim(),
-      },
-    ];
+    const base = filters.filter((f) => f.field !== "search");
+    if (!search?.trim()) return base;
+    return [...base, { field: "search", operator: "contains", value: search.trim() }];
   }, [filters, search]);
 
   const buildPreviewRequestBody = useCallback(
@@ -381,87 +334,51 @@ export default function EditPreviewPage() {
       limit,
       supportValue,
     }),
-    [
-      selectedField,
-      editType,
-      debouncedValue,
-      debouncedSearchReplace,
-      locationValue,
-      targetSnapshotId,
-      effectiveFilters,
-      pagination.page,
-      pagination.limit,
-      supportValue,
-    ],
+    [selectedField, editType, debouncedValue, debouncedSearchReplace, locationValue,
+     targetSnapshotId, effectiveFilters, pagination.page, pagination.limit, supportValue]
   );
 
   const applyRecipe = useCallback((recipe) => {
     const fieldDefinition = getFieldDefinition(recipe.field);
-    const action = fieldDefinition?.actions?.find(
-      (item) => item.value === recipe.actionValue,
-    );
-
+    const action = fieldDefinition?.actions?.find((a) => a.value === recipe.actionValue);
     if (!fieldDefinition || !action) return;
-
     setSelectedField(fieldDefinition);
     setEditType(action);
     setInputValue(recipe.value || "");
     setSupportValue("");
     setLocationValue("");
     setSearchReplace(recipe.searchReplace || { search: "", replace: "" });
-    if (Array.isArray(recipe.filters)) {
-      dispatch(setFilters(recipe.filters));
-    }
-    setPagination((current) => ({ ...current, page: 1 }));
+    if (Array.isArray(recipe.filters)) dispatch(setFilters(recipe.filters));
+    setPagination((c) => ({ ...c, page: 1 }));
     setConflictWarning(null);
   }, [dispatch]);
 
   useEffect(() => {
     const recipeKey = location.state?.recipeKey;
     if (!recipeKey) return;
-
-    const recipe = RECIPE_TEMPLATES.find((item) => item.key === recipeKey);
-    if (recipe) {
-      applyRecipe(recipe);
-    }
+    const recipe = RECIPE_TEMPLATES.find((r) => r.key === recipeKey);
+    if (recipe) applyRecipe(recipe);
   }, [applyRecipe, location.state?.recipeKey]);
 
   const fetchPreview = useCallback(async () => {
     if (!editType || !selectedField) return;
-
-    console.log("🔵 UI Selected Field:", selectedField.value);
-    //  console.log("🔵 Edit Type:", editType.value)
-
     const validOps = selectedField.actions?.map((a) => a.value) || [];
     if (!validOps.includes(editType.value)) return;
-
     if (
       editType.inputType === InputType.SEARCH_REPLACE &&
       !debouncedSearchReplace.search &&
       !debouncedSearchReplace.replace
-    ) {
-      return;
-    }
+    ) return;
 
     setLoading(true);
-
     try {
-      const res = await fetchWithAuth(
-        `/api/products/edit-preview?lang=${i18n.language}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(buildPreviewRequestBody()),
-        }
-      );
-
+      const res = await fetchWithAuth(`/api/products/edit-preview?lang=${i18n.language}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(buildPreviewRequestBody()),
+      });
       const json = await res.json();
-
-      // console.log("🟢 FULL PREVIEW RESPONSE:", json);
-      // console.log("🟢 PREVIEW DATA:", json.data?.preview);
-
       if (!res.ok) throw new Error(json.message);
-
       setProducts(json.data.preview);
       setPagination(json.data.pagination);
       setIsVariant(json.data.isVariant);
@@ -476,69 +393,36 @@ export default function EditPreviewPage() {
     } finally {
       setLoading(false);
     }
-  }, [
-    editType,
-    selectedField,
-    debouncedValue,
-    debouncedSearchReplace,
-    locationValue,
-    effectiveFilters,
-    targetSnapshotId,
-    pagination.page,
-    pagination.limit,
-    supportValue,
-    fetchWithAuth,
-    i18n.language,
-    buildPreviewRequestBody,
-  ]);
+  }, [editType, selectedField, debouncedValue, debouncedSearchReplace, locationValue,
+      effectiveFilters, targetSnapshotId, pagination.page, pagination.limit,
+      supportValue, fetchWithAuth, i18n.language, buildPreviewRequestBody]);
 
-  useEffect(() => {
-    fetchPreview();
-  }, [fetchPreview]);
+  useEffect(() => { fetchPreview(); }, [fetchPreview]);
 
   const canRunEdit = useMemo(() => {
     if (!editType || !selectedField) return false;
-
     switch (editType.inputType) {
-      case InputType.SEARCH_REPLACE:
-        return Boolean(searchReplace?.search?.trim());
+      case InputType.SEARCH_REPLACE: return Boolean(searchReplace?.search?.trim());
       case InputType.CHOICE_LIST:
       case InputType.API_AUTOCOMPLETE:
-      case InputType.LOCATION_SELECT:
-        return Boolean(inputValue);
+      case InputType.LOCATION_SELECT: return Boolean(inputValue);
       case InputType.SINGLE:
-      case InputType.NONE:
-        return true;
-      default:
-        return Boolean(inputValue?.toString().trim());
+      case InputType.NONE: return true;
+      default: return Boolean(inputValue?.toString().trim());
     }
   }, [editType, inputValue, searchReplace?.search, selectedField]);
 
   const isAllProductsOperation = useMemo(() => {
     if (previewTotal <= 0) return false;
-
     if (targetSnapshotId) {
       if (!targetPayload || targetPayload.mode !== "query") return false;
-
-      const hasFilters = Array.isArray(targetPayload.filters)
-        ? targetPayload.filters.length > 0
-        : false;
+      const hasFilters = Array.isArray(targetPayload.filters) ? targetPayload.filters.length > 0 : false;
       const hasSearch = Boolean(String(targetPayload.search || "").trim());
-      const hasExcluded = Array.isArray(targetPayload.excludedIds)
-        ? targetPayload.excludedIds.length > 0
-        : false;
-
+      const hasExcluded = Array.isArray(targetPayload.excludedIds) ? targetPayload.excludedIds.length > 0 : false;
       return !hasFilters && !hasSearch && !hasExcluded;
     }
-
     return effectiveFilters.length === 0 && !search?.trim();
-  }, [
-    effectiveFilters.length,
-    previewTotal,
-    search,
-    targetPayload,
-    targetSnapshotId,
-  ]);
+  }, [effectiveFilters.length, previewTotal, search, targetPayload, targetSnapshotId]);
 
   const openAllProductsGuardrail = useCallback((action) => {
     setGuardrailConfirmText("");
@@ -551,93 +435,53 @@ export default function EditPreviewPage() {
   }, []);
 
   const handleRunEdit = async ({ confirmedAllProducts = false } = {}) => {
-    if (isSyncInProgress) {
-      return;
-    }
-
-    if (submitError) {
-      toast.error(submitError);
-      return;
-    }
-
-    if (
-      editType?.inputType === InputType.SEARCH_REPLACE &&
-      !searchReplace.search
-    ) {
+    if (isSyncInProgress || submitError || !editType || !canRunEdit) return;
+    if (editType?.inputType === InputType.SEARCH_REPLACE && !searchReplace.search) {
       toast.error(t("bulkEditSearchReplaceSearchRequired"));
       return;
     }
-
-    if (!editType || !canRunEdit) return;
-
     setSubmitting(true);
     setLimitWarning(null);
     setConflictWarning(null);
     setOperationRestriction(null);
-
     try {
-      const preflightRes = await fetchWithAuth(
-        `/api/products/edit-preview?lang=${i18n.language}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(buildPreviewRequestBody(1, 1)),
-        },
-      );
+      const preflightRes = await fetchWithAuth(`/api/products/edit-preview?lang=${i18n.language}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(buildPreviewRequestBody(1, 1)),
+      });
       const preflightJson = await preflightRes.json();
-
       if (preflightRes.ok) {
         const nextTotal = Number(preflightJson?.data?.pagination?.total || 0);
         const nextMirrorBatchId = preflightJson?.data?.mirrorBatchId || "";
         const countDelta = Math.abs(nextTotal - Number(previewMeta.total || 0));
-        const mirrorChanged =
-          previewMeta.mirrorBatchId &&
-          nextMirrorBatchId &&
-          previewMeta.mirrorBatchId !== nextMirrorBatchId;
-
-        if (mirrorChanged || countDelta > 0) {
-          setConflictWarning({ count: countDelta });
-          return;
-        }
+        const mirrorChanged = previewMeta.mirrorBatchId && nextMirrorBatchId && previewMeta.mirrorBatchId !== nextMirrorBatchId;
+        if (mirrorChanged || countDelta > 0) { setConflictWarning({ count: countDelta }); return; }
       }
-
-      const res = await fetchWithAuth(
-        `/api/products/update?lang=${i18n.language}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            editedField: selectedField.value,
-            editedType: editType.value,
-            value: debouncedValue,
-            searchKey: debouncedSearchReplace.search,
-            replaceText: debouncedSearchReplace.replace,
-            location: locationValue,
-            filterParams: targetSnapshotId ? [] : effectiveFilters,
-            targetSnapshotId: targetSnapshotId || undefined,
-            supportValue,
-            allProductsConfirmation: confirmedAllProducts ? "CONFIRM" : "",
-          }),
-        }
-      );
-
+      const res = await fetchWithAuth(`/api/products/update?lang=${i18n.language}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          editedField: selectedField.value,
+          editedType: editType.value,
+          value: debouncedValue,
+          searchKey: debouncedSearchReplace.search,
+          replaceText: debouncedSearchReplace.replace,
+          location: locationValue,
+          filterParams: targetSnapshotId ? [] : effectiveFilters,
+          targetSnapshotId: targetSnapshotId || undefined,
+          supportValue,
+          allProductsConfirmation: confirmedAllProducts ? "CONFIRM" : "",
+        }),
+      });
       const json = await res.json();
       if (!res.ok) {
         if (res.status === 409 && json.error) {
-          setOperationRestriction({
-            code: json.error,
-            message: json.message || "Bulk editing is disabled right now.",
-          });
-          toast.error(json.message || "Bulk editing is disabled right now.", {
-            duration: 6000,
-          });
+          setOperationRestriction({ code: json.error, message: json.message || "Bulk editing is disabled right now." });
+          toast.error(json.message || "Bulk editing is disabled right now.", { duration: 6000 });
           return;
         }
-
-        if (
-          res.status === 400 &&
-          json.message?.toLowerCase().includes("plan")
-        ) {
+        if (res.status === 400 && json.message?.toLowerCase().includes("plan")) {
           setLimitWarning(json.message);
           toast.error(json.message, { duration: 6000 });
         } else {
@@ -645,7 +489,6 @@ export default function EditPreviewPage() {
         }
         return;
       }
-
       toast.success("Bulk edit started");
       navigate(`/editDetails/${json.id}`);
     } catch (err) {
@@ -656,96 +499,54 @@ export default function EditPreviewPage() {
   };
 
   const handleRunPipeline = async ({ confirmedAllProducts = false } = {}) => {
-    if (isSyncInProgress) {
-      return;
-    }
-
-    if (previewTotal <= 0) {
-      toast.error(t("noProductsMatch"));
-      return;
-    }
-
+    if (isSyncInProgress) return;
+    if (previewTotal <= 0) { toast.error(t("noProductsMatch")); return; }
     setSubmitting(true);
     setLimitWarning(null);
     setConflictWarning(null);
     setOperationRestriction(null);
-
     try {
-      const preflightRes = await fetchWithAuth(
-        `/api/products/edit-preview?lang=${i18n.language}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            field: "tags",
-            editType: "Add tag(s) to product",
-            editValue: "sale",
-            filterParams: targetSnapshotId ? [] : effectiveFilters,
-            targetSnapshotId: targetSnapshotId || undefined,
-            page: 1,
-            limit: 1,
-          }),
-        },
-      );
+      const preflightRes = await fetchWithAuth(`/api/products/edit-preview?lang=${i18n.language}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          field: "tags", editType: "Add tag(s) to product", editValue: "sale",
+          filterParams: targetSnapshotId ? [] : effectiveFilters,
+          targetSnapshotId: targetSnapshotId || undefined,
+          page: 1, limit: 1,
+        }),
+      });
       const preflightJson = await preflightRes.json();
-
       if (preflightRes.ok) {
         const nextTotal = Number(preflightJson?.data?.pagination?.total || 0);
         const nextMirrorBatchId = preflightJson?.data?.mirrorBatchId || "";
         const countDelta = Math.abs(nextTotal - Number(previewMeta.total || 0));
-        const mirrorChanged =
-          previewMeta.mirrorBatchId &&
-          nextMirrorBatchId &&
-          previewMeta.mirrorBatchId !== nextMirrorBatchId;
-
-        if (mirrorChanged || countDelta > 0) {
-          setConflictWarning({ count: countDelta });
-          return;
-        }
+        const mirrorChanged = previewMeta.mirrorBatchId && nextMirrorBatchId && previewMeta.mirrorBatchId !== nextMirrorBatchId;
+        if (mirrorChanged || countDelta > 0) { setConflictWarning({ count: countDelta }); return; }
       }
-
       const [firstRule] = SALE_PIPELINE_TEMPLATE;
-      const res = await fetchWithAuth(
-        `/api/products/update?lang=${i18n.language}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            editedField: firstRule.field,
-            editedType: firstRule.editOption,
-            value: firstRule.value,
-            rules: SALE_PIPELINE_TEMPLATE.map((step) => ({
-              field: step.field,
-              editOption: step.editOption,
-              value: step.value,
-            })),
-            title: t("pipelineSaleTitle", {
-              defaultValue: "Sale pipeline",
-            }),
-            filterParams: targetSnapshotId ? [] : effectiveFilters,
-            targetSnapshotId: targetSnapshotId || undefined,
-            allProductsConfirmation: confirmedAllProducts ? "CONFIRM" : "",
-          }),
-        },
-      );
-
+      const res = await fetchWithAuth(`/api/products/update?lang=${i18n.language}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          editedField: firstRule.field,
+          editedType: firstRule.editOption,
+          value: firstRule.value,
+          rules: SALE_PIPELINE_TEMPLATE.map((s) => ({ field: s.field, editOption: s.editOption, value: s.value })),
+          title: t("pipelineSaleTitle", { defaultValue: "Sale pipeline" }),
+          filterParams: targetSnapshotId ? [] : effectiveFilters,
+          targetSnapshotId: targetSnapshotId || undefined,
+          allProductsConfirmation: confirmedAllProducts ? "CONFIRM" : "",
+        }),
+      });
       const json = await res.json();
       if (!res.ok) {
         if (res.status === 409 && json.error) {
-          setOperationRestriction({
-            code: json.error,
-            message: json.message || "Bulk editing is disabled right now.",
-          });
-          toast.error(json.message || "Bulk editing is disabled right now.", {
-            duration: 6000,
-          });
+          setOperationRestriction({ code: json.error, message: json.message || "Bulk editing is disabled right now." });
+          toast.error(json.message || "Bulk editing is disabled right now.", { duration: 6000 });
           return;
         }
-
-        if (
-          res.status === 400 &&
-          json.message?.toLowerCase().includes("plan")
-        ) {
+        if (res.status === 400 && json.message?.toLowerCase().includes("plan")) {
           setLimitWarning(json.message);
           toast.error(json.message, { duration: 6000 });
         } else {
@@ -753,7 +554,6 @@ export default function EditPreviewPage() {
         }
         return;
       }
-
       toast.success(t("pipelineStarted", { defaultValue: "Pipeline started" }));
       navigate(`/editDetails/${json.id}`);
     } catch (err) {
@@ -764,484 +564,411 @@ export default function EditPreviewPage() {
   };
 
   const requestRunEdit = useCallback(() => {
-    if (isAllProductsOperation) {
-      openAllProductsGuardrail("edit");
-      return;
-    }
-
+    if (isAllProductsOperation) { openAllProductsGuardrail("edit"); return; }
     handleRunEdit();
   }, [handleRunEdit, isAllProductsOperation, openAllProductsGuardrail]);
 
   const requestRunPipeline = useCallback(() => {
-    if (isAllProductsOperation) {
-      openAllProductsGuardrail("pipeline");
-      return;
-    }
-
+    if (isAllProductsOperation) { openAllProductsGuardrail("pipeline"); return; }
     handleRunPipeline();
   }, [handleRunPipeline, isAllProductsOperation, openAllProductsGuardrail]);
 
   const runPendingGuardrailAction = useCallback(() => {
     if (guardrailConfirmText !== "CONFIRM") return;
-
     const action = pendingGuardrailAction;
     closeAllProductsGuardrail();
-
-    if (action === "pipeline") {
-      handleRunPipeline({ confirmedAllProducts: true });
-      return;
-    }
-
+    if (action === "pipeline") { handleRunPipeline({ confirmedAllProducts: true }); return; }
     handleRunEdit({ confirmedAllProducts: true });
-  }, [
-    closeAllProductsGuardrail,
-    guardrailConfirmText,
-    handleRunEdit,
-    handleRunPipeline,
-    pendingGuardrailAction,
-  ]);
-
-  const summaryText = useMemo(() => {
-    if (loading) {
-      return t("loadingProductsPreview");
-    }
-
-    if (previewTotal > 0) {
-      return `${previewTotal} ${t("productsReadyToEdit")}`;
-    }
-
-    return t("noProductsMatch");
-  }, [previewTotal, loading, t]);
+  }, [closeAllProductsGuardrail, guardrailConfirmText, handleRunEdit, handleRunPipeline, pendingGuardrailAction]);
 
   const editGuarantees = [
     t("bulkEditGuaranteeUndo", { defaultValue: "Undo available for this edit" }),
-    t("bulkEditGuaranteeSnapshot", { defaultValue: "Snapshot saved" }),
-    t("bulkEditGuaranteeFrozen", {
-      defaultValue: "Affected products frozen",
-    }),
-    t("bulkEditGuaranteeSafeMode", {
-      defaultValue: "Safe mode enabled",
-    }),
-    t("bulkEditGuaranteeOptimizedBatches", {
-      defaultValue: "Processing in optimized batches",
-    }),
+    t("bulkEditGuaranteeSnapshot", { defaultValue: "Snapshot saved before running" }),
+    t("bulkEditGuaranteeFrozen", { defaultValue: "Affected products frozen during edit" }),
+    t("bulkEditGuaranteeSafeMode", { defaultValue: "Safe mode enabled" }),
+    t("bulkEditGuaranteeOptimizedBatches", { defaultValue: "Processing in optimized batches" }),
   ];
+
   const safetyNote = FIELD_SAFETY_NOTES[selectedField?.value];
-  const estimatedDuration = formatEstimatedBulkEditDuration(
-    previewTotal,
-    i18n.language,
-  );
-  const showImpactWarning =
-    previewTotal > 0 &&
-    (previewTotal >= LARGE_OPERATION_THRESHOLD || Boolean(safetyNote));
-  const impactHeatmapRows = getImpactHeatmapRows({
-    selectedField,
-    previewTotal,
-    t,
-  });
+  const estimatedDuration = formatEstimatedBulkEditDuration(previewTotal, i18n.language);
+  const showImpactWarning = previewTotal > 0 && (previewTotal >= LARGE_OPERATION_THRESHOLD || Boolean(safetyNote));
+  const impactHeatmapRows = getImpactHeatmapRows({ selectedField, previewTotal, t });
+
   const conflictTitle = conflictWarning?.count
     ? t("bulkEditConflictTitle", {
         count: conflictWarning.count,
         defaultValue: `${conflictWarning.count} products changed in Shopify after your preview.`,
       })
-    : t("bulkEditConflictTitleUnknown", {
-        defaultValue: "Products changed in Shopify after your preview.",
-      });
+    : t("bulkEditConflictTitleUnknown", { defaultValue: "Products changed in Shopify after your preview." });
 
   return (
     <Page
       fullWidth
-      title={t("ConfigureModifications")}
+      title={t("ConfigureModifications", { defaultValue: "Configure bulk edit" })}
+      subtitle={
+        previewTotal > 0
+          ? t("editPageSubtitle", {
+              count: formatCount(previewTotal, i18n.language),
+              defaultValue: `${formatCount(previewTotal, i18n.language)} products will be affected`,
+            })
+          : undefined
+      }
       backAction={{
-        content: "Back",
+        content: t("back", { defaultValue: "Back" }),
         icon: ChevronLeftIcon,
         onAction: () => navigate("/products"),
       }}
       primaryAction={{
-        content: submitting ? t("Running") : t("RunEdit"),
+        content: submitting ? t("Running", { defaultValue: "Running…" }) : t("RunEdit", { defaultValue: "Run edit" }),
         onAction: requestRunEdit,
         loading: submitting,
         disabled: isSyncInProgress || Boolean(submitError) || !canRunEdit,
       }}
       secondaryActions={[
         {
-          content: t("ScheduleEdit"),
-          onAction: () =>
-            setModalState((current) => ({ ...current, scheduleEdit: true })),
+          content: t("ScheduleEdit", { defaultValue: "Schedule" }),
+          icon: ClockIcon,
+          onAction: () => setModalState((c) => ({ ...c, scheduleEdit: true })),
           disabled: isSyncInProgress,
         },
         {
-          content: t("RecurringEdit"),
-          onAction: () =>
-            setModalState((current) => ({ ...current, recurringEdit: true })),
+          content: t("RecurringEdit", { defaultValue: "Recurring" }),
+          icon: RefreshIcon,
+          onAction: () => setModalState((c) => ({ ...c, recurringEdit: true })),
           disabled: isSyncInProgress,
         },
       ]}
     >
-      <Layout>
+      <BlockStack gap="600">
+        {/* Global banners */}
         {isSyncInProgress && (
-          <Layout.Section>
-            <Banner tone="info" title="Sync in progress">
-              <p>{t("bulkEditSyncBlockingMessage")}</p>
-            </Banner>
-          </Layout.Section>
+          <Banner tone="info" title={t("syncInProgress", { defaultValue: "Sync in progress" })}>
+            <Text as="p">{t("bulkEditSyncBlockingMessage")}</Text>
+          </Banner>
+        )}
+        {limitWarning && (
+          <Banner
+            tone="warning"
+            title={t("planLimitReached", { defaultValue: "Plan limit reached" })}
+            onDismiss={() => setLimitWarning(null)}
+            action={{ content: t("upgradePlan", { defaultValue: "Upgrade plan" }), onAction: () => navigate("/pricing") }}
+          >
+            <Text as="p">{limitWarning}</Text>
+          </Banner>
+        )}
+        {conflictWarning && (
+          <Banner
+            tone="warning"
+            title={conflictTitle}
+            action={{ content: t("bulkEditConflictRefresh", { defaultValue: "Refresh preview" }), onAction: fetchPreview }}
+            onDismiss={() => setConflictWarning(null)}
+          >
+            <Text as="p">{t("bulkEditConflictText", { defaultValue: "Refresh preview before applying." })}</Text>
+          </Banner>
+        )}
+        {operationRestriction && (
+          <Banner
+            tone="warning"
+            title={t("bulkEditDisabled", { defaultValue: "Bulk editing disabled" })}
+            onDismiss={() => setOperationRestriction(null)}
+          >
+            <Text as="p">{operationRestriction.message}</Text>
+          </Banner>
         )}
 
-        <Layout.Section>
-          {limitWarning && (
-            <Box paddingBlockEnd="300">
-              <Banner
-                tone="warning"
-                title="Plan limit reached"
-                onDismiss={() => setLimitWarning(null)}
-                action={{
-                  content: "Upgrade plan",
-                  onAction: () => navigate("/pricing"),
-                }}
-              >
-                <p>{limitWarning}</p>
-              </Banner>
-            </Box>
-          )}
+        {/* Main two-column layout */}
+        <Layout>
+          {/* Left column — edit configuration */}
+          <Layout.Section>
+            <BlockStack gap="500">
+              {/* Edit setup card */}
+              <Card>
+                <BlockStack gap="500">
+                  <BlockStack gap="100">
+                    <Text as="h2" variant="headingMd">
+                      {t("bulkEditSetupTitle", { defaultValue: "Edit configuration" })}
+                    </Text>
+                    <Text as="p" variant="bodySm" tone="subdued">
+                      {t("bulkEditSetupText", { defaultValue: "Choose a field and define how it should be changed across matching products." })}
+                    </Text>
+                  </BlockStack>
 
-          {conflictWarning && (
-            <Box paddingBlockEnd="300">
-              <Banner
-                tone="warning"
-                title={conflictTitle}
-                action={{
-                  content: t("bulkEditConflictRefresh", {
-                    defaultValue: "Refresh preview",
-                  }),
-                  onAction: () => fetchPreview(),
-                }}
-                onDismiss={() => setConflictWarning(null)}
-              >
-                <p>
-                  {t("bulkEditConflictText", {
-                    defaultValue: "Refresh preview before applying.",
-                  })}
-                </p>
-              </Banner>
-            </Box>
-          )}
+                  <Divider />
 
-          {operationRestriction && (
-            <Box paddingBlockEnd="300">
-              <Banner
-                tone="warning"
-                title={t("bulkEditDisabled", {
-                  defaultValue: "Bulk editing disabled",
-                })}
-                onDismiss={() => setOperationRestriction(null)}
-              >
-                <p>
-                  {t("bulkEditDisabledReason", {
-                    defaultValue: `Reason: ${operationRestriction.message}`,
-                  })}
-                </p>
-              </Banner>
-            </Box>
-          )}
-
-          <Card>
-            <Box padding="500">
-              <BlockStack gap="400">
-                <BlockStack gap="100">
-                  <Text as="h2" variant="headingMd">
-                    {t("bulkEditSetupTitle")}
-                  </Text>
-
-                  <Text as="p" variant="bodySm" tone="subdued">
-                    {t("bulkEditSetupText")}
-                  </Text>
-                </BlockStack>
-
-                <FormLayout>
-                  <FormLayout.Group condensed>
-                    <FieldSelector
-                      selectedField={selectedField}
-                      onFieldChange={setSelectedField}
-                    />
-
-                    {!shouldHideEditTypeSelector && (
-                      <EditTypeSelector
+                  <FormLayout>
+                    <FormLayout.Group condensed>
+                      <FieldSelector
                         selectedField={selectedField}
-                        editType={editType}
-                        onEditTypeChange={setEditType}
+                        onFieldChange={setSelectedField}
                       />
-                    )}
-                  </FormLayout.Group>
+                      {!shouldHideEditTypeSelector && (
+                        <EditTypeSelector
+                          selectedField={selectedField}
+                          editType={editType}
+                          onEditTypeChange={setEditType}
+                        />
+                      )}
+                    </FormLayout.Group>
 
-                  <ValueInput
-                    selectedField={selectedField}
-                    editType={editType}
-                    value={inputValue}
-                    onChange={setInputValue}
-                    searchReplace={searchReplace}
-                    onSearchReplaceChange={setSearchReplace}
-                    locationValue={locationValue}
-                    onLocationChange={setLocationValue}
-                    setSupportValue={setSupportValue}
-                  />
+                    <ValueInput
+                      selectedField={selectedField}
+                      editType={editType}
+                      value={inputValue}
+                      onChange={setInputValue}
+                      searchReplace={searchReplace}
+                      onSearchReplaceChange={setSearchReplace}
+                      locationValue={locationValue}
+                      onLocationChange={setLocationValue}
+                      setSupportValue={setSupportValue}
+                    />
+                  </FormLayout>
 
                   {safetyNote && (
                     <Banner
                       tone={safetyNote.tone}
-                      title={t(safetyNote.titleKey, {
-                        defaultValue: safetyNote.defaultTitle,
-                      })}
+                      title={t(safetyNote.titleKey, { defaultValue: safetyNote.defaultTitle })}
                     >
-                      <p>
-                        {t(safetyNote.messageKey, {
-                          defaultValue: safetyNote.defaultMessage,
-                        })}
-                      </p>
+                      <Text as="p">{t(safetyNote.messageKey, { defaultValue: safetyNote.defaultMessage })}</Text>
                     </Banner>
                   )}
-                </FormLayout>
-              </BlockStack>
-            </Box>
-          </Card>
-        </Layout.Section>
-
-        <Layout.Section>
-          <Card>
-            <Box padding="500">
-              <BlockStack gap="300">
-                <BlockStack gap="100">
-                  <Text as="h3" variant="headingMd">
-                    {t("bulkEditRecipesTitle", {
-                      defaultValue: "Recipe templates",
-                    })}
-                  </Text>
-                  <Text as="p" variant="bodySm" tone="subdued">
-                    {t("bulkEditRecipesText", {
-                      defaultValue:
-                        "Start from a common bulk edit and adjust it before running.",
-                    })}
-                  </Text>
                 </BlockStack>
-                <InlineStack gap="200">
-                  {RECIPE_TEMPLATES.map((recipe) => (
-                    <Button key={recipe.key} onClick={() => applyRecipe(recipe)}>
-                      {t(recipe.labelKey, {
-                        defaultValue: recipe.defaultLabel,
-                      })}
-                    </Button>
-                  ))}
-                </InlineStack>
-              </BlockStack>
-            </Box>
-          </Card>
-        </Layout.Section>
+              </Card>
 
-        <Layout.Section>
-          <Card>
-            <Box padding="500">
-              <BlockStack gap="300">
-                <BlockStack gap="100">
-                  <Text as="h3" variant="headingMd">
-                    {t("pipelineTitle", { defaultValue: "Pipeline" })}
-                  </Text>
-                  <Text as="p" variant="bodySm" tone="subdued">
-                    {t("pipelineText", {
-                      defaultValue:
-                        "Run multiple edit operations against the same frozen target.",
-                    })}
-                  </Text>
+              {/* Recipe templates */}
+              <Card>
+                <BlockStack gap="400">
+                  <BlockStack gap="100">
+                    <Text as="h3" variant="headingMd">
+                      {t("bulkEditRecipesTitle", { defaultValue: "Quick recipes" })}
+                    </Text>
+                    <Text as="p" variant="bodySm" tone="subdued">
+                      {t("bulkEditRecipesText", { defaultValue: "Start from a common bulk edit pattern and adjust before running." })}
+                    </Text>
+                  </BlockStack>
+                  <InlineStack gap="200" wrap>
+                    {RECIPE_TEMPLATES.map((recipe) => (
+                      <Button key={recipe.key} size="slim" onClick={() => applyRecipe(recipe)}>
+                        {t(recipe.labelKey, { defaultValue: recipe.defaultLabel })}
+                      </Button>
+                    ))}
+                  </InlineStack>
                 </BlockStack>
+              </Card>
 
-                <BlockStack gap="200">
-                  {SALE_PIPELINE_TEMPLATE.map((step, index) => (
-                    <InlineStack
-                      key={step.key}
-                      gap="300"
-                      blockAlign="center"
-                      wrap={false}
-                    >
-                      <Badge tone="info">{index + 1}</Badge>
-                      <Text as="p" variant="bodyMd" fontWeight="medium">
-                        {t(step.labelKey, {
-                          defaultValue: step.defaultLabel,
-                        })}
+              {/* Pipeline card */}
+              {/* <Card>
+                <BlockStack gap="400">
+                  <BlockStack gap="100">
+                    <InlineStack gap="200" blockAlign="center">
+                      <Text as="h3" variant="headingMd">
+                        {t("pipelineTitle", { defaultValue: "Sale pipeline" })}
                       </Text>
+                      <Badge tone="info">
+                        {t("pipelineStepCount", {
+                          count: SALE_PIPELINE_TEMPLATE.length,
+                          defaultValue: `${SALE_PIPELINE_TEMPLATE.length} steps`,
+                        })}
+                      </Badge>
                     </InlineStack>
-                  ))}
+                    <Text as="p" variant="bodySm" tone="subdued">
+                      {t("pipelineText", { defaultValue: "Run multiple edit operations against the same frozen target in sequence." })}
+                    </Text>
+                  </BlockStack>
+
+                  <Divider />
+
+                  <BlockStack gap="300">
+                    {SALE_PIPELINE_TEMPLATE.map((step, index) => (
+                      <InlineStack key={step.key} gap="300" blockAlign="center" wrap={false}>
+                        <Box
+                          minWidth="24px"
+                          width="24px"
+                          paddingBlock="050"
+                          background="bg-surface-secondary"
+                          borderRadius="full"
+                        >
+                          <Text as="span" variant="bodySm" fontWeight="semibold" alignment="center">
+                            {index + 1}
+                          </Text>
+                        </Box>
+                        <Text as="p" variant="bodyMd">
+                          {t(step.labelKey, { defaultValue: step.defaultLabel })}
+                        </Text>
+                      </InlineStack>
+                    ))}
+                  </BlockStack>
+
+                  <Box paddingBlockStart="100">
+                    <InlineStack align="end">
+                      <Button
+                        variant="primary"
+                        onClick={requestRunPipeline}
+                        loading={submitting && pendingGuardrailAction !== "edit"}
+                        disabled={isSyncInProgress || previewTotal <= 0}
+                      >
+                        {t("runPipeline", { defaultValue: "Run pipeline" })}
+                      </Button>
+                    </InlineStack>
+                  </Box>
+                </BlockStack>
+              </Card> */}
+            </BlockStack>
+          </Layout.Section>
+
+          {/* Right column — summary sidebar */}
+          <Layout.Section variant="oneThird">
+            <Card>
+              <BlockStack gap="400">
+                {/* Count summary */}
+                <BlockStack gap="200">
+                  <Text as="h3" variant="headingMd">
+                    {t("bulkEditPreviewSummaryTitle", { defaultValue: "Edit summary" })}
+                  </Text>
+
+                  <Box
+                    padding="400"
+                    background="bg-surface-secondary"
+                    borderRadius="200"
+                  >
+                    <InlineStack gap="300" blockAlign="center" wrap={false}>
+                      <Badge
+                        tone={previewTotal > 0 ? "info" : "enabled"}
+                        size="large"
+                      >
+                        {formatCount(previewTotal, i18n.language)}
+                      </Badge>
+                      <BlockStack gap="050">
+                        <Text as="span" variant="bodySm" fontWeight="semibold">
+                          {t("bulkEditMatchingProductsLabel", { defaultValue: "matching products" })}
+                        </Text>
+                        {previewTotal > 0 && (
+                          <Text as="span" variant="bodySm" tone="subdued">
+                            {t("bulkEditEstimatedTime", {
+                              duration: estimatedDuration,
+                              defaultValue: `Est. ${estimatedDuration}`,
+                            })}
+                          </Text>
+                        )}
+                      </BlockStack>
+                    </InlineStack>
+                  </Box>
+
+                  <Text as="p" variant="bodySm" tone="subdued">
+                    {loading
+                      ? t("loadingProductsPreview", { defaultValue: "Loading preview…" })
+                      : previewTotal > 0
+                      ? t("productsReadyToEdit", { defaultValue: "products ready to edit" })
+                      : t("noProductsMatch", { defaultValue: "No products match your current filters." })}
+                  </Text>
                 </BlockStack>
 
-                <InlineStack align="end">
-                  <Button
-                    variant="primary"
-                    onClick={requestRunPipeline}
-                    loading={submitting && pendingGuardrailAction !== "edit"}
-                    disabled={isSyncInProgress || previewTotal <= 0}
-                  >
-                    {t("runPipeline", { defaultValue: "Run pipeline" })}
-                  </Button>
-                </InlineStack>
-              </BlockStack>
-            </Box>
-          </Card>
-        </Layout.Section>
-
-        <Layout.Section variant="oneThird">
-          <Card>
-            <Box padding="500">
-              <BlockStack gap="300">
-                <Text as="h3" variant="headingMd">
-                  {t("bulkEditPreviewSummaryTitle")}
-                </Text>
-                <InlineStack gap="200" blockAlign="center">
-                  <Badge tone={previewTotal > 0 ? "info" : "attention"}>
-                    {previewTotal || 0}
-                  </Badge>
-                  <Text as="span" variant="bodySm" tone="subdued">
-                    {t("bulkEditMatchingProductsLabel")}
-                  </Text>
-                </InlineStack>
-                <Text as="p" variant="bodySm" tone="subdued">
-                  {summaryText}
-                </Text>
-                {previewTotal > 0 ? (
-                  <Text as="p" variant="bodySm" fontWeight="medium">
-                    {t("bulkEditEstimatedTime", {
-                      duration: estimatedDuration,
-                      defaultValue: `Estimated time: ${estimatedDuration}`,
-                    })}
-                  </Text>
-                ) : null}
-                {showImpactWarning ? (
+                {/* Impact warning */}
+                {showImpactWarning && (
                   <Banner
                     tone="warning"
                     title={t("bulkEditImpactWarningTitle", {
                       count: formatCount(previewTotal, i18n.language),
-                      defaultValue: `This will affect ${formatCount(
-                        previewTotal,
-                        i18n.language,
-                      )} products`,
+                      defaultValue: `This will affect ${formatCount(previewTotal, i18n.language)} products`,
                     })}
                   >
                     <List type="bullet">
                       <List.Item>
-                        {t("bulkEditImpactWarningTime", {
-                          defaultValue: "Large operations may take several minutes",
-                        })}
+                        {t("bulkEditImpactWarningTime", { defaultValue: "Large operations may take several minutes" })}
                       </List.Item>
                       <List.Item>
-                        {t("bulkEditImpactWarningStorefront", {
-                          defaultValue: "Changes may impact storefront immediately",
-                        })}
+                        {t("bulkEditImpactWarningStorefront", { defaultValue: "Changes may impact storefront immediately" })}
                       </List.Item>
                     </List>
                   </Banner>
-                ) : null}
-                {impactHeatmapRows.length > 0 ? (
-                  <Box
-                    padding="300"
-                    background="bg-surface-secondary"
-                    borderRadius="200"
-                  >
-                    <BlockStack gap="200">
+                )}
+
+                {/* Impact heatmap */}
+                {impactHeatmapRows.length > 0 && (
+                  <>
+                    <Divider />
+                    <BlockStack gap="300">
                       <Text as="p" variant="bodySm" fontWeight="semibold">
-                        {t("bulkEditSimulationHeatmapTitle", {
-                          defaultValue: "Fields affected",
-                        })}
+                        {t("bulkEditSimulationHeatmapTitle", { defaultValue: "Fields affected" })}
                       </Text>
-                      {impactHeatmapRows.map((row) => {
-                        const width = Math.max(
-                          12,
-                          Math.round((row.count / Math.max(previewTotal, 1)) * 100),
-                        );
-
-                        return (
-                          <InlineStack
-                            key={row.key}
-                            gap="200"
-                            blockAlign="center"
-                            wrap={false}
-                          >
-                            <div
-                              aria-hidden="true"
-                              style={{
-                                width: "96px",
-                                height: "10px",
-                                background: "#dfe3e8",
-                                borderRadius: "999px",
-                                overflow: "hidden",
-                                flexShrink: 0,
-                              }}
-                            >
+                      <BlockStack gap="250">
+                        {impactHeatmapRows.map((row) => {
+                          const width = Math.max(8, Math.round((row.count / Math.max(previewTotal, 1)) * 100));
+                          return (
+                            <BlockStack key={row.key} gap="100">
+                              <InlineStack align="space-between" blockAlign="center">
+                                <Text as="span" variant="bodySm" tone="subdued">
+                                  {row.label}
+                                </Text>
+                                <Text as="span" variant="bodySm" fontWeight="medium">
+                                  {row.count.toLocaleString()}
+                                </Text>
+                              </InlineStack>
                               <div
+                                aria-hidden="true"
                                 style={{
-                                  width: `${width}%`,
-                                  height: "100%",
-                                  background: "#008060",
+                                  width: "100%",
+                                  height: "6px",
+                                  background: "var(--p-color-bg-fill-tertiary, #e4e5e7)",
+                                  borderRadius: "999px",
+                                  overflow: "hidden",
                                 }}
-                              />
-                            </div>
-                            <Text as="span" variant="bodySm">
-                              {row.label}
-                            </Text>
-                          </InlineStack>
-                        );
-                      })}
+                              >
+                                <div
+                                  style={{
+                                    width: `${width}%`,
+                                    height: "100%",
+                                    background: "var(--p-color-bg-fill-success, #008060)",
+                                    borderRadius: "999px",
+                                    transition: "width 0.4s ease",
+                                  }}
+                                />
+                              </div>
+                            </BlockStack>
+                          );
+                        })}
+                      </BlockStack>
                     </BlockStack>
-                  </Box>
-                ) : null}
-                <Text as="p" variant="bodySm" tone="subdued">
-                  {t("bulkEditPreviewSummaryText")}
-                </Text>
-                <Box
-                  paddingBlockStart="300"
-                  borderBlockStartWidth="025"
-                  borderColor="border"
-                >
-                 <BlockStack gap="200">
-  {editGuarantees.map((guarantee) => (
-    <InlineStack
-      key={guarantee}
-      gap="150"
-      align="start"
-      blockAlign="center"
-      wrap={false}
-    >
-      <Box minWidth="20px">
-        <Icon source={CheckCircleIcon} tone="success" />
-      </Box>
+                  </>
+                )}
 
-      <Text as="span" variant="bodySm" fontWeight="medium">
-        {guarantee}
-      </Text>
-    </InlineStack>
-  ))}
-</BlockStack>
-                </Box>
+                {/* Guarantees */}
+                <Divider />
+                <BlockStack gap="200">
+                  <Text as="p" variant="bodySm" fontWeight="semibold" tone="subdued">
+                    {t("bulkEditGuaranteesTitle", { defaultValue: "What's protected" })}
+                  </Text>
+                  {editGuarantees.map((guarantee) => (
+                    <InlineStack key={guarantee} gap="200" blockAlign="center" wrap={false}>
+                      <Box flexShrink="0">
+                        <Icon source={CheckCircleIcon} tone="success" />
+                      </Box>
+                      <Text as="span" variant="bodySm">
+                        {guarantee}
+                      </Text>
+                    </InlineStack>
+                  ))}
+                </BlockStack>
               </BlockStack>
-            </Box>
-          </Card>
-        </Layout.Section>
+            </Card>
+          </Layout.Section>
+        </Layout>
 
-        <Layout.Section>
-          <PreviewTable
-            loading={loading}
-            products={products}
-            pagination={pagination}
-            isVariant={isVariant}
-            onPageChange={(page) =>
-              setPagination((current) => ({ ...current, page }))
-            }
-            field={selectedField.value}
-          />
-        </Layout.Section>
-      </Layout>
+        {/* Preview table — full width below */}
+        <PreviewTable
+          loading={loading}
+          products={products}
+          pagination={pagination}
+          isVariant={isVariant}
+          onPageChange={(page) => setPagination((c) => ({ ...c, page }))}
+          field={selectedField.value}
+        />
+      </BlockStack>
 
+      {/* Modals */}
       {modalState.scheduleEdit && (
         <ScheduleEdit
           show
-          onHide={() =>
-            setModalState((current) => ({ ...current, scheduleEdit: false }))
-          }
+          onHide={() => setModalState((c) => ({ ...c, scheduleEdit: false }))}
           count={previewTotal}
           editedField={selectedField.value}
           editedBy={editType?.value}
@@ -1254,13 +981,10 @@ export default function EditPreviewPage() {
           supportValue={supportValue}
         />
       )}
-
       {modalState.recurringEdit && (
         <RecurringEditModal
           show
-          onHide={() =>
-            setModalState((current) => ({ ...current, recurringEdit: false }))
-          }
+          onHide={() => setModalState((c) => ({ ...c, recurringEdit: false }))}
           count={previewTotal}
           editedField={selectedField.value}
           editedBy={editType?.value}
@@ -1274,17 +998,15 @@ export default function EditPreviewPage() {
         />
       )}
 
+      {/* All-products guardrail modal */}
       <Modal
         open={Boolean(pendingGuardrailAction)}
         onClose={closeAllProductsGuardrail}
-        title={t("allProductsGuardrailTitle", {
-          defaultValue: "You're about to change ALL products",
-        })}
+        title={t("allProductsGuardrailTitle", { defaultValue: "You're about to change ALL products" })}
         primaryAction={{
-          content:
-            pendingGuardrailAction === "pipeline"
-              ? t("runPipeline", { defaultValue: "Run pipeline" })
-              : t("RunEdit"),
+          content: pendingGuardrailAction === "pipeline"
+            ? t("runPipeline", { defaultValue: "Run pipeline" })
+            : t("RunEdit", { defaultValue: "Run edit" }),
           destructive: true,
           disabled: guardrailConfirmText !== "CONFIRM",
           loading: submitting,
@@ -1298,34 +1020,28 @@ export default function EditPreviewPage() {
         ]}
       >
         <Modal.Section>
-          <BlockStack gap="300">
+          <BlockStack gap="400">
             <Banner tone="critical">
               <BlockStack gap="100">
                 <Text as="p" fontWeight="semibold">
                   {t("allProductsGuardrailWarning", {
                     count: formatCount(previewTotal, i18n.language),
-                    defaultValue: `This operation will affect ${formatCount(
-                      previewTotal,
-                      i18n.language,
-                    )} products.`,
+                    defaultValue: `This operation will affect ${formatCount(previewTotal, i18n.language)} products.`,
                   })}
                 </Text>
                 <Text as="p" tone="subdued">
                   {t("allProductsGuardrailText", {
-                    defaultValue:
-                      'Type "CONFIRM" to proceed with changing every product in this target.',
+                    defaultValue: 'Type "CONFIRM" to proceed with changing every product in this target.',
                   })}
                 </Text>
               </BlockStack>
             </Banner>
-
             <TextField
-              label={t("allProductsGuardrailInputLabel", {
-                defaultValue: 'Type "CONFIRM" to proceed',
-              })}
+              label={t("allProductsGuardrailInputLabel", { defaultValue: 'Type "CONFIRM" to proceed' })}
               value={guardrailConfirmText}
               onChange={setGuardrailConfirmText}
               autoComplete="off"
+              placeholder="CONFIRM"
             />
           </BlockStack>
         </Modal.Section>

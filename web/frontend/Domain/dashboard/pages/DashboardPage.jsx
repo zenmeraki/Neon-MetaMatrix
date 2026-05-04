@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { InlineGrid, Layout, Page,Box } from "@shopify/polaris";
+import { InlineGrid, Layout, Page, Box } from "@shopify/polaris";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import {
   EditIcon,
