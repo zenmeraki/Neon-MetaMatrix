@@ -20,6 +20,7 @@ function getSessionOrThrow(res) {
 export async function createScheduledExportController(req, res) {
   let session;
   
+  
   try {
     session = getSessionOrThrow(res);
     const data = await createScheduledExport({
