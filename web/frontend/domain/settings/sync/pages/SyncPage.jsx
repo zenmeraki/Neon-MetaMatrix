@@ -609,7 +609,7 @@ export default function DataSyncPage() {
       setShouldPoll(true);
 
       try {
-        const response = await fetchWithAuth(`${row.api}?force=true`, {
+       const response = await fetchWithAuth(row.api, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
         });

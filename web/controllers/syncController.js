@@ -330,7 +330,9 @@ export const syncProductData = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Product sync started",
+    message: shouldRunVariantBackfill
+  ? "Variant backfill started"
+  : "Product sync started",
       skipped: false,
       forced: force,
       bulkOperationId: result.bulkOperationId,
