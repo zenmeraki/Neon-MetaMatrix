@@ -1,0 +1,12 @@
+export const AUTOMATION_ACTION_TYPES = Object.freeze({
+  BULK_EDIT: "BULK_EDIT",
+  EXPORT: "EXPORT",
+  TAG: "TAG",
+  UNTAG: "UNTAG",
+  ALERT_ONLY: "ALERT_ONLY",
+});
+
+export const AUTOMATION_ACTION_STATUS = Object.freeze({
+  ENABLED: "ENABLED",
+  DISABLED: "DISABLED",
+});

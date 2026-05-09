@@ -1,0 +1,266 @@
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  Badge,
+  Banner,
+  BlockStack,
+  Card,
+  InlineStack,
+  Layout,
+  Page,
+  Text,
+} from "@shopify/polaris";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { useSelector } from "react-redux";
+import {
+  selectFrozenTarget,
+  selectFilters,
+  selectProductCount,
+  selectSearch,
+} from "../../../../store/slices/productSlice";
+import { allFields, exportPresets, presetFieldMap } from "../constants";
+
+import { useTranslation } from "react-i18next";
+import { useAuthenticatedFetch } from "../../../../hooks/useAuthenticatedFetch";
+
+import ExportSettingsCard from "../components/ExportSettingsCard";
+import FieldSelectionCard from "../components/FieldSelectionCard";
+import InfoCard from "../components/InfoCard";
+import ScheduledExportModal from "../components/ScheduledExportModal";
+
+export default function CsvExportPage() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const { t } = useTranslation();
+  const fetchWithAuth = useAuthenticatedFetch();
+  const count = useSelector(selectProductCount);
+  const filters = useSelector(selectFilters);
+  const search = useSelector(selectSearch);
+  const frozenTarget = useSelector(selectFrozenTarget);
+  const targetSnapshotId =
+    typeof searchParams.get("targetSnapshotId") === "string"
+      ? searchParams.get("targetSnapshotId")
+      : typeof location.state?.targetSnapshotId === "string"
+      ? location.state.targetSnapshotId
+      : typeof frozenTarget?.targetSnapshotId === "string"
+      ? frozenTarget.targetSnapshotId
+      : "";
+  const targetCount = Number(
+    location.state?.targetCount || frozenTarget?.count || 0
+  );
+  const displayCount = targetCount || count;
+
+  const [selectedFields, setSelectedFields] = useState([]);
+  const [preset, setPreset] = useState("custom");
+  const [fileName, setFileName] = useState("");
+  const [fileError, setFileError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [banner, setBanner] = useState(null);
+  const [showScheduledExportModal, setShowScheduledExportModal] =
+    useState(false);
+
+  const productFields = useMemo(
+    () => allFields.filter((f) => f.group === "product"),
+    []
+  );
+  const variantFields = useMemo(
+    () => allFields.filter((f) => f.group === "variant"),
+    []
+  );
+  const seoFields = useMemo(
+    () => allFields.filter((f) => f.group === "seo"),
+    []
+  );
+  const googleFields = useMemo(
+    () => allFields.filter((f) => f.group === "google"),
+    []
+  );
+
+  useEffect(() => {
+    const presetFields = presetFieldMap[preset] || [];
+    if (presetFields.length) {
+      setSelectedFields(presetFields);
+    }
+  }, [preset]);
+
+  const validateFileName = () => {
+    if (!fileName.trim()) {
+      setFileError("File name is required");
+      return false;
+    }
+
+    if (!/^[a-zA-Z0-9-_ ]+$/.test(fileName)) {
+      setFileError(
+        "Only letters, numbers, spaces, dash and underscore allowed"
+      );
+      return false;
+    }
+
+    setFileError("");
+    return true;
+  };
+
+  const effectiveFilters = useMemo(() => {
+    const baseFilters = filters.filter((f) => f.field !== "search");
+
+    if (!search?.trim()) {
+      return baseFilters;
+    }
+
+    return [
+      ...baseFilters,
+      {
+        field: "search",
+        operator: "contains",
+        value: search.trim(),
+      },
+    ];
+  }, [filters, search]);
+  const handleExport = async () => {
+    if (loading) return;
+    if (!validateFileName()) return;
+    if (selectedFields.length === 0) return;
+
+    setLoading(true);
+    setBanner(null);
+
+    const payload = {
+      fields: selectedFields,
+      preset,
+      fileName: fileName.endsWith(".csv") ? fileName : `${fileName}.csv`,
+      filterParams: targetSnapshotId ? [] : effectiveFilters,
+      targetSnapshotId: targetSnapshotId || undefined,
+    };
+
+    try {
+      const res = await fetchWithAuth("/api/products/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setBanner({
+          tone: "critical",
+          message: data.message || data.error || "Export failed",
+        });
+      } else {
+        setBanner({
+          tone: "success",
+          message:
+            "Export started successfully. You’ll receive the CSV once ready.",
+        });
+        navigate("/exportDetails/" + data.exportJobId);
+      }
+    } catch (err) {
+      setBanner({
+        tone: "critical",
+        message: "Something went wrong while starting export.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Page
+      title={t("exportPageTitle")}
+      subtitle={t("exportPageSubtitle")}
+      primaryAction={{
+        content: loading ? t("Exporting") : t("GenerateCSV"),
+        onAction: handleExport,
+        disabled: loading || selectedFields.length === 0 || !fileName.trim(),
+      }}
+      backAction={{
+        onAction: () => navigate("/products"),
+      }}
+      secondaryActions={[
+        {
+          content: t("ScheduledExport"),
+          onAction: () => setShowScheduledExportModal(true),
+          disabled: loading || selectedFields.length === 0 || !fileName.trim(),
+        },
+      ]}
+    >
+      <BlockStack gap="400">
+        {banner && (
+          <Banner tone={banner.tone} onDismiss={() => setBanner(null)}>
+            {banner.message}
+          </Banner>
+        )}
+
+        <Card>
+          <InlineStack align="space-between" blockAlign="center" wrap gap="400">
+            <BlockStack gap="100">
+              <Text as="h2" variant="headingMd">
+                {t("exportBuilderTitle")}
+              </Text>
+
+              <Text as="p" tone="subdued" variant="bodyMd">
+                {t("exportBuilderText")}
+              </Text>
+            </BlockStack>
+            <InlineStack gap="200">
+              <Badge tone="info">
+                {displayCount === 0
+                  ? t("Allfilteredproducts")
+                  : `${displayCount} ${t("matchingProducts")}`}
+              </Badge>
+              <Badge>
+                {selectedFields.length} {t("fieldsselected")}
+              </Badge>
+            </InlineStack>
+          </InlineStack>
+        </Card>
+
+        <Layout>
+          <Layout.Section>
+            <BlockStack gap="400">
+              <ExportSettingsCard
+                fileName={fileName}
+                setFileName={setFileName}
+                fileError={fileError}
+                validateFileName={validateFileName}
+                count={count}
+                loading={loading}
+                preset={preset}
+                setPreset={setPreset}
+                presetOptions={exportPresets}
+              />
+
+              <FieldSelectionCard
+                productFields={productFields}
+                variantFields={variantFields}
+                seoFields={seoFields}
+                googleFields={googleFields}
+                selectedFields={selectedFields}
+                setSelectedFields={setSelectedFields}
+                allFields={allFields}
+                loading={loading}
+              />
+            </BlockStack>
+          </Layout.Section>
+
+          <Layout.Section variant="oneThird">
+            <InfoCard />
+          </Layout.Section>
+        </Layout>
+      </BlockStack>
+
+      {showScheduledExportModal && (
+        <ScheduledExportModal
+          show
+          onHide={() => setShowScheduledExportModal(false)}
+          fileName={fileName.endsWith(".csv") ? fileName : `${fileName}.csv`}
+          selectedFields={selectedFields}
+          preset={preset}
+          filters={effectiveFilters}
+          targetSnapshotId={targetSnapshotId}
+          count={count}
+        />
+      )}
+    </Page>
+  );
+}
