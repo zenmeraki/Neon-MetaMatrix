@@ -1358,137 +1358,210 @@ export default class ProductBulkService {
     }
   }
 
-  async _preparingBulkOperation({ historyId }) {
-    await assertEditExecutionUsesFrozenTargets({
+async _preparingBulkOperation({ historyId }) {
+  await assertEditExecutionUsesFrozenTargets({
+    shop: this.session.shop,
+    historyId,
+    phase: "bulk_edit_prepare_batch",
+  });
+
+  const history = await prisma.editHistory.findFirst({
+    where: {
+      id: historyId,
       shop: this.session.shop,
-      historyId,
-      phase: "bulk_edit_prepare_batch",
+    },
+    select: {
+      shop: true,
+      batch: true,
+      rules: true,
+      summary: true,
+      targetMirrorBatchId: true,
+      targetSnapshotCount: true,
+      executionIdentity: true,
+    },
+  });
+
+  if (!history) {
+    throw new Error("Edit history not found");
+  }
+
+  const mirrorBatchId = assertRequiredMirrorBatchId(
+    history.targetMirrorBatchId
+  );
+
+  const intent = history?.summary?.bulkEditIntent || null;
+
+  const intentId =
+    (typeof history?.summary?.intentId === "string" &&
+      history.summary.intentId) ||
+    buildIntentId(intent);
+
+  const sourceTargetSnapshotId =
+    typeof history?.batch?.sourceTargetSnapshotId === "string"
+      ? history.batch.sourceTargetSnapshotId
+      : null;
+
+  const persistedMutationPlanHash =
+    typeof history?.summary?.mutationPlanHash === "string"
+      ? history.summary.mutationPlanHash
+      : typeof history?.batch?.mutationPlanHash === "string"
+      ? history.batch.mutationPlanHash
+      : null;
+
+  if (persistedMutationPlanHash) {
+    const recomputedMutationPlanHash = buildMutationPlanHash({
+      intentId,
+      targetSnapshotId: sourceTargetSnapshotId,
+      mirrorBatchId,
+      plannerFingerprint:
+        typeof history?.batch?.previewSnapshotFingerprint === "string"
+          ? history.batch.previewSnapshotFingerprint
+          : null,
+      plannerVersion: Number.isInteger(
+        history?.batch?.previewPlannerVersion
+      )
+        ? history.batch.previewPlannerVersion
+        : null,
     });
 
-    const history = await prisma.editHistory.findFirst({
-      where: {
-        id: historyId,
-        shop: this.session.shop,
-      },
-      select: {
-        shop: true,
-        batch: true,
-        rules: true,
-        summary: true,
-        targetMirrorBatchId: true,
-        targetSnapshotCount: true,
-        executionIdentity: true,
-      },
-    });
-
-    if (!history) {
-      throw new Error("Edit history not found");
-    }
-    const mirrorBatchId = assertRequiredMirrorBatchId(history.targetMirrorBatchId);
-
-    const intent = history?.summary?.bulkEditIntent || null;
-    if (!intent) {
-      const error = new Error("BULK_EDIT_INTENT_REQUIRED");
-      error.code = "BULK_EDIT_INTENT_REQUIRED";
+    if (recomputedMutationPlanHash !== persistedMutationPlanHash) {
+      const error = new Error("MUTATION_PLAN_HASH_MISMATCH");
+      error.code = "MUTATION_PLAN_HASH_MISMATCH";
       throw error;
     }
-    const rules = mapIntentToRules(intent).filter(Boolean);
-    if (!rules.length) {
-      throw new Error("Edit rules not found");
-    }
+  }
 
-    const limit = history.batch?.size || DEFAULT_BULK_EDIT_PRODUCT_BATCH_SIZE;
-    const cursorOrdinal = Number(history.batch?.lastOrdinal) || 0;
-    const { rows, lastProductId, lastOrdinal, hasMore } =
-      await getFrozenTargetProductIds({
-        ownerType: "EDIT_HISTORY",
-        ownerId: historyId,
-        shop: history.shop,
-        limit,
-        cursorOrdinal,
-      });
+  if (!intent) {
+    const error = new Error("BULK_EDIT_INTENT_REQUIRED");
+    error.code = "BULK_EDIT_INTENT_REQUIRED";
+    throw error;
+  }
 
-    if (!rows.length) {
-      return {
-        formattedProducts: [],
-        changes: [],
-        lastProductId: null,
-        hasMore: false,
-        batchId: crypto
-          .createHash("sha1")
-          .update(
-            `${history.executionIdentity || historyId}:${
-              cursorOrdinal || "start"
-            }:empty`
-          )
-          .digest("hex"),
-        batchTargetCount: 0,
-        batchVariantCount: 0,
-      };
-    }
+  const rules = mapIntentToRules(intent).filter(Boolean);
 
-    const fields = rules.map((rule) => rule.field).filter(Boolean);
-    const include = buildProductInclude(fields);
-    const safeInclude =
-      include?.variants
-        ? {
-            variants: {
-                where: {
-                  shop: history.shop,
-                  mirrorBatchId,
-                },
-              },
-            }
-        : undefined;
-    const orderedIds = rows.map((row) => row.productId);
+  if (!rules.length) {
+    throw new Error("Edit rules not found");
+  }
 
-    let products = await prisma.product.findMany({
-      where: {
-        shop: history.shop,
-        id: { in: orderedIds },
-        mirrorBatchId,
-      },
-      ...(safeInclude ? { include: safeInclude } : {}),
+  const limit =
+    history.batch?.size || DEFAULT_BULK_EDIT_PRODUCT_BATCH_SIZE;
+
+  const cursorOrdinal = Number(history.batch?.lastOrdinal) || 0;
+
+  const { rows, lastProductId, lastOrdinal, hasMore } =
+    await getFrozenTargetProductIds({
+      ownerType: "EDIT_HISTORY",
+      ownerId: historyId,
+      shop: history.shop,
+      limit,
+      cursorOrdinal,
     });
 
-    const productsById = new Map(
-      products.map((product) => [product.id, product])
-    );
-    const { selectedRows, variantCount, capped } = selectBatchRowsForMutation({
+  if (!rows.length) {
+    return {
+      formattedProducts: [],
+      changes: [],
+      lastProductId: null,
+      hasMore: false,
+      batchId: crypto
+        .createHash("sha1")
+        .update(
+          `${history.executionIdentity || historyId}:${
+            cursorOrdinal || "start"
+          }:empty`
+        )
+        .digest("hex"),
+      batchTargetCount: 0,
+      batchVariantCount: 0,
+    };
+  }
+
+  const fields = rules.map((rule) => rule.field).filter(Boolean);
+
+  const include = buildProductInclude(fields);
+
+  const safeInclude = include?.variants
+    ? {
+        variants: {
+          where: {
+            shop: history.shop,
+            mirrorBatchId,
+          },
+        },
+      }
+    : undefined;
+
+  const orderedIds = rows.map((row) => row.productId);
+
+  const products = await prisma.product.findMany({
+    where: {
+      shop: history.shop,
+      id: { in: orderedIds },
+      mirrorBatchId,
+    },
+    ...(safeInclude ? { include: safeInclude } : {}),
+  });
+
+  const productsById = new Map(
+    products.map((product) => [product.id, product])
+  );
+
+  const { selectedRows, variantCount, capped } =
+    selectBatchRowsForMutation({
       rows,
       productsById,
       fields,
     });
-    const selectedIds = selectedRows.map((row) => row.productId);
-    const missingIds = selectedIds.filter((id) => !productsById.has(id));
-    if (missingIds.length) {
-      const error = new Error("FROZEN_TARGET_PRODUCTS_MISSING_FROM_MIRROR");
-      error.code = "FROZEN_TARGET_PRODUCTS_MISSING_FROM_MIRROR";
-      error.details = {
-        missingCount: missingIds.length,
-        sample: missingIds.slice(0, 10),
-        mirrorBatchId,
-      };
-      throw error;
-    }
-    const selectedIdSet = new Set(selectedIds);
-    const selectedLastRow = selectedRows[selectedRows.length - 1];
-    const selectedHasMore = Boolean(hasMore || capped);
-    const batchId = crypto
-      .createHash("sha1")
-      .update(
-        `${history.executionIdentity || historyId}:${
-          cursorOrdinal || "start"
-        }:${selectedLastRow?.ordinal ?? lastOrdinal}:${selectedRows.length}`
-      )
-      .digest("hex");
-    const preparedProducts = selectedIds
-      .map((productId) => productsById.get(productId))
-      .filter(Boolean);
-    const { formattedProducts, changes } = shouldUsePreparationWorkers(
+
+  const selectedIds = selectedRows.map((row) => row.productId);
+
+  const missingIds = selectedIds.filter(
+    (id) => !productsById.has(id)
+  );
+
+  if (missingIds.length) {
+    const error = new Error(
+      "FROZEN_TARGET_PRODUCTS_MISSING_FROM_MIRROR"
+    );
+
+    error.code = "FROZEN_TARGET_PRODUCTS_MISSING_FROM_MIRROR";
+
+    error.details = {
+      missingCount: missingIds.length,
+      sample: missingIds.slice(0, 10),
+      mirrorBatchId,
+    };
+
+    throw error;
+  }
+
+  const selectedIdSet = new Set(selectedIds);
+
+  const selectedLastRow =
+    selectedRows[selectedRows.length - 1];
+
+  const selectedHasMore = Boolean(hasMore || capped);
+
+  const batchId = crypto
+    .createHash("sha1")
+    .update(
+      `${history.executionIdentity || historyId}:${
+        cursorOrdinal || "start"
+      }:${selectedLastRow?.ordinal ?? lastOrdinal}:${
+        selectedRows.length
+      }`
+    )
+    .digest("hex");
+
+  const preparedProducts = selectedIds
+    .map((productId) => productsById.get(productId))
+    .filter(Boolean);
+
+  const { formattedProducts, changes } =
+    shouldUsePreparationWorkers(
       preparedProducts.length,
       rules.length,
-      fields,
+      fields
     )
       ? await processBulkPreparationWithWorkers({
           products: preparedProducts,
@@ -1505,17 +1578,19 @@ export default class ProductBulkService {
           batchId,
         });
 
-    return {
-      formattedProducts,
-      changes,
-      lastProductId: selectedLastRow?.productId ?? lastProductId,
-      lastOrdinal: selectedLastRow?.ordinal ?? lastOrdinal,
-      hasMore: selectedHasMore,
-      batchId,
-      batchTargetCount: selectedIdSet.size,
-      batchVariantCount: variantCount,
-    };
-  }
+  return {
+    formattedProducts,
+    changes,
+    lastProductId:
+      selectedLastRow?.productId ?? lastProductId,
+    lastOrdinal:
+      selectedLastRow?.ordinal ?? lastOrdinal,
+    hasMore: selectedHasMore,
+    batchId,
+    batchTargetCount: selectedIdSet.size,
+    batchVariantCount: variantCount,
+  };
+}
 
   async trackEditProducts({
     field,
@@ -1691,30 +1766,5 @@ export default class ProductBulkService {
     };
   }
 }
-    const intentId =
-      (typeof history?.summary?.intentId === "string" && history.summary.intentId) ||
-      buildIntentId(intent);
-    const sourceTargetSnapshotId =
-      typeof history?.batch?.sourceTargetSnapshotId === "string"
-        ? history.batch.sourceTargetSnapshotId
-        : null;
-    const persistedMutationPlanHash =
-      typeof history?.summary?.mutationPlanHash === "string"
-        ? history.summary.mutationPlanHash
-        : typeof history?.batch?.mutationPlanHash === "string"
-        ? history.batch.mutationPlanHash
-        : null;
-    if (persistedMutationPlanHash) {
-      const recomputedMutationPlanHash = buildMutationPlanHash({
-        intentId,
-        targetSnapshotId: sourceTargetSnapshotId,
-        mirrorBatchId,
-        plannerFingerprint: null,
-        plannerVersion: null,
-      });
-      if (recomputedMutationPlanHash !== persistedMutationPlanHash) {
-        const error = new Error("MUTATION_PLAN_HASH_MISMATCH");
-        error.code = "MUTATION_PLAN_HASH_MISMATCH";
-        throw error;
-      }
-    }
+
+    

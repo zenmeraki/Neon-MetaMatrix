@@ -54,13 +54,14 @@ const INLINE_EDIT_TYPES = {
   vendor: "Set text to value",
   inventory: "Set to fixed value",
 };
+
 const QUERY_COST_THRESHOLDS = {
   mediumRows: 250000,
   highRows: 1000000,
 };
+
 const STATUS_FACET_VALUES = ["ACTIVE", "DRAFT", "ARCHIVED"];
 
-// Only show banner for these states — suppress "ready" and "checking" to reduce noise
 const BANNER_VISIBLE_STATES = new Set(["syncing", "stale", "failed", "unknown"]);
 const SEARCH_DEBOUNCE_MS = 350;
 
@@ -98,6 +99,7 @@ function buildSegmentName({ filters = [], search = "", t }) {
       ["=", "equalTo", "equals"].includes(String(filter.operator)) &&
       String(filter.value) === "0"
   );
+
   const hasActive = filters.some(
     (filter) =>
       filter.field === "status" &&
@@ -198,6 +200,7 @@ function getSyncBannerView({ state, syncStatus, t }) {
             "Catalog sync is running. Bulk targets will update when syncing completes.",
         }),
       };
+
     case "stale":
       return {
         tone: "warning",
@@ -211,6 +214,7 @@ function getSyncBannerView({ state, syncStatus, t }) {
                 "Products changed since last sync. Refresh catalog before large edits or exports.",
             }),
       };
+
     case "failed":
       return {
         tone: "critical",
@@ -219,6 +223,7 @@ function getSyncBannerView({ state, syncStatus, t }) {
             "The last catalog sync failed. Retry before running bulk actions.",
         }),
       };
+
     default:
       return {
         tone: "warning",
@@ -275,12 +280,21 @@ const SyncBannerSection = memo(function SyncBannerSection({
           <Text as="p">{syncBannerView.message}</Text>
           <InlineStack gap="200">
             {syncState === "stale" ? (
-              <Button onClick={runSync} loading={syncActionLoading} disabled={syncActionLoading}>
+              <Button
+                onClick={runSync}
+                loading={syncActionLoading}
+                disabled={syncActionLoading}
+              >
                 {t("refreshCatalog", { defaultValue: "Refresh catalog" })}
               </Button>
             ) : null}
+
             {syncState === "failed" ? (
-              <Button onClick={runSync} loading={syncActionLoading} disabled={syncActionLoading}>
+              <Button
+                onClick={runSync}
+                loading={syncActionLoading}
+                disabled={syncActionLoading}
+              >
                 {t("retry", { defaultValue: "Retry" })}
               </Button>
             ) : null}
@@ -324,8 +338,14 @@ export default function ProductsPage() {
   const search = useSelector(selectSearch);
   const { i18n, t } = useTranslation();
 
-  const { loading, error, hasFetched, lastFetchedAt, streamingState, fetchProducts } =
-    useProducts();
+  const {
+    loading,
+    error,
+    hasFetched,
+    lastFetchedAt,
+    streamingState,
+    fetchProducts,
+  } = useProducts();
 
   const [showBulkEditConfirm, setShowBulkEditConfirm] = useState(false);
   const [lastAction, setLastAction] = useState(null);
@@ -340,6 +360,7 @@ export default function ProductsPage() {
   const searchDebounceTimeoutRef = useRef(null);
   const clearSelectionRef = useRef(() => {});
   const requestAbortControllersRef = useRef(new Map());
+
   const dismissSelectionCommandNotice = useCallback(
     () => setSelectionCommandNotice(""),
     []
@@ -367,6 +388,7 @@ export default function ProductsPage() {
         limit: "1",
         lang: i18n.language || "en",
       });
+
       const response = await runAbortableRequest("last_action", (signal) =>
         fetchWithAuth(`/api/history/get-shop-edithistory?${params.toString()}`, {
           signal,
@@ -374,11 +396,13 @@ export default function ProductsPage() {
           headers: { Accept: "application/json" },
         })
       );
+
       const result = await response.json();
 
       if (response.ok && Array.isArray(result?.data)) {
         const latest = result.data[0] || null;
         setLastAction(latest);
+
         if (latest?.canUndo === true || latest?.canUndo === false) {
           return;
         }
@@ -406,7 +430,11 @@ export default function ProductsPage() {
     if (hasActiveSegmentCriteria || !products.length || totalCount <= 0) return;
 
     setStatusFacetBaseline(
-      estimateStatusFacets({ products, total: totalCount, language: i18n.language })
+      estimateStatusFacets({
+        products,
+        total: totalCount,
+        language: i18n.language,
+      })
     );
   }, [hasActiveSegmentCriteria, i18n.language, products, totalCount]);
 
@@ -456,13 +484,19 @@ export default function ProductsPage() {
 
     const interval = setInterval(async () => {
       try {
-        const response = await fetchWithAuth(`/api/history/live-progress/${lastAction.id}`, {
-          method: "GET",
-          headers: { Accept: "application/json" },
-        });
+        const response = await fetchWithAuth(
+          `/api/history/live-progress/${lastAction.id}`,
+          {
+            method: "GET",
+            headers: { Accept: "application/json" },
+          }
+        );
+
         if (!response.ok) return;
+
         const payload = await response.json();
         const progress = payload?.data || null;
+
         if (!progress) return;
 
         setLastAction((current) =>
@@ -484,7 +518,7 @@ export default function ProductsPage() {
                   ...(progress.telemetry || {}),
                 },
               }
-            : current,
+            : current
         );
       } catch {
         // silent polling failure
@@ -521,20 +555,20 @@ export default function ProductsPage() {
       return;
     }
 
-    setSegmentName(
-      buildSegmentName({ filters: effectiveFilters, search, t })
-    );
+    setSegmentName(buildSegmentName({ filters: effectiveFilters, search, t }));
   }, [effectiveFilters, hasActiveSegmentCriteria, search, setSegmentName, t]);
 
   const onFilterChange = useCallback(
     (field, nextFilter) => {
       const updated = (() => {
         const index = filterState.findIndex((f) => f.field === field);
+
         if (index !== -1) {
           const copy = [...filterState];
           copy[index] = { field, ...nextFilter };
           return copy;
         }
+
         return [...filterState, { field, ...nextFilter }];
       })();
 
@@ -561,7 +595,7 @@ export default function ProductsPage() {
         setSelectedView(0);
       }, SEARCH_DEBOUNCE_MS);
     },
-    [dispatch]
+    [dispatch, setSelectedView]
   );
 
   const handleSearchClear = useCallback(() => {
@@ -569,18 +603,21 @@ export default function ProductsPage() {
       clearTimeout(searchDebounceTimeoutRef.current);
       searchDebounceTimeoutRef.current = null;
     }
+
     dispatch(setSearch(""));
     setSelectedView(0);
-  }, [dispatch]);
+  }, [dispatch, setSelectedView]);
 
   useEffect(
     () => () => {
       if (searchDebounceTimeoutRef.current) {
         clearTimeout(searchDebounceTimeoutRef.current);
       }
+
       requestAbortControllersRef.current.forEach((controller) => {
         controller.abort();
       });
+
       requestAbortControllersRef.current.clear();
     },
     []
@@ -619,7 +656,29 @@ export default function ProductsPage() {
     search: search?.trim() || "",
     sort: null,
   });
+
   clearSelectionRef.current = selection.clearSelection;
+
+  const {
+    targetAction,
+    targetActionError,
+    targetPreview,
+    targetPreviewLoading,
+    freezeTarget,
+    navigateWithFrozenTarget,
+    dismissTargetActionError,
+    setTargetAction,
+    setTargetActionError,
+  } = useProductTargetFreeze({
+    fetchWithAuth,
+    runAbortableRequest,
+    selection,
+    querySignature,
+    effectiveFilters,
+    search,
+    dispatch,
+    navigate,
+  });
 
   const handleRetryProducts = useCallback(() => {
     fetchProducts(page, effectiveFilters, PRODUCT_LIST_SORT);
@@ -635,6 +694,7 @@ export default function ProductsPage() {
 
   const handlePreviousPage = useCallback(() => {
     if (page <= 1) return;
+
     fetchProducts(page - 1, effectiveFilters, PRODUCT_LIST_SORT, {
       direction: "prev",
       stream: false,
@@ -663,6 +723,7 @@ export default function ProductsPage() {
     Boolean(syncStatus?.isProductInitialySyning);
 
   const showSyncBanner = BANNER_VISIBLE_STATES.has(syncState);
+
   const syncBannerView = showSyncBanner
     ? getSyncBannerView({ state: syncState, syncStatus, t })
     : null;
@@ -679,6 +740,7 @@ export default function ProductsPage() {
     const hasBroadTextFilter = effectiveFilters.some((filter) =>
       ["contains", "does not contain"].includes(String(filter.operator))
     );
+
     const level =
       estimatedScanRows >= QUERY_COST_THRESHOLDS.highRows || hasBroadTextFilter
         ? "HIGH"
@@ -701,13 +763,19 @@ export default function ProductsPage() {
       total: targetPreview?.total ?? totalCount,
       language: i18n.language,
     });
+
     const baseline =
       statusFacetBaseline ||
-      estimateStatusFacets({ products, total: totalCount, language: i18n.language });
+      estimateStatusFacets({
+        products,
+        total: totalCount,
+        language: i18n.language,
+      });
 
     return currentFacets.map((facet) => {
       const before =
         baseline.find((item) => item.status === facet.status)?.label || "0";
+
       return {
         key: facet.status,
         label: t(`statusChoices.${facet.status.toLowerCase()}`, {
@@ -725,27 +793,6 @@ export default function ProductsPage() {
     !hasFetched ||
     (!products.length && (syncStatusLoading || isSyncInProgress));
 
-  const {
-    targetAction,
-    targetActionError,
-    targetPreview,
-    targetPreviewLoading,
-    freezeTarget,
-    navigateWithFrozenTarget,
-    dismissTargetActionError,
-    setTargetAction,
-    setTargetActionError,
-  } = useProductTargetFreeze({
-    fetchWithAuth,
-    runAbortableRequest,
-    selection,
-    querySignature,
-    effectiveFilters,
-    search,
-    dispatch,
-    navigate,
-  });
-
   const handleSuggestedDraftOutOfStock = useCallback(async () => {
     if (targetAction || shouldShowLoadingState || totalCount <= 0) return;
 
@@ -753,7 +800,11 @@ export default function ProductsPage() {
     setTargetActionError("");
 
     try {
-      const frozenTarget = await freezeTarget(undefined, "suggested_draft_out_of_stock");
+      const frozenTarget = await freezeTarget(
+        undefined,
+        "suggested_draft_out_of_stock"
+      );
+
       navigateWithFrozenTarget("/edit", frozenTarget, "edit", {
         recipeKey: "draftOutOfStock",
       });
@@ -764,7 +815,15 @@ export default function ProductsPage() {
     } finally {
       setTargetAction("");
     }
-  }, [freezeTarget, navigateWithFrozenTarget, shouldShowLoadingState, targetAction, totalCount]);
+  }, [
+    freezeTarget,
+    navigateWithFrozenTarget,
+    setTargetAction,
+    setTargetActionError,
+    shouldShowLoadingState,
+    targetAction,
+    totalCount,
+  ]);
 
   const handleBulkEdit = useCallback(async () => {
     if (targetAction || shouldShowLoadingState || totalCount <= 0) return;
@@ -782,7 +841,15 @@ export default function ProductsPage() {
     } finally {
       setTargetAction("");
     }
-  }, [freezeTarget, navigateWithFrozenTarget, shouldShowLoadingState, targetAction, totalCount]);
+  }, [
+    freezeTarget,
+    navigateWithFrozenTarget,
+    setTargetAction,
+    setTargetActionError,
+    shouldShowLoadingState,
+    targetAction,
+    totalCount,
+  ]);
 
   const handleUndoLastAction = useCallback(async () => {
     if (!lastAction?.id || !canUndoLastAction(lastAction)) return;
@@ -833,7 +900,7 @@ export default function ProductsPage() {
 
     setTargetActionError("");
     setShowBulkEditConfirm(true);
-  }, [shouldShowLoadingState, targetAction, totalCount]);
+  }, [setTargetActionError, shouldShowLoadingState, targetAction, totalCount]);
 
   const closeBulkEditConfirm = useCallback(() => {
     if (targetAction) return;
@@ -861,7 +928,15 @@ export default function ProductsPage() {
     } finally {
       setTargetAction("");
     }
-  }, [freezeTarget, navigateWithFrozenTarget, shouldShowLoadingState, targetAction, totalCount]);
+  }, [
+    freezeTarget,
+    navigateWithFrozenTarget,
+    setTargetAction,
+    setTargetActionError,
+    shouldShowLoadingState,
+    targetAction,
+    totalCount,
+  ]);
 
   const freezeSelectionCommand = useCallback(
     async (actionKey) => {
@@ -872,7 +947,11 @@ export default function ProductsPage() {
       setSelectionCommandNotice("");
 
       try {
-        const frozenTarget = await freezeTarget(undefined, `selection_${actionKey}`);
+        const frozenTarget = await freezeTarget(
+          undefined,
+          `selection_${actionKey}`
+        );
+
         dispatch(
           setFrozenTarget({
             targetSnapshotId: frozenTarget.targetSnapshotId,
@@ -898,7 +977,17 @@ export default function ProductsPage() {
         setTargetAction("");
       }
     },
-    [dispatch, freezeTarget, i18n.language, shouldShowLoadingState, t, targetAction, totalCount]
+    [
+      dispatch,
+      freezeTarget,
+      i18n.language,
+      setTargetAction,
+      setTargetActionError,
+      shouldShowLoadingState,
+      t,
+      targetAction,
+      totalCount,
+    ]
   );
 
   const handleViewSelection = useCallback(() => {
@@ -942,10 +1031,14 @@ export default function ProductsPage() {
       setTargetActionError("");
 
       try {
-        const frozenTarget = await freezeTarget({
-          mode: "ids",
-          ids: [String(product.id)],
-        }, "edit_single_product");
+        const frozenTarget = await freezeTarget(
+          {
+            mode: "ids",
+            ids: [String(product.id)],
+          },
+          "edit_single_product"
+        );
+
         navigateWithFrozenTarget("/edit", frozenTarget, "edit");
       } catch (error) {
         setTargetActionError(
@@ -955,7 +1048,14 @@ export default function ProductsPage() {
         setTargetAction("");
       }
     },
-    [freezeTarget, navigateWithFrozenTarget, shouldShowLoadingState, targetAction]
+    [
+      freezeTarget,
+      navigateWithFrozenTarget,
+      setTargetAction,
+      setTargetActionError,
+      shouldShowLoadingState,
+      targetAction,
+    ]
   );
 
   const handleInlineSave = useCallback(
@@ -986,22 +1086,31 @@ export default function ProductsPage() {
       }
 
       const productId = String(product.id);
+
       setSavingInlineCell(`${productId}:${field}`);
       setTargetActionError("");
       setSelectionCommandNotice("");
 
       try {
-        const frozenTarget = await freezeTarget({ mode: "ids", ids: [productId] }, "inline_edit_single_product");
+        const frozenTarget = await freezeTarget(
+          { mode: "ids", ids: [productId] },
+          "inline_edit_single_product"
+        );
 
         const response = await runAbortableRequest(
           `inline_update_${productId}`,
           (signal) =>
             fetchWithAuth(
-              `/api/products/update?lang=${encodeURIComponent(i18n.language || "en")}`,
+              `/api/products/update?lang=${encodeURIComponent(
+                i18n.language || "en"
+              )}`,
               {
                 signal,
                 method: "POST",
-                headers: { "Content-Type": "application/json", Accept: "application/json" },
+                headers: {
+                  "Content-Type": "application/json",
+                  Accept: "application/json",
+                },
                 body: JSON.stringify({
                   source: "INLINE",
                   editedField: field,
@@ -1014,6 +1123,7 @@ export default function ProductsPage() {
               }
             )
         );
+
         const result = await response.json();
 
         if (!response.ok) {
@@ -1022,24 +1132,42 @@ export default function ProductsPage() {
 
         setSelectionCommandNotice(
           t("inlineEditQueued", {
-            defaultValue: "Inline edit queued. The product row will update after processing.",
+            defaultValue:
+              "Inline edit queued. The product row will update after processing.",
           })
         );
 
         fetchProducts(page, effectiveFilters, PRODUCT_LIST_SORT);
         fetchLastAction();
+
         return true;
       } catch (error) {
         setTargetActionError(
           error.message ||
-            t("inlineEditFailed", { defaultValue: "Could not save inline edit." })
+            t("inlineEditFailed", {
+              defaultValue: "Could not save inline edit.",
+            })
         );
+
         return false;
       } finally {
         setSavingInlineCell("");
       }
     },
-    [effectiveFilters, fetchLastAction, fetchProducts, fetchWithAuth, freezeTarget, i18n.language, page, runAbortableRequest, savingInlineCell, t]
+    [
+      effectiveFilters,
+      fetchLastAction,
+      fetchProducts,
+      fetchWithAuth,
+      freezeTarget,
+      i18n.language,
+      inventoryLocationId,
+      page,
+      runAbortableRequest,
+      savingInlineCell,
+      setTargetActionError,
+      t,
+    ]
   );
 
   const freezeProductCommand = useCallback(
@@ -1051,10 +1179,13 @@ export default function ProductsPage() {
       setSelectionCommandNotice("");
 
       try {
-        const frozenTarget = await freezeTarget({
-          mode: "ids",
-          ids: [String(product.id)],
-        }, `product_action_${actionKey}`);
+        const frozenTarget = await freezeTarget(
+          {
+            mode: "ids",
+            ids: [String(product.id)],
+          },
+          `product_action_${actionKey}`
+        );
 
         dispatch(
           setFrozenTarget({
@@ -1078,7 +1209,15 @@ export default function ProductsPage() {
         setTargetAction("");
       }
     },
-    [dispatch, freezeTarget, shouldShowLoadingState, t, targetAction]
+    [
+      dispatch,
+      freezeTarget,
+      setTargetAction,
+      setTargetActionError,
+      shouldShowLoadingState,
+      t,
+      targetAction,
+    ]
   );
 
   const handleViewProduct = useCallback((product) => {
@@ -1091,7 +1230,10 @@ export default function ProductsPage() {
 
   const getInlineSavingField = useCallback(
     (product) => {
-      if (!product?.id || !savingInlineCell.startsWith(`${product.id}:`)) return "";
+      if (!product?.id || !savingInlineCell.startsWith(`${product.id}:`)) {
+        return "";
+      }
+
       return savingInlineCell.split(":")[1] || "";
     },
     [savingInlineCell]
@@ -1121,8 +1263,10 @@ export default function ProductsPage() {
     selection.selectedCount > 0
       ? selection.selectedCount
       : targetPreview?.total ?? totalCount;
+
   const bulkEditTargetLabel = formatMetric(bulkEditTargetCount);
   const hasSelection = selection.selectedCount > 0;
+
   const targetActionDisabled =
     Boolean(targetAction) || shouldShowLoadingState || totalCount <= 0;
 
@@ -1178,7 +1322,6 @@ export default function ProductsPage() {
           t={t}
         />
 
-        {/* Sync just completed — dismissible success */}
         <ProductNotificationsSection
           syncCompleted={syncCompleted}
           targetActionError={targetActionError}
@@ -1193,7 +1336,6 @@ export default function ProductsPage() {
 
         <ProductTrustStateBanner t={t} trustMetadata={trustMetadata} />
 
-        {/* Undo bar for last action */}
         {lastAction ? (
           <Layout.Section>
             <ProductsUndoBar
@@ -1226,7 +1368,6 @@ export default function ProductsPage() {
           streamingState={streamingState}
         />
 
-        {/* Out-of-stock smart suggestion */}
         {hasOutOfStockActiveFilter ? (
           <Layout.Section>
             <Banner
@@ -1243,6 +1384,7 @@ export default function ProductsPage() {
                         "inventory = 0 often means these products should stop selling.",
                     })}
                   </Text>
+
                   <Text as="p" tone="subdued" variant="bodySm">
                     {t("smartDefaultsInventorySuggestions", {
                       defaultValue:
@@ -1250,14 +1392,18 @@ export default function ProductsPage() {
                     })}
                   </Text>
                 </BlockStack>
+
                 <InlineStack gap="200">
                   <Button
                     onClick={handleSuggestedDraftOutOfStock}
                     loading={targetAction === "edit"}
                     disabled={targetActionDisabled}
                   >
-                    {t("smartDefaultSetDraft", { defaultValue: "Set status to Draft" })}
+                    {t("smartDefaultSetDraft", {
+                      defaultValue: "Set status to Draft",
+                    })}
                   </Button>
+
                   <Button disabled>
                     {t("smartDefaultHideOnlineStore", {
                       defaultValue: "Hide from online store",
@@ -1318,7 +1464,6 @@ export default function ProductsPage() {
           handlePreviousPage={handlePreviousPage}
         />
 
-        {/* Sticky bulk action bar */}
         {hasSelection ? (
           <Layout.Section>
             <StickyBulkActionBar
@@ -1346,8 +1491,6 @@ export default function ProductsPage() {
         bulkEditTargetCount={bulkEditTargetCount}
         bulkEditTargetLabel={bulkEditTargetLabel}
       />
-
-     
     </Page>
   );
 }

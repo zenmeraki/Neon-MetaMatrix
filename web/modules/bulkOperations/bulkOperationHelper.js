@@ -33,7 +33,7 @@ export async function getCurrentBulkOperationStatus(
 
   const response = await adminGraphqlWithRetry({
     session,
-    shop: session?.shop,
+    shop: session.shop,
     operationName: "currentBulkOperation",
     data: {
       query,
@@ -49,6 +49,53 @@ export async function getCurrentBulkOperationStatus(
     createdAt: null,
     completedAt: null,
   };
+}
+
+export async function cancelBulkOperation(session, bulkOperationId = null) {
+  assertSession(session);
+
+  const mutation = `
+    mutation BulkOperationCancel($id: ID) {
+      bulkOperationCancel(id: $id) {
+        bulkOperation {
+          id
+          type
+          status
+          errorCode
+          createdAt
+          completedAt
+        }
+        userErrors {
+          field
+          message
+        }
+      }
+    }
+  `;
+
+  const response = await adminGraphqlWithRetry({
+    session,
+    shop: session.shop,
+    operationName: "bulkOperationCancel",
+    data: {
+      query: mutation,
+      variables: {
+        id: bulkOperationId || null,
+      },
+    },
+  });
+
+  const payload = response?.body?.data?.bulkOperationCancel;
+  const userErrors = payload?.userErrors || [];
+
+  if (userErrors.length) {
+    throw codedError(
+      "BULK_OPERATION_CANCEL_FAILED",
+      userErrors.map((error) => error.message).join("; "),
+    );
+  }
+
+  return payload?.bulkOperation || null;
 }
 
 export async function getBulkEditStatus(bulkOperationId, session) {
@@ -80,7 +127,7 @@ export async function getBulkEditStatus(bulkOperationId, session) {
 
   const response = await adminGraphqlWithRetry({
     session,
-    shop: session?.shop,
+    shop: session.shop,
     operationName: "bulkOperationStatus",
     data: {
       query,
@@ -89,6 +136,7 @@ export async function getBulkEditStatus(bulkOperationId, session) {
   });
 
   const node = response?.body?.data?.node || null;
+
   if (!node) {
     throw codedError("BULK_OPERATION_NOT_FOUND");
   }

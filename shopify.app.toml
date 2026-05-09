@@ -1,48 +1,23 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-client_id = "6c1a39944a4ab6bdd6e4428ccceb028b"
+client_id = "6f9d8710bcea15a9a7814c24bb5404be"
 name = "new"
-application_url = "https://protect-begins-midi-mem.trycloudflare.com"
+application_url = "https://example.com"
 embedded = true
-handle = "new-270"
 
 [webhooks]
-api_version = "2025-04"
+api_version = "2026-01"
 
   [[webhooks.subscriptions]]
-  topics = [ "bulk_operations/finish", "products/create" ]
-  uri = "https://a50e-2409-4073-307-d512-1554-bf40-8d5f-a82.ngrok-free.app/api/webhooks"
-
-  [[webhooks.subscriptions]]
-  uri = "https://contributing-cole-senate-dried.trycloudflare.com/gdpr/customer_data_erasure"
-  compliance_topics = [ "customers/redact" ]
-
-  [[webhooks.subscriptions]]
-  uri = "https://contributing-cole-senate-dried.trycloudflare.com/gdpr/customer_data_request"
-  compliance_topics = [ "customers/data_request" ]
-
-  [[webhooks.subscriptions]]
-  uri = "https://contributing-cole-senate-dried.trycloudflare.com/gdpr/shop_data_erasure"
-  compliance_topics = [ "shop/redact" ]
+  topics = [ "bulk_operations/finish" ]
+  uri = "/webhooks/bulk-operations-finish"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "read_inventory,read_locations,read_products,write_inventory,write_products"
+scopes = "read_inventory,read_products,write_products"
 
 [auth]
-redirect_urls = [
-  "https://protect-begins-midi-mem.trycloudflare.com/auth/callback",
-  "https://protect-begins-midi-mem.trycloudflare.com/auth/shopify/callback",
-  "https://protect-begins-midi-mem.trycloudflare.com/api/auth/callback"
-]
-
-[app_proxy]
-url = "https://impression-receive-wallace-surprised.trycloudflare.com/storefront/subscription"
-subpath = "proxy"
-prefix = "apps"
-
-[pos]
-embedded = false
+redirect_urls = [ "https://example.com/api/auth" ]
 
 [build]
 automatically_update_urls_on_dev = true
