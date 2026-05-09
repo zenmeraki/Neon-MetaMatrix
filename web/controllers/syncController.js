@@ -1,6 +1,7 @@
 import { productFilterService } from "../services/productService/productFilterService.js";
 import crypto from "crypto";
 import {
+  cancelBulkOperation,
   getBulkEditStatus,
   getCurrentBulkOperationStatus,
 } from "../modules/bulkOperations/bulkOperationHelper.js";
@@ -19,6 +20,10 @@ const FORCE_BLOCKED_STAGES = new Set([
   "ACTIVATING",
 ]);
 const READY_MIRROR_STATES = new Set(["HEALTHY", "READY"]);
+const STALE_PRODUCT_SYNC_MS = Math.max(
+  Number(process.env.PRODUCT_SYNC_STALE_RUNNING_MS || 30 * 60 * 1000),
+  2 * 60 * 1000,
+);
 
 function parseForceFlag(req) {
   return String(req.body?.force || "")
@@ -89,6 +94,47 @@ async function releaseSyncStartLock(shop, syncLeaseOwner, errorMessage = null) {
   }).catch(() => {});
 }
 
+function isStaleProductSync(syncHistory) {
+  if (!syncHistory?.updatedAt) return false;
+
+  const updatedAtMs = new Date(syncHistory.updatedAt).getTime();
+  if (!Number.isFinite(updatedAtMs)) return false;
+
+  return Date.now() - updatedAtMs > STALE_PRODUCT_SYNC_MS;
+}
+
+async function releaseStaleProductSync(shop, activeLocalSync, errorMessage) {
+  if (!shop || !activeLocalSync?.id) return;
+
+  await prisma.$transaction([
+    prisma.syncHistory.updateMany({
+      where: {
+        id: activeLocalSync.id,
+        shop,
+        status: "processing",
+      },
+      data: {
+        status: "failed",
+        stage: "STALE_SYNC_RELEASED",
+        errorMessage,
+      },
+    }),
+    prisma.store.updateMany({
+      where: { shopUrl: shop },
+      data: {
+        isProductSyncing: false,
+        isProductInitialySyning: false,
+        syncProgressStage: "IDLE",
+        syncLeaseOwner: null,
+        syncLeaseExpiresAt: null,
+        lastSyncErrorSummary: errorMessage,
+      },
+    }),
+  ]);
+
+  await clearKeyCaches(`${shop}:sync_`).catch(() => {});
+}
+
 export const syncProductData = async (req, res) => {
   const session = res.locals?.shopify?.session;
   const force = parseForceFlag(req);
@@ -155,13 +201,30 @@ export const syncProductData = async (req, res) => {
         select: {
           id: true,
           bulkOperationId: true,
+          syncBatchId: true,
           stage: true,
           status: true,
+          updatedAt: true,
         },
       }),
     ]);
 
-    if (activeLocalSync && !force) {
+    const staleActiveLocalSync = activeLocalSync && isStaleProductSync(activeLocalSync);
+    if (staleActiveLocalSync) {
+      const staleMessage = `Product sync was stale for more than ${Math.round(
+        STALE_PRODUCT_SYNC_MS / 60000,
+      )} minutes; releasing local sync lock.`;
+      console.warn("[api:sync_stale_released]", {
+        shop: session.shop,
+        syncHistoryId: activeLocalSync.id,
+        bulkOperationId: activeLocalSync.bulkOperationId,
+        stage: activeLocalSync.stage || null,
+        updatedAt: activeLocalSync.updatedAt,
+      });
+      await releaseStaleProductSync(session.shop, activeLocalSync, staleMessage);
+    }
+
+    if (activeLocalSync && !staleActiveLocalSync && !force) {
       return res.status(409).json({
         ...conflictResponse("SYNC_ALREADY_ACTIVE", "Sync already active"),
         syncHistoryId: activeLocalSync.id,
@@ -179,7 +242,36 @@ export const syncProductData = async (req, res) => {
     }
 
     const currentBulkOperation = await getCurrentBulkOperationStatus(session, "QUERY");
-    if (currentBulkOperation?.status === "RUNNING" && !force) {
+    const staleBulkMatchesLocalSync =
+      staleActiveLocalSync &&
+      activeLocalSync?.bulkOperationId &&
+      currentBulkOperation?.id === activeLocalSync.bulkOperationId;
+
+    if (currentBulkOperation?.status === "RUNNING" && staleBulkMatchesLocalSync) {
+      console.warn("[api:sync_stale_bulk_cancel]", {
+        shop: session.shop,
+        bulkOperationId: currentBulkOperation.id,
+      });
+      try {
+        await cancelBulkOperation(session, currentBulkOperation.id);
+        await clearKeyCaches(`${session.shop}:sync_bulk_status:${currentBulkOperation.id}`).catch(() => {});
+      } catch (cancelError) {
+        await logApiError({
+          shop: session.shop,
+          err: cancelError,
+          req,
+          source: "syncController.syncProductData.cancelStaleBulkOperation",
+        });
+
+        return res.status(409).json({
+          ...conflictResponse(
+            "STALE_SHOPIFY_BULK_CANCEL_FAILED",
+            "Stale Shopify bulk operation could not be cancelled yet",
+          ),
+          bulkOperationId: currentBulkOperation.id,
+        });
+      }
+    } else if (currentBulkOperation?.status === "RUNNING" && !force) {
       console.log(`[api:sync_blocked] shop=${session.shop} reason=bulk_op_running`);
       return res.status(409).json({
         ...conflictResponse(
@@ -215,9 +307,17 @@ export const syncProductData = async (req, res) => {
       });
     }
 
-    const [productCount, latestCompletedSync] = await Promise.all([
+    const [productCount, variantCount, latestCompletedSync] = await Promise.all([
       storeSnapshot?.activeMirrorBatchId
         ? prisma.product.count({
+            where: {
+              shop: session.shop,
+              mirrorBatchId: storeSnapshot.activeMirrorBatchId,
+            },
+          })
+        : Promise.resolve(0),
+      storeSnapshot?.activeMirrorBatchId
+        ? prisma.variant.count({
             where: {
               shop: session.shop,
               mirrorBatchId: storeSnapshot.activeMirrorBatchId,
@@ -249,6 +349,7 @@ export const syncProductData = async (req, res) => {
       storeSnapshot.shopifyBulkJobCompleted === true &&
       !!storeSnapshot.activeMirrorBatchId &&
       productCount > 0 &&
+      variantCount > 0 &&
       expectedCount > 0 &&
       productCount >= Math.floor(expectedCount * 0.995) &&
       READY_MIRROR_STATES.has(String(storeSnapshot.mirrorHealthState || ""));
@@ -260,6 +361,7 @@ export const syncProductData = async (req, res) => {
         forceAllowed: true,
         data: {
           productCount,
+          variantCount,
           storeTotalProducts: storeSnapshot.storeTotalProducts,
           lastProductSyncAt: storeSnapshot.lastProductSyncAt,
           lastCompletedSyncAt: latestCompletedSync?.updatedAt || null,
@@ -309,10 +411,21 @@ export const syncProductData = async (req, res) => {
 
     const isInitialSync = !storeSnapshot?.activeMirrorBatchId && !latestCompletedSync;
 
-    const result = await productFilterService.startBulkOperationToFetchProducts({
-      session,
-      isInitialSync,
-    });
+    const shouldRunVariantBackfill =
+      !isInitialSync &&
+      productCount > 0 &&
+      variantCount <= 0 &&
+      storeSnapshot?.activeMirrorBatchId;
+
+    const result = shouldRunVariantBackfill
+      ? await productFilterService.startBulkOperationToFetchProductVariants({
+          session,
+          syncBatchId: storeSnapshot.activeMirrorBatchId,
+        })
+      : await productFilterService.startBulkOperationToFetchProducts({
+          session,
+          isInitialSync,
+        });
     console.log(`[api:sync_triggered] shop=${session.shop} bulkOperationId=${result.bulkOperationId} syncHistoryId=${result.syncHistoryId}`);
 
     if (command?.enabled) {
@@ -330,9 +443,7 @@ export const syncProductData = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-    message: shouldRunVariantBackfill
-  ? "Variant backfill started"
-  : "Product sync started",
+      message: "Product sync started",
       skipped: false,
       forced: force,
       bulkOperationId: result.bulkOperationId,

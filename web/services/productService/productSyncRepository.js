@@ -59,6 +59,52 @@ export async function queueProductSyncStart({
   return syncHistory;
 }
 
+export async function queueProductVariantSyncStart({
+  shop,
+  bulkOperationId,
+  syncBatchId,
+}) {
+  if (!syncBatchId) {
+    throw new Error("syncBatchId is required for product variant sync");
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const store = await tx.store.findUnique({
+      where: { shopUrl: shop },
+      select: { shopUrl: true },
+    });
+
+    if (!store) {
+      throw new Error("Store not found for product variant sync");
+    }
+
+    await tx.store.update({
+      where: { shopUrl: shop },
+      data: {
+        isProductSyncing: true,
+        isProductInitialySyning: false,
+        syncProgressStage: "SHOPIFY_BULK_RUNNING",
+        staleReason: MIRROR_STALE_REASONS.FULL_SYNC_RUNNING,
+        lastSyncErrorSummary: null,
+      },
+    });
+
+    return tx.syncHistory.create({
+      data: {
+        shop,
+        bulkOperationId,
+        syncBatchId,
+        status: "processing",
+        stage: "SHOPIFY_VARIANT_BULK_RUNNING",
+        operationType: "Product",
+        isInitialProductSync: false,
+        recordCount: 0,
+        duration: 0,
+      },
+    });
+  });
+}
+
 export async function clearProductSyncCache(shop) {
   await clearKeyCaches(`${shop}:sync_`);
 }
@@ -192,31 +238,10 @@ export async function activateProductMirrorBatch({
       SELECT pg_advisory_xact_lock(hashtext(${shop}))::text AS lock_acquired
     `;
 
-    if (syncHistoryId) {
-      const fenced = await tx.syncHistory.updateMany({
-        where: {
-          id: syncHistoryId,
-          shop,
-          syncBatchId,
-          status: "processing",
-          stage: { in: ["SHOPIFY_BULK_RUNNING", "MIRROR_STAGING"] },
-        },
-        data: {
-          stage: "MIRROR_ACTIVATING",
-        },
-      });
-      if (fenced.count !== 1) {
-        throw new Error("MIRROR_BATCH_ACTIVATION_HISTORY_FENCE_FAILED");
-      }
-    }
-
     const store = await tx.store.findUnique({
       where: { shopUrl: shop },
-      select: { activeMirrorBatchId: true, isProductSyncing: true },
+      select: { activeMirrorBatchId: true },
     });
-    if (!store?.isProductSyncing) {
-      throw new Error("MIRROR_BATCH_ACTIVATION_SYNC_NOT_ACTIVE");
-    }
     previousBatchId = store?.activeMirrorBatchId || null;
 
     const activated = await tx.store.updateMany({
@@ -280,7 +305,7 @@ export async function activateProductMirrorBatch({
         lastSyncAt: completedAt,
       },
     });
-  }, { isolationLevel: "Serializable" });
+  });
 
   if (previousBatchId && previousBatchId !== syncBatchId) {
     await prisma.$executeRaw`
