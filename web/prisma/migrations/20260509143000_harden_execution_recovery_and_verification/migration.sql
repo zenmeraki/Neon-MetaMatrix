@@ -6,6 +6,7 @@ ALTER TABLE "Variant"
 
 CREATE INDEX IF NOT EXISTS "Product_shop_sourceSequence_idx"
   ON "Product"("shop", "sourceSequence");
+
 CREATE INDEX IF NOT EXISTS "Variant_shop_sourceSequence_idx"
   ON "Variant"("shop", "sourceSequence");
 
@@ -25,14 +26,23 @@ ALTER TABLE "OperationExecution"
 
 CREATE INDEX IF NOT EXISTS "OperationExecution_shop_leaseOwner_leaseExpiresAt_idx"
   ON "OperationExecution"("shop", "leaseOwner", "leaseExpiresAt");
+
 CREATE INDEX IF NOT EXISTS "OperationExecution_shop_poisoned_status_idx"
   ON "OperationExecution"("shop", "poisoned", "status");
 
 ALTER TABLE "OperationSubmission"
-  ADD COLUMN IF NOT EXISTS "submissionFingerprint" TEXT NOT NULL DEFAULT '';
+  ADD COLUMN IF NOT EXISTS "submissionFingerprint" TEXT NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS "partitionOrdinal" INTEGER;
+
+DROP INDEX IF EXISTS "OperationSubmission_shop_merchantOperationId_partitionOrd_submis_key";
 
 CREATE UNIQUE INDEX IF NOT EXISTS "OperationSubmission_shop_merchantOperationId_partitionOrd_submis_key"
-  ON "OperationSubmission"("shop", "merchantOperationId", "partitionOrdinal", "submissionFingerprint");
+  ON "OperationSubmission"(
+    "shop",
+    "merchantOperationId",
+    COALESCE("partitionOrdinal", 0),
+    "submissionFingerprint"
+  );
 
 CREATE TABLE IF NOT EXISTS "VerificationResult" (
   "id" TEXT NOT NULL,
@@ -58,5 +68,6 @@ ALTER TABLE "OperationLease"
 
 CREATE INDEX IF NOT EXISTS "OperationLease_shop_pipeline_leaseExpiresAt_idx"
   ON "OperationLease"("shop", "pipeline", "leaseExpiresAt");
+
 CREATE INDEX IF NOT EXISTS "OperationLease_shop_leaseOwner_heartbeatAt_idx"
   ON "OperationLease"("shop", "leaseOwner", "heartbeatAt");

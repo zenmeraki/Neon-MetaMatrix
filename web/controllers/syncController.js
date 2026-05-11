@@ -729,7 +729,15 @@ export const getSyncStatus = async (req, res) => {
       shop,
       syncStatus: syncDetails,
     });
-  } catch (error) {
+   } catch (error) {
+    console.error("[sync-status:500]", {
+      shop: session?.shop,
+      message: error?.message,
+      code: error?.code,
+      meta: error?.meta,
+      stack: error?.stack,
+    });
+
     await logApiError({
       shop: session?.shop,
       err: error,
@@ -739,7 +747,9 @@ export const getSyncStatus = async (req, res) => {
 
     return res.status(500).json({
       error: "SYNC_STATUS_FAILED",
-      message: "Unable to load sync status",
+      message: error?.message || "Unable to load sync status",
+      code: error?.code || null,
+      meta: error?.meta || null,
     });
   }
 };

@@ -502,7 +502,7 @@ export default function DashboardPage() {
     }
     refreshInFlightRef.current = true;
     return refetch({ forceRefresh: true })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => {
         refreshInFlightRef.current = false;
       });
@@ -533,7 +533,10 @@ export default function DashboardPage() {
     setSyncFeedback(null);
 
     try {
-      const response = await fetchWithAuth("/api/sync/products");
+      const response = await fetchWithAuth("/api/sync/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
       if (!response?.ok) {
         throw new Error(t("syncStartFailed", "Unable to start product sync."));
       }

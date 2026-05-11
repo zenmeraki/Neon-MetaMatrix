@@ -10,11 +10,12 @@ ALTER TABLE "MerchantOperation"
 
 DO $$
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1
-    FROM pg_constraint
-    WHERE conname = 'MerchantOperation_replayOfOperationId_fkey'
-  ) THEN
+  IF to_regclass('"MerchantOperation"') IS NOT NULL
+     AND NOT EXISTS (
+       SELECT 1 FROM pg_constraint
+       WHERE conname = 'MerchantOperation_replayOfOperationId_fkey'
+     )
+  THEN
     ALTER TABLE "MerchantOperation"
       ADD CONSTRAINT "MerchantOperation_replayOfOperationId_fkey"
       FOREIGN KEY ("replayOfOperationId")
@@ -33,8 +34,24 @@ CREATE INDEX IF NOT EXISTS "MerchantOperation_shop_executionPlanId_idx"
 CREATE INDEX IF NOT EXISTS "MerchantOperation_shop_intentId_idx"
   ON "MerchantOperation"("shop", "intentId");
 
+CREATE TABLE IF NOT EXISTS "ExecutionPlan" (
+  "id" TEXT NOT NULL,
+  "shop" TEXT NOT NULL,
+  "operationId" TEXT,
+  "snapshotSetId" TEXT,
+  "intentHash" TEXT NOT NULL DEFAULT '',
+  "mutationCount" INTEGER NOT NULL DEFAULT 0,
+  "status" TEXT NOT NULL DEFAULT 'PLANNED',
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "ExecutionPlan_pkey" PRIMARY KEY ("id")
+);
+
 ALTER TABLE "ExecutionPlan"
-  ADD COLUMN IF NOT EXISTS "operationId" TEXT;
+  ADD COLUMN IF NOT EXISTS "operationId" TEXT,
+  ADD COLUMN IF NOT EXISTS "snapshotSetId" TEXT,
+  ADD COLUMN IF NOT EXISTS "intentHash" TEXT NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS "mutationCount" INTEGER NOT NULL DEFAULT 0;
 
 INSERT INTO "MerchantOperation" (
   "id",
@@ -70,13 +87,6 @@ WHERE ep."operationId" IS NULL
   AND mo."shop" = ep."shop"
   AND mo."idempotencyKey" = 'execution-plan-backfill:' || ep."id";
 
-DO $$
-BEGIN
-  IF EXISTS (SELECT 1 FROM "ExecutionPlan" WHERE "operationId" IS NULL) THEN
-    RAISE EXCEPTION 'ExecutionPlan.operationId backfill failed; refusing to set NOT NULL';
-  END IF;
-END $$;
-
 ALTER TABLE "ExecutionPlan"
   ALTER COLUMN "operationId" SET NOT NULL;
 
@@ -84,14 +94,14 @@ DROP INDEX IF EXISTS "ExecutionPlan_shop_intentHash_snapshotSetId_key";
 
 CREATE UNIQUE INDEX IF NOT EXISTS "ExecutionPlan_shop_operationId_intentHash_snapshotSetId_key"
   ON "ExecutionPlan"("shop", "operationId", "intentHash", "snapshotSetId");
+
 CREATE INDEX IF NOT EXISTS "ExecutionPlan_shop_operationId_idx"
   ON "ExecutionPlan"("shop", "operationId");
 
 DO $$
 BEGIN
   IF NOT EXISTS (
-    SELECT 1
-    FROM pg_constraint
+    SELECT 1 FROM pg_constraint
     WHERE conname = 'ExecutionPlan_operationId_fkey'
   ) THEN
     ALTER TABLE "ExecutionPlan"
@@ -121,15 +131,14 @@ CREATE TABLE IF NOT EXISTS "ExecutionPartition" (
   "submittedAt" TIMESTAMP(3),
   "completedAt" TIMESTAMP(3),
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "updatedAt" TIMESTAMP(3) NOT NULL,
+  "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT "ExecutionPartition_pkey" PRIMARY KEY ("id")
 );
 
 DO $$
 BEGIN
   IF NOT EXISTS (
-    SELECT 1
-    FROM pg_constraint
+    SELECT 1 FROM pg_constraint
     WHERE conname = 'ExecutionPartition_operationId_fkey'
   ) THEN
     ALTER TABLE "ExecutionPartition"
@@ -141,8 +150,7 @@ BEGIN
   END IF;
 
   IF NOT EXISTS (
-    SELECT 1
-    FROM pg_constraint
+    SELECT 1 FROM pg_constraint
     WHERE conname = 'ExecutionPartition_executionPlanId_fkey'
   ) THEN
     ALTER TABLE "ExecutionPartition"
@@ -156,7 +164,9 @@ END $$;
 
 CREATE UNIQUE INDEX IF NOT EXISTS "ExecutionPartition_shop_executionPlanId_ordinal_key"
   ON "ExecutionPartition"("shop", "executionPlanId", "ordinal");
+
 CREATE INDEX IF NOT EXISTS "ExecutionPartition_shop_operationId_idx"
   ON "ExecutionPartition"("shop", "operationId");
+
 CREATE INDEX IF NOT EXISTS "ExecutionPartition_shop_status_idx"
   ON "ExecutionPartition"("shop", "status");
