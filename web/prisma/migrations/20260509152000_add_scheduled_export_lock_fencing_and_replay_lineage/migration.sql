@@ -1,0 +1,6 @@
+ALTER TABLE "ScheduledExport"
+  ADD COLUMN IF NOT EXISTS "lockVersion" BIGINT NOT NULL DEFAULT 0;
+
+ALTER TABLE "ScheduledExportRun"
+  ADD COLUMN IF NOT EXISTS "replayedFromRunId" TEXT,
+  ADD COLUMN IF NOT EXISTS "replayReason" TEXT;

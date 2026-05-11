@@ -1,0 +1,6 @@
+.PlanStatus__loading {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  min-height: 140px;
+}

@@ -1,0 +1,49 @@
+const TAXONOMY = {
+  SAFE_RETRY: "SAFE_RETRY",
+  RETRY_BLOCKED: "RETRY_BLOCKED",
+  MANUAL_REVIEW: "MANUAL_REVIEW",
+  ALREADY_DONE: "ALREADY_DONE",
+  DUPLICATE_IGNORED: "DUPLICATE_IGNORED",
+};
+
+export function classifyRetry(code) {
+  const normalized = String(code || "").toUpperCase();
+  if (
+    [
+      "SHOPIFY_BULK_RUNNING",
+      "COLLECTION_SYNC_ALREADY_RUNNING",
+      "SYNC_ALREADY_ACTIVE",
+      "WRITE_OPERATION_RUNNING",
+      "LOCK_HELD",
+      "FORCE_SYNC_COOLDOWN_ACTIVE",
+    ].includes(normalized)
+  ) {
+    return TAXONOMY.RETRY_BLOCKED;
+  }
+
+  if (
+    [
+      "SNAPSHOT_FINGERPRINT_MISMATCH",
+      "TARGET_COUNT_UNSTABLE",
+      "PREFLIGHT_SNAPSHOT_MISMATCH",
+      "BULK_MUTATION_SUBMISSION_CORRELATION_MISMATCH",
+      "EXECUTION_FINGERPRINT_MISMATCH",
+      "EXECUTION_FINGERPRINT_REQUIRED",
+      "MERCHANT_OR_APP_CHANGED_VALUE_AFTER_EDIT",
+    ].includes(normalized)
+  ) {
+    return TAXONOMY.MANUAL_REVIEW;
+  }
+
+  if (["IDEMPOTENT_REPLAY_COMPLETED"].includes(normalized)) {
+    return TAXONOMY.ALREADY_DONE;
+  }
+
+  if (["IDEMPOTENT_DUPLICATE_IN_PROGRESS"].includes(normalized)) {
+    return TAXONOMY.DUPLICATE_IGNORED;
+  }
+
+  return TAXONOMY.SAFE_RETRY;
+}
+
+export { TAXONOMY };
