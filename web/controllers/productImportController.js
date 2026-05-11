@@ -36,7 +36,7 @@ const MAX_SERVER_XLSX_FILE_BYTES = 20 * 1024 * 1024;
 const MAX_VALIDATION_ERRORS = 100;
 const PREVIEW_ROW_LIMIT = 50;
 const FORMULA_PREFIX = /^[=+\-@\t\r\n]/;
-const IMPORTABLE_FIELDS = new Set(Object.keys(FIELD_ALIASES));
+
 const ACTIVE_SYNC_STAGES = new Set([
   "SHOPIFY_BULK_STARTING",
   "SHOPIFY_BULK_RUNNING",
@@ -62,6 +62,8 @@ const FIELD_ALIASES = {
   taxable: new Set(["taxable"]),
   tags: new Set(["tags", "product_tags"]),
 };
+
+const IMPORTABLE_FIELDS = new Set(Object.keys(FIELD_ALIASES));
 
 function buildImportIdempotencyKey({
   shop,
