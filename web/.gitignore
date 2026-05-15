@@ -1,5 +1,12 @@
 node_modules
+
 # Keep environment variables out of version control
 .env
+.env.*
+.env.local
+.env.*.local
+
+# VS Code Local History extension
+.history/
 
 /generated/prisma
